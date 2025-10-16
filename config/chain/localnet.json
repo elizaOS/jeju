@@ -1,0 +1,39 @@
+{
+  "chainId": 42069,
+  "networkId": 42069,
+  "name": "Jeju Localnet",
+  "rpcUrl": "http://127.0.0.1:8545",
+  "wsUrl": "ws://127.0.0.1:8546",
+  "explorerUrl": "http://127.0.0.1:4000",
+  "l1ChainId": 1337,
+  "l1RpcUrl": "http://127.0.0.1:8545",
+  "l1Name": "Local",
+  "flashblocksEnabled": true,
+  "flashblocksSubBlockTime": 200,
+  "blockTime": 2000,
+  "gasToken": {
+    "name": "Ether",
+    "symbol": "ETH",
+    "decimals": 18
+  },
+  "contracts": {
+    "l2": {
+      "L2CrossDomainMessenger": "0x4200000000000000000000000000000000000007",
+      "L2StandardBridge": "0x4200000000000000000000000000000000000010",
+      "L2ToL1MessagePasser": "0x4200000000000000000000000000000000000016",
+      "L2ERC721Bridge": "0x4200000000000000000000000000000000000014",
+      "GasPriceOracle": "0x420000000000000000000000000000000000000F",
+      "L1Block": "0x4200000000000000000000000000000000000015",
+      "WETH": "0x4200000000000000000000000000000000000006"
+    },
+    "l1": {
+      "OptimismPortal": "",
+      "L2OutputOracle": "",
+      "L1CrossDomainMessenger": "",
+      "L1StandardBridge": "",
+      "SystemConfig": ""
+    }
+  }
+}
+
+

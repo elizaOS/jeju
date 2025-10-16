@@ -1,0 +1,19 @@
+# Foundry
+cache/
+out/
+broadcast/
+deployments/local/
+
+# Artifacts
+artifacts/
+typechain/
+typechain-types/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+

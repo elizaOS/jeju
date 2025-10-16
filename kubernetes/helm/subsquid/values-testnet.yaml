@@ -1,0 +1,84 @@
+# Subsquid values for testnet
+
+processor:
+  image:
+    repository: ghcr.io/jeju-l3/subsquid-processor  # TODO: Build and push image
+    tag: "latest"
+
+  replicaCount: 1
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  env:
+    - name: RPC_ENDPOINT
+      value: "http://reth-rpc.rpc:8545"
+    - name: START_BLOCK
+      value: "0"
+    - name: CHAIN_ID
+      value: "420690"
+    - name: DB_HOST
+      value: "subsquid-postgres"
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_NAME
+      value: "indexer"
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: subsquid-db-secret
+          key: username
+    - name: DB_PASS
+      valueFrom:
+        secretKeyRef:
+          name: subsquid-db-secret
+          key: password
+
+api:
+  replicaCount: 2
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+  autoscaling:
+    enabled: false
+
+postgres:
+  enabled: true
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  persistence:
+    enabled: true
+    size: "50Gi"
+    storageClass: "gp3"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: testnet-indexer.jeju.network
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: subsquid-testnet-tls
+      hosts:
+        - testnet-indexer.jeju.network
+
+

@@ -1,0 +1,199 @@
+replicaCount: 1
+
+processor:
+  image:
+    repository: subsquid-processor
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+  env:
+    - name: RPC_ETH_HTTP
+      value: "http://reth-rpc.jeju-rpc:8545"
+    - name: START_BLOCK
+      value: "0"
+    - name: CHAIN_ID
+      value: "42069"
+    - name: DB_HOST
+      value: "subsquid-postgres"
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_NAME
+      value: "indexer"
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: subsquid-db-secret
+          key: username
+    - name: DB_PASS
+      valueFrom:
+        secretKeyRef:
+          name: subsquid-db-secret
+          key: password
+    - name: GQL_PORT
+      value: "4350"
+
+  persistence:
+    enabled: false
+
+api:
+  image:
+    repository: ghcr.io/jeju/indexer-api
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  replicaCount: 2
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+  service:
+    type: ClusterIP
+    port: 4350
+    targetPort: 4350
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "4350"
+      prometheus.io/path: "/metrics"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  env:
+    - name: GQL_PORT
+      value: "4350"
+    - name: DB_HOST
+      value: "subsquid-postgres"
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_NAME
+      value: "indexer"
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: subsquid-db-secret
+          key: username
+    - name: DB_PASS
+      valueFrom:
+        secretKeyRef:
+          name: subsquid-db-secret
+          key: password
+
+nginx:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: nginx
+    tag: "1.25-alpine"
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+
+  rateLimiting:
+    enabled: true
+    requestsPerMinute: 100
+    burstSize: 20
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15-alpine"
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+  persistence:
+    enabled: true
+    size: "100Gi"
+    storageClass: "gp3"
+
+  config:
+    maxConnections: 200
+    sharedBuffers: "1GB"
+    effectiveCacheSize: "3GB"
+    maintenanceWorkMem: "256MB"
+    checkpointCompletionTarget: 0.9
+    walBuffers: "16MB"
+    defaultStatisticsTarget: 100
+    randomPageCost: 1.1
+    effectiveIoConcurrency: 200
+    workMem: "8MB"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "subsquid"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+  hosts:
+    - host: indexer.jeju.network
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: subsquid-tls
+      hosts:
+        - indexer.jeju.network
+
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+  grafana:
+    enabled: true
+    dashboards:
+      - subsquid-metrics
+      - subsquid-performance
+

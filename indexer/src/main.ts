@@ -1,0 +1,344 @@
+import {TypeormDatabase} from '@subsquid/typeorm-store'
+import {
+    Block, Transaction, Account, Log, Contract, TokenTransfer, 
+    DecodedEvent, Trace, TransactionStatus, TokenStandard, 
+    ContractType, TraceType
+} from './model'
+import {processor} from './processor'
+
+// Event signatures for token standards
+// Note: ERC20 and ERC721 Transfer events have the same signature
+const TRANSFER_EVENT = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+const ERC1155_TRANSFER_SINGLE = '0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62'
+
+processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
+    const blocks: Block[] = []
+    const transactions: Transaction[] = []
+    const logs: Log[] = []
+    const decodedEvents: DecodedEvent[] = []
+    const tokenTransfers: TokenTransfer[] = []
+    const traces: Trace[] = []
+    const accounts = new Map<string, Account>()
+    const contracts = new Map<string, Contract>()
+
+    // Helper to get or create account
+    function getOrCreateAccount(address: string, blockNumber: number): Account {
+        const id = address.toLowerCase()
+        let account = accounts.get(id)
+        if (!account) {
+            account = new Account({
+                id,
+                address: id,
+                isContract: false,
+                firstSeenBlock: blockNumber,
+                lastSeenBlock: blockNumber,
+                transactionCount: 0,
+                totalValueSent: 0n,
+                totalValueReceived: 0n,
+                labels: []
+            })
+            accounts.set(id, account)
+        }
+        account.lastSeenBlock = Math.max(account.lastSeenBlock, blockNumber)
+        return account
+    }
+
+    // Helper to get or create contract
+    function getOrCreateContract(address: string, block: Block, creator: Account): Contract {
+        const id = address.toLowerCase()
+        let contract = contracts.get(id)
+        if (!contract) {
+            const account = getOrCreateAccount(address, block.number)
+            account.isContract = true
+            
+            contract = new Contract({
+                id,
+                address: id,
+                creator,
+                creationBlock: block,
+                isERC20: false,
+                isERC721: false,
+                isERC1155: false,
+                isProxy: false,
+                verified: false,
+                firstSeenAt: block.timestamp,
+                lastSeenAt: block.timestamp
+            })
+            contracts.set(id, contract)
+        }
+        contract.lastSeenAt = block.timestamp
+        return contract
+    }
+
+    // Process each block
+    for (let block of ctx.blocks) {
+        const blockEntity = new Block({
+            id: block.header.hash,
+            number: block.header.height,
+            hash: block.header.hash,
+            parentHash: block.header.parentHash,
+            timestamp: new Date(block.header.timestamp),
+            miner: '0x0000000000000000000000000000000000000000',
+            gasUsed: block.header.gasUsed,
+            gasLimit: block.header.gasLimit,
+            baseFeePerGas: block.header.baseFeePerGas,
+            difficulty: block.header.difficulty,
+            size: typeof block.header.size === 'bigint' ? Number(block.header.size) : block.header.size || 0,
+            transactionCount: block.transactions.length
+        })
+        blocks.push(blockEntity)
+
+        // Process transactions
+        for (let tx of block.transactions) {
+            const fromAccount = getOrCreateAccount(tx.from, block.header.height)
+            fromAccount.transactionCount++
+            fromAccount.totalValueSent += tx.value
+            
+            let toAccount: Account | undefined
+            if (tx.to) {
+                toAccount = getOrCreateAccount(tx.to, block.header.height)
+                toAccount.totalValueReceived += tx.value
+            }
+
+            const txEntity = new Transaction({
+                id: tx.hash,
+                hash: tx.hash,
+                block: blockEntity,
+                transactionIndex: tx.transactionIndex,
+                from: fromAccount,
+                to: toAccount,
+                value: tx.value,
+                gasPrice: tx.gasPrice,
+                gasLimit: BigInt(tx.gas),
+                gasUsed: tx.gasUsed ? BigInt(tx.gasUsed) : null,
+                input: tx.input,
+                nonce: tx.nonce,
+                status: tx.status === 1 ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
+                contractAddress: null,  // Will be updated after contracts are created
+                type: tx.type || null,
+                maxFeePerGas: tx.maxFeePerGas,
+                maxPriorityFeePerGas: tx.maxPriorityFeePerGas
+            })
+            
+            // Track contract creation for later processing
+            if (tx.contractAddress) {
+                const createdContract = getOrCreateContract(tx.contractAddress, blockEntity, fromAccount)
+                createdContract.creationTransaction = txEntity
+            }
+            transactions.push(txEntity)
+        }
+
+        // Process logs - THE CRITICAL MISSING PIECE!
+        for (let log of block.logs) {
+            // Get or create contract that emitted this event
+            const fromAccount = accounts.get(log.address.toLowerCase()) || getOrCreateAccount(log.address, block.header.height)
+            const contractEntity = getOrCreateContract(log.address, blockEntity, fromAccount)
+
+            // Find transaction for this log
+            const txEntity = transactions.find(t => t.hash === log.transactionHash)
+            if (!txEntity) continue
+
+            const logEntity = new Log({
+                id: `${log.transactionHash}-${log.logIndex}`,
+                block: blockEntity,
+                transaction: txEntity,
+                logIndex: log.logIndex,
+                address: contractEntity,
+                topic0: log.topics[0] || null,
+                topic1: log.topics[1] || null,
+                topic2: log.topics[2] || null,
+                topic3: log.topics[3] || null,
+                data: log.data || null
+            })
+            logs.push(logEntity)
+
+            // Detect and decode known events
+            const eventSig = log.topics[0]
+            if (!eventSig) continue
+            
+            // ERC20/ERC721 Transfer (same signature)
+            if (eventSig === TRANSFER_EVENT) {
+                if (log.topics.length === 3 && log.data) {
+                    // ERC20 Transfer
+                    contractEntity.isERC20 = true
+                    contractEntity.contractType = ContractType.ERC20
+
+                    const fromAddr = '0x' + log.topics[1].slice(26)
+                    const toAddr = '0x' + log.topics[2].slice(26)
+                    const value = BigInt(log.data)
+
+                    const fromAcc = getOrCreateAccount(fromAddr, block.header.height)
+                    const toAcc = getOrCreateAccount(toAddr, block.header.height)
+
+                    tokenTransfers.push(new TokenTransfer({
+                        id: logEntity.id,
+                        block: blockEntity,
+                        transaction: txEntity,
+                        logIndex: log.logIndex,
+                        token: contractEntity,
+                        tokenStandard: TokenStandard.ERC20,
+                        from: fromAcc,
+                        to: toAcc,
+                        value,
+                        timestamp: blockEntity.timestamp
+                    }))
+
+                    decodedEvents.push(new DecodedEvent({
+                        id: logEntity.id,
+                        log: logEntity,
+                        block: blockEntity,
+                        transaction: txEntity,
+                        address: contractEntity,
+                        eventSignature: eventSig,
+                        eventName: 'Transfer',
+                        args: { from: fromAddr, to: toAddr, value: value.toString() },
+                        timestamp: blockEntity.timestamp
+                    }))
+                } else if (log.topics.length === 4) {
+                    // ERC721 Transfer
+                    contractEntity.isERC721 = true
+                    contractEntity.contractType = ContractType.ERC721
+
+                    const fromAddr = '0x' + log.topics[1].slice(26)
+                    const toAddr = '0x' + log.topics[2].slice(26)
+                    const tokenId = BigInt(log.topics[3])
+
+                    const fromAcc = getOrCreateAccount(fromAddr, block.header.height)
+                    const toAcc = getOrCreateAccount(toAddr, block.header.height)
+
+                    tokenTransfers.push(new TokenTransfer({
+                        id: logEntity.id,
+                        block: blockEntity,
+                        transaction: txEntity,
+                        logIndex: log.logIndex,
+                        token: contractEntity,
+                        tokenStandard: TokenStandard.ERC721,
+                        from: fromAcc,
+                        to: toAcc,
+                        tokenId,
+                        timestamp: blockEntity.timestamp
+                    }))
+
+                    decodedEvents.push(new DecodedEvent({
+                        id: logEntity.id,
+                        log: logEntity,
+                        block: blockEntity,
+                        transaction: txEntity,
+                        address: contractEntity,
+                        eventSignature: eventSig,
+                        eventName: 'Transfer',
+                        args: { from: fromAddr, to: toAddr, tokenId: tokenId.toString() },
+                        timestamp: blockEntity.timestamp
+                    }))
+                }
+            }
+            // ERC1155 TransferSingle
+            else if (eventSig === ERC1155_TRANSFER_SINGLE && log.data) {
+                contractEntity.isERC1155 = true
+                contractEntity.contractType = ContractType.ERC1155
+
+                const operator = '0x' + log.topics[1].slice(26)
+                const fromAddr = '0x' + log.topics[2].slice(26)
+                const toAddr = '0x' + log.topics[3].slice(26)
+                
+                const tokenId = BigInt('0x' + log.data.slice(2, 66))
+                const value = BigInt('0x' + log.data.slice(66, 130))
+
+                const operatorAcc = getOrCreateAccount(operator, block.header.height)
+                const fromAcc = getOrCreateAccount(fromAddr, block.header.height)
+                const toAcc = getOrCreateAccount(toAddr, block.header.height)
+
+                tokenTransfers.push(new TokenTransfer({
+                    id: logEntity.id,
+                    block: blockEntity,
+                    transaction: txEntity,
+                    logIndex: log.logIndex,
+                    token: contractEntity,
+                    tokenStandard: TokenStandard.ERC1155,
+                    operator: operatorAcc,
+                    from: fromAcc,
+                    to: toAcc,
+                    tokenId,
+                    value,
+                    timestamp: blockEntity.timestamp
+                }))
+
+                decodedEvents.push(new DecodedEvent({
+                    id: logEntity.id,
+                    log: logEntity,
+                    block: blockEntity,
+                    transaction: txEntity,
+                    address: contractEntity,
+                    eventSignature: eventSig,
+                    eventName: 'TransferSingle',
+                    args: { 
+                        operator, 
+                        from: fromAddr, 
+                        to: toAddr, 
+                        id: tokenId.toString(), 
+                        value: value.toString() 
+                    },
+                    timestamp: blockEntity.timestamp
+                }))
+            }
+        }
+
+        // Process traces (internal transactions)
+        // Note: Trace processing can be expanded based on available fields
+        for (let trace of block.traces) {
+            if (!trace.transaction) continue
+
+            const txEntity = transactions.find(t => t.hash === trace.transaction!.hash)
+            if (!txEntity) continue
+
+            let traceType: TraceType
+            if (trace.type === 'call') traceType = TraceType.CALL
+            else if (trace.type === 'create') traceType = TraceType.CREATE
+            else if (trace.type === 'suicide') traceType = TraceType.SUICIDE
+            else if (trace.type === 'reward') traceType = TraceType.REWARD
+            else continue
+
+            // Simplified trace entity - can be enhanced based on actual trace data available
+            const traceEntity = new Trace({
+                id: `${trace.transaction.hash}-${trace.traceAddress.join('-')}`,
+                transaction: txEntity,
+                traceAddress: trace.traceAddress,
+                subtraces: trace.subtraces || 0,
+                traceType,
+                callType: null,
+                from: null,
+                to: null,
+                value: 0n,
+                gas: null,
+                gasUsed: null,
+                input: null,
+                output: null,
+                error: trace.error || null,
+                block: blockEntity
+            })
+            traces.push(traceEntity)
+        }
+    }
+
+    const startBlock = ctx.blocks.at(0)?.header.height
+    const endBlock = ctx.blocks.at(-1)?.header.height
+    ctx.log.info(
+        `Processed blocks ${startBlock}-${endBlock}: ` +
+        `${blocks.length} blocks, ${transactions.length} txs, ${logs.length} logs, ` +
+        `${tokenTransfers.length} tokens, ${decodedEvents.length} events, ` +
+        `${contracts.size} contracts, ${accounts.size} accounts, ${traces.length} traces`
+    )
+
+    // Save everything to database in correct order (respect foreign keys!)
+    // Order matters: child tables depend on parent tables
+    await ctx.store.upsert(Array.from(accounts.values()))  // 1. Accounts first (no dependencies)
+    await ctx.store.insert(blocks)  // 2. Blocks (no dependencies except accounts)
+    await ctx.store.insert(transactions)  // 3. Transactions (depend on blocks and accounts)
+    await ctx.store.upsert(Array.from(contracts.values()))  // 4. Contracts (depend on blocks and transactions)
+    await ctx.store.insert(logs)  // 5. Logs (depend on blocks, transactions, contracts)
+    await ctx.store.insert(decodedEvents)  // 6. Decoded events (depend on logs)
+    await ctx.store.insert(tokenTransfers)  // 7. Token transfers (depend on all above)
+    if (traces.length > 0) {
+        await ctx.store.insert(traces)  // 8. Traces (depend on transactions)
+    }
+})

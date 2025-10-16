@@ -1,0 +1,57 @@
+# RPC Gateway values for testnet
+replicaCount: 2
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/wafv2-acl-arn: ""  # No WAF for testnet
+    alb.ingress.kubernetes.io/shield-advanced-protection: "false"
+  hosts:
+    - host: testnet-rpc.jeju.network
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: testnet-ws.jeju.network
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: testnet-rpc-jeju-network-tls
+      hosts:
+        - testnet-rpc.jeju.network
+        - testnet-ws.jeju.network
+
+autoscaling:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+backend:
+  rpcService: "reth-rpc"
+  rpcPort: 8545
+  wsPort: 8546
+
+# Relaxed rate limits for testnet
+rateLimit:
+  enabled: true
+  requestsPerSecond: 50
+  requestsPerMinute: 2000
+  burstSize: 100
+  maxConnectionsPerIp: 5
+
+monitoring:
+  enabled: true
+

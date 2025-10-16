@@ -1,0 +1,32 @@
+# Reth RPC values for testnet - single node
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+persistence:
+  enabled: true
+  storageClass: gp3
+  size: 500Gi
+
+autoscaling:
+  enabled: false
+
+nodeSelector:
+  role: rpc
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: rpc
+    effect: NoSchedule
+
+service:
+  type: ClusterIP
+
+

@@ -1,0 +1,113 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+
+# Production
+build/
+dist/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Kubernetes
+*.kubeconfig
+kubeconfig*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+*.code-workspace
+
+# Kurtosis
+.kurtosis/
+kurtosis-data/
+
+# Contract artifacts
+contracts/**/artifacts/
+contracts/**/cache/
+contracts/**/typechain/
+contracts/**/deployments/local/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Generated files
+generated/
+*.generated.*
+
+# Snapshots
+snapshots/
+*.snapshot
+
+# AWS
+.aws/
+
+# Monitoring data
+prometheus-data/
+grafana-data/
+loki-data/
+
+# Node modules
+node_modules/
+node_modules
+
+# Documentation build artifacts
+documentation/.vitepress/cache/
+documentation/.vitepress/dist/
+documentation/node_modules/
+
+# Indexer build artifacts
+indexer/lib/
+indexer/node_modules/
