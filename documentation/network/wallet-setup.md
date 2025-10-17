@@ -1,6 +1,6 @@
 # Wallet Setup
 
-Complete guide to setting up your wallet to use Jeju L3 on testnet and mainnet.
+Complete guide to setting up your wallet to use Jeju on testnet and mainnet.
 
 ## MetaMask Setup
 

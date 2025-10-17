@@ -45,7 +45,7 @@ The Node Explorer is a Next.js application that provides:
                  │ RPC Calls
                  ↓
 ┌──────────────────────────────────────────────┐
-│ Jeju L2                                       │
+│ Jeju                                       │
 │ - NodeOperatorRewards contract               │
 │ - Node registration verification             │
 └──────────────────────────────────────────────┘

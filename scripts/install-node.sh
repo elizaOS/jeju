@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Jeju L3 Node - One-Command Installer
+# Jeju Node - One-Command Installer
 # 
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/jeju-l3/jeju/main/scripts/install-node.sh | bash
@@ -404,7 +404,7 @@ create_systemd_service() {
     
     sudo tee /etc/systemd/system/jeju-node.service >/dev/null <<EOF
 [Unit]
-Description=Jeju L3 Node
+Description=Jeju Node
 After=docker.service
 Requires=docker.service
 
@@ -489,7 +489,7 @@ EOF
 main() {
     echo ""
     echo "╔═══════════════════════════════════════╗"
-    echo "║   Jeju L3 Node - One-Click Installer ║"
+    echo "║   Jeju Node - One-Click Installer ║"
     echo "╚═══════════════════════════════════════╝"
     echo ""
     

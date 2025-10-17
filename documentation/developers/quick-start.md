@@ -1,6 +1,6 @@
 # Developer Quick Start
 
-Start building on Jeju L3 in minutes. This guide assumes you have basic Ethereum development experience.
+Start building on Jeju in minutes. This guide assumes you have basic Ethereum development experience.
 
 ## Prerequisites
 
@@ -370,7 +370,7 @@ forge create src/Counter.sol:Counter \
 
 - **Discord**: [discord.gg/jeju](https://discord.gg/jeju)
 - **GitHub**: [github.com/your-org/jeju](https://github.com/your-org/jeju)
-- **Twitter**: [@jejul3](https://twitter.com/jejul3)
+- **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 
 ## Next Steps
 

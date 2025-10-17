@@ -1,6 +1,6 @@
 # Infrastructure Setup
 
-Detailed infrastructure configuration for Jeju L3.
+Detailed infrastructure configuration for Jeju.
 
 ## Architecture
 

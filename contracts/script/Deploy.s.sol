@@ -26,7 +26,7 @@ import "forge-std/Script.sol";
  * - SystemConfig (Proxy + Implementation)
  * - ProtocolVersions
  * 
- * For Jeju L3 specifically:
+ * For Jeju specifically:
  * - These contracts are deployed on Base (not Ethereum)
  * - Base itself has these contracts on Ethereum
  * - Jeju → Base → Ethereum (3-layer architecture)

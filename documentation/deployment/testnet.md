@@ -1,6 +1,6 @@
 # Testnet Deployment
 
-Deploy Jeju L3 testnet on Base Sepolia.
+Deploy Jeju testnet on Base Sepolia.
 
 ## Overview
 

@@ -2,7 +2,7 @@
  * @fileoverview Subsquid EVM processor configuration for Jeju blockchain indexer
  * @module indexer/processor
  * 
- * Configures the blockchain indexer to capture comprehensive data from the Jeju L3 network:
+ * Configures the blockchain indexer to capture comprehensive data from the Jeju network:
  * - All blocks with full metadata
  * - All transactions (successful and failed)
  * - All event logs from all contracts
@@ -34,7 +34,7 @@ import {
 /**
  * Main blockchain processor instance
  * 
- * Configured to index the Jeju L3 blockchain comprehensively:
+ * Configured to index the Jeju blockchain comprehensively:
  * - Connects to RPC endpoint specified in RPC_ETH_HTTP env var
  * - Waits for 10 block confirmations before considering data final
  * - Indexes ALL transactions and logs (no filtering)

@@ -1,10 +1,10 @@
 # Jeju Localnet with Kurtosis
 
-Automated local blockchain deployment for Jeju L3 development and testing.
+Automated local blockchain deployment for Jeju development and testing.
 
 ## Overview
 
-This Kurtosis package deploys a complete Jeju L3 blockchain environment on your local machine:
+This Kurtosis package deploys a complete Jeju blockchain environment on your local machine:
 
 - **L1 Layer**: Geth in dev mode (auto-mines blocks every 1 second)
 - **L2 Layer**: op-geth in dev mode (auto-mines blocks every 2 seconds)

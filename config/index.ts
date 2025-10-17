@@ -1,5 +1,5 @@
 /**
- * @fileoverview Chain configuration loader and utilities for Jeju L3 network
+ * @fileoverview Chain configuration loader and utilities for Jeju network
  * @module config
  * 
  * Provides type-safe access to network configurations across localnet, testnet, and mainnet.

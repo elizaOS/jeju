@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title elizaOS Token
  * @author Jeju Network
- * @notice Standard ERC-20 token used as the fee payment token in the Jeju L3 ecosystem
+ * @notice Standard ERC-20 token used as the fee payment token in the Jeju ecosystem
  * @dev This token is used by the LiquidityPaymaster system where users pay transaction fees 
  *      in elizaOS tokens instead of ETH. The paymaster converts these tokens to ETH using 
  *      liquidity provider pools.

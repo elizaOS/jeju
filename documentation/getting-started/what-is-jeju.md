@@ -1,4 +1,4 @@
-# What is Jeju L3?
+# What is Jeju?
 
 Jeju is a Layer 3 blockchain - an application-specific rollup that settles on Base L2 instead of directly on Ethereum L1. This architecture provides the optimal balance of security, performance, and cost.
 
@@ -32,7 +32,7 @@ Jeju is a Layer 3 blockchain - an application-specific rollup that settles on Ba
        │ Much cheaper!
        │
 ┌─────────────┐
-│  Jeju L3    │ ← Your application chain
+│  Jeju    │ ← Your application chain
 └─────────────┘
 ```
 

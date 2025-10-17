@@ -1,6 +1,6 @@
 # OP Stack Deploy Configurations
 
-Configuration files for deploying Jeju L3 using OP Stack tooling.
+Configuration files for deploying Jeju using OP Stack tooling.
 
 ## Files
 

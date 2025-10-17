@@ -1,6 +1,6 @@
 # Jeju Mainnet
 
-Production network for Jeju L3, settling on Base mainnet. Use this for production dApps with real value.
+Production network for Jeju, settling on Base mainnet. Use this for production dApps with real value.
 
 ## Network Details
 
@@ -205,7 +205,7 @@ Real-time metrics:
 
 ### Incidents & Updates
 
-- **Twitter**: [@jejul3](https://twitter.com/jejul3)
+- **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 - **Discord**: [#announcements](https://discord.gg/jeju)
 - **Status Page**: https://status.jeju.network
 
@@ -332,8 +332,8 @@ forge verify-contract $CONTRACT_ADDRESS YourContract \
 ### Community
 
 - **Discord**: [Join Community](https://discord.gg/jeju)
-- **Telegram**: [t.me/jejul3](https://t.me/jejul3)
-- **Twitter**: [@jejul3](https://twitter.com/jejul3)
+- **Telegram**: [t.me/jejunetwork](https://t.me/jejunetwork)
+- **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 - **Forum**: [forum.jeju.network](https://forum.jeju.network)
 
 ### Enterprise Support

@@ -90,7 +90,7 @@ contract DeployCrossChainRelayOnJeju is Script {
         address targetOracle = vm.envAddress("ORACLE_ADDRESS");
         
         console.log("============================================================");
-        console.log("Deploying CrossChainPriceRelay on Jeju L3");
+        console.log("Deploying CrossChainPriceRelay on Jeju");
         console.log("============================================================");
         console.log("Deployer:", deployer);
         console.log("Chain ID:", block.chainid);

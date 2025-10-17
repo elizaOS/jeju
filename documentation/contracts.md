@@ -1,6 +1,6 @@
 # Contract Addresses
 
-Comprehensive list of all smart contract addresses on Jeju L3, organized by network.
+Comprehensive list of all smart contract addresses on Jeju, organized by network.
 
 <NetworkSwitcher />
 

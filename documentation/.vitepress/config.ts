@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: 'Jeju L3',
+  title: 'Jeju',
   description: 'High-performance OP-Stack L3 settling on Base with Flashblocks, EigenDA, and full DeFi stack',
   base: '/jeju/',
   ignoreDeadLinks: false, // ✅ Fixed: All missing pages created
@@ -11,7 +11,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#3eaf7c' }],
     ['meta', { name: 'og:type', content: 'website' }],
     ['meta', { name: 'og:locale', content: 'en' }],
-    ['meta', { name: 'og:site_name', content: 'Jeju L3' }],
+    ['meta', { name: 'og:site_name', content: 'Jeju' }],
   ],
 
   themeConfig: {
@@ -39,7 +39,7 @@ export default defineConfig({
           text: 'Getting Started',
           items: [
             { text: 'Introduction', link: '/getting-started/introduction' },
-            { text: 'What is Jeju L3?', link: '/getting-started/what-is-jeju' },
+            { text: 'What is Jeju?', link: '/getting-started/what-is-jeju' },
             { text: 'Quick Start', link: '/getting-started/quick-start' },
             { text: 'Installation', link: '/getting-started/installation' },
           ],
@@ -95,12 +95,12 @@ export default defineConfig({
     socialLinks: [
       { icon: 'github', link: 'https://github.com/your-org/jeju' },
       { icon: 'discord', link: 'https://discord.gg/jeju' },
-      { icon: 'twitter', link: 'https://twitter.com/jejul3' },
+      { icon: 'twitter', link: 'https://twitter.com/jejunetwork' },
     ],
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2025-present Jeju L3',
+      copyright: 'Copyright © 2025-present Jeju',
     },
 
     search: {

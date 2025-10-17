@@ -1,6 +1,6 @@
 # Bridge Assets
 
-Learn how to bridge assets between Ethereum, Base, and Jeju L3.
+Learn how to bridge assets between Ethereum, Base, and Jeju.
 
 ## Official Bridge
 
@@ -18,7 +18,7 @@ Ethereum L1
     ↕️
   Base L2
     ↕️
- Jeju L3  ← You are here
+ Jeju  ← You are here
 ```
 
 To move assets to Jeju, you bridge through Base (Jeju's settlement layer).

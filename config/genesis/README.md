@@ -1,6 +1,6 @@
 # Genesis Configuration Files
 
-Genesis state for Jeju L3 blockchain.
+Genesis state for Jeju blockchain.
 
 ## Files
 

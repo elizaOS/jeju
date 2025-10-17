@@ -1,6 +1,6 @@
 # Mainnet Deployment
 
-Deploy Jeju L3 mainnet on Base.
+Deploy Jeju mainnet on Base.
 
 ## Overview
 

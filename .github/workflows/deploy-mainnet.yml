@@ -269,7 +269,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Jeju L3 Mainnet Deployed Successfully*\n\n• Settlement: Base (Chain ID 8453)\n• L3 Chain ID: 8888\n• RPC: https://rpc.jeju.network\n• Explorer: https://explorer.jeju.network\n\nJob: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    "text": "*Jeju Mainnet Deployed Successfully*\n\n• Settlement: Base (Chain ID 8453)\n• L3 Chain ID: 8888\n• RPC: https://rpc.jeju.network\n• Explorer: https://explorer.jeju.network\n\nJob: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
                 }
               ]

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Jeju L3 paymaster requires accurate elizaOS/ETH exchange rates to calculate gas costs. Since the elizaOS token trades on Base L2 (Uniswap, Aerodrome), we need a reliable way to get those prices onto Jeju L3.
+The Jeju paymaster requires accurate elizaOS/ETH exchange rates to calculate gas costs. Since the elizaOS token trades on Base L2 (Uniswap, Aerodrome), we need a reliable way to get those prices onto Jeju.
 
 ## Solution: Automated Price Bot
 
@@ -22,7 +22,7 @@ The Jeju L3 paymaster requires accurate elizaOS/ETH exchange rates to calculate 
          │ tx.updatePrices()
          ↓
 ┌──────────────────┐
-│    Jeju L3       │
+│    Jeju       │
 │  (Oracle)        │  ManualPriceOracle → LiquidityPaymaster
 └──────────────────┘
 ```
@@ -130,7 +130,7 @@ Bot runs every 5 minutes and:
 ### Bot Operating Costs
 
 **Gas per update:**
-- Jeju L3: ~50,000 gas @ 0.1 gwei = $0.000015
+- Jeju: ~50,000 gas @ 0.1 gwei = $0.000015
 - Updates per day: 288 (every 5 minutes)
 - **Daily: $0.0043**
 - **Monthly: $0.13**
@@ -267,7 +267,7 @@ Use `L2CrossDomainMessenger` to relay prices from Base to Jeju trustlessly.
 
 ### Option 2: Chainlink on Jeju
 
-If Chainlink deploys to Jeju L3.
+If Chainlink deploys to Jeju.
 
 **Pros**: Battle-tested, no maintenance
 **Cons**: Expensive, elizaOS feed unlikely to exist

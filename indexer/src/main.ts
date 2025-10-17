@@ -2,7 +2,7 @@
  * @fileoverview Main indexer processor - comprehensive blockchain data indexing
  * @module indexer/main
  * 
- * This is the core indexer that processes all blockchain data from Jeju L3:
+ * This is the core indexer that processes all blockchain data from Jeju:
  * - Captures every block, transaction, and event log
  * - Decodes known event signatures (ERC20, ERC721, ERC1155 transfers)
  * - Tracks token balances and NFT ownership

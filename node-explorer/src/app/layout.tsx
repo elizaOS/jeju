@@ -5,7 +5,7 @@ const queryClient = new QueryClient();
 
 export const metadata = {
   title: 'Jeju Network Explorer',
-  description: 'Decentralized node operator dashboard for Jeju L3',
+  description: 'Decentralized node operator dashboard for Jeju',
 };
 
 export default function RootLayout({

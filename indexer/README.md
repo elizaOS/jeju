@@ -1,4 +1,4 @@
-# Jeju L2 Blockchain Indexer
+# Jeju Blockchain Indexer
 
 ✅ **FULLY FUNCTIONAL** - Comprehensive blockchain indexing with Subsquid
 
@@ -107,7 +107,7 @@ GQL_PORT=4350
 # RPC endpoint
 RPC_ETH_HTTP=https://eth.llamarpc.com  # Test endpoint
 
-# For Jeju L2:
+# For Jeju:
 RPC_ETH_HTTP=http://your-jeju-rpc:8545
 START_BLOCK=0
 ```

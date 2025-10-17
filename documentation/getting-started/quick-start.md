@@ -1,6 +1,6 @@
 # Quick Start
 
-Get Jeju L3 running locally in 10 minutes. Perfect for development and testing.
+Get Jeju running locally in 10 minutes. Perfect for development and testing.
 
 ## Prerequisites
 

@@ -4,7 +4,7 @@
 
 Your L3 paymaster needs accurate elizaOS/ETH exchange rates, but:
 - ElizaOS token trades on **Base L2** (Uniswap, Aerodrome, etc.)
-- Your paymaster runs on **Jeju L3**
+- Your paymaster runs on **Jeju**
 - Can't directly access Base state from L3
 - Manual updates are fragile and dangerous
 
@@ -13,7 +13,7 @@ Your L3 paymaster needs accurate elizaOS/ETH exchange rates, but:
 We use an automated keeper bot that:
 1. Fetches ETH/USD from **Chainlink on Base** (battle-tested)
 2. Fetches elizaOS/USD from **Base DEXes** (Uniswap V3, Aerodrome)
-3. Pushes prices to your **ManualPriceOracle on Jeju L3**
+3. Pushes prices to your **ManualPriceOracle on Jeju**
 4. Runs every 5 minutes with safety checks
 
 ## Architecture
@@ -43,7 +43,7 @@ We use an automated keeper bot that:
                    │ tx.updatePrices()
                    ↓
 ┌──────────────────────────────────────────────┐
-│            Jeju L3 (Your Oracle)             │
+│            Jeju (Your Oracle)             │
 ├──────────────────────────────────────────────┤
 │                                              │
 │  📡 ManualPriceOracle                        │
@@ -91,7 +91,7 @@ TELEGRAM_CHAT_ID=...
 
 ### 3. Fund Price Updater Wallet
 
-The price updater needs ETH on Jeju L3 for gas:
+The price updater needs ETH on Jeju for gas:
 
 ```bash
 # Send ~0.1 ETH to your PRICE_UPDATER wallet address
@@ -258,7 +258,7 @@ If deviation is too large, bot alerts admin and waits for manual approval.
 ### Bot Operating Costs
 
 **Gas per update:**
-- Jeju L3: ~50,000 gas @ 0.1 gwei = $0.000015
+- Jeju: ~50,000 gas @ 0.1 gwei = $0.000015
 - Updates per day: 288 (every 5 minutes)
 - **Daily cost: $0.0043**
 - **Monthly cost: $0.13**

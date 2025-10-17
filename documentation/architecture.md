@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Deep dive into Jeju L3's technical architecture, design decisions, and how all the pieces fit together.
+Deep dive into Jeju's technical architecture, design decisions, and how all the pieces fit together.
 
 ## High-Level Architecture
 
@@ -23,7 +23,7 @@ Deep dive into Jeju L3's technical architecture, design decisions, and how all t
                │ (Settlement)
                │
 ┌──────────────▼──────────────────────────────────────────┐
-│ Jeju L3 (Application Layer)                              │
+│ Jeju (Application Layer)                              │
 │ • 200ms Flashblocks                                      │
 │ • Full EVM compatibility                                 │
 │ • Complete DeFi stack                                    │
@@ -410,7 +410,7 @@ Profit:   $53,750/month = $645,000/year
 
 ## Comparison with Alternatives
 
-| Feature | Jeju L3 | L2 on ETH | Alt L1 | Sidechain |
+| Feature | Jeju | L2 on ETH | Alt L1 | Sidechain |
 |---------|---------|-----------|--------|-----------|
 | **Security** | Ethereum | Ethereum | Own validators | Own validators |
 | **Costs** | $750/mo | $450k/mo | Varies | Low |

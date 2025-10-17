@@ -1,6 +1,6 @@
 # Rollup Configuration Files
 
-Configuration files for Jeju L3 OP Stack rollup.
+Configuration files for Jeju OP Stack rollup.
 
 ## Files
 
@@ -52,7 +52,7 @@ op-node:
 
 ### Chain IDs
 - `l1_chain_id`: Settlement layer (Base)
-- `l2_chain_id`: Jeju L3
+- `l2_chain_id`: Jeju
 
 ### Timing
 - `block_time`: Block production interval (2 seconds)

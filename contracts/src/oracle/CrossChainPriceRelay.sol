@@ -20,7 +20,7 @@ interface ICrossDomainMessenger {
 /**
  * @title CrossChainPriceRelay
  * @notice Receives price updates from Base via CrossDomainMessenger
- * @dev Deploy on Jeju L3. Works with PriceSource.sol deployed on Base L2.
+ * @dev Deploy on Jeju. Works with PriceSource.sol deployed on Base L2.
  * 
  * Architecture:
  * 1. PriceSource on Base reads Chainlink + DEX prices

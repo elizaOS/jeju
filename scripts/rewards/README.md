@@ -1,6 +1,6 @@
 # Jeju Node Operator Rewards System
 
-Incentivize and reward node operators for running reliable Jeju L3 infrastructure.
+Incentivize and reward node operators for running reliable Jeju infrastructure.
 
 ## Overview
 

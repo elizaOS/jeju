@@ -1,6 +1,6 @@
 # Jeju Node Operator Handbook
 
-Complete guide to running, maintaining, and earning rewards from Jeju L3 nodes.
+Complete guide to running, maintaining, and earning rewards from Jeju nodes.
 
 ---
 

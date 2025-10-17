@@ -1,5 +1,5 @@
 #!/bin/bash
-# Master test runner for Jeju L3 codebase
+# Master test runner for Jeju codebase
 # Runs all standalone tests that don't require external services
 #
 # Usage: ./scripts/run-all-tests.sh

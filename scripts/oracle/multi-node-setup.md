@@ -23,7 +23,7 @@ This guide covers deploying **multiple oracle bots with automatic failover** for
        │  │
        ▼  ▼
 ┌─────────────────────────────────────────────────────────┐
-│                  Jeju L3 (Oracle)                       │
+│                  Jeju (Oracle)                       │
 │          Only leader submits transactions               │
 └─────────────────────────────────────────────────────────┘
 ```

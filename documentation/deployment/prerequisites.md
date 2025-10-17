@@ -1,6 +1,6 @@
 # Deployment Prerequisites
 
-Requirements before deploying your own Jeju L3 instance.
+Requirements before deploying your own Jeju instance.
 
 ## Technical Requirements
 

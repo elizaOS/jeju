@@ -24,11 +24,11 @@ const CONFIG = {
   BASE_RPCS: (process.env.BASE_RPC_URLS || process.env.BASE_RPC_URL || 'https://mainnet.base.org')
     .split(',').map(url => url.trim()),
   
-  // Jeju L3 RPC URLs (failover support)
+  // Jeju RPC URLs (failover support)
   JEJU_RPCS: (process.env.JEJU_RPC_URLS || process.env.JEJU_RPC_URL || 'https://rpc.jeju.network')
     .split(',').map(url => url.trim()),
   
-  // Oracle contract on Jeju L3
+  // Oracle contract on Jeju
   ORACLE_ADDRESS: process.env.ORACLE_ADDRESS || '',
   
   // ElizaOS token on Base

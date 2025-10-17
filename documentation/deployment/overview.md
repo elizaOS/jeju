@@ -1,6 +1,6 @@
 # Deployment Overview
 
-Learn how to deploy your own Jeju L3 instance on testnet or mainnet.
+Learn how to deploy your own Jeju instance on testnet or mainnet.
 
 ## Before You Start
 

@@ -6,7 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title PriceSource
- * @notice Reads prices on Base L2 and relays them to Jeju L3 via CrossDomainMessenger
+ * @notice Reads prices on Base L2 and relays them to Jeju via CrossDomainMessenger
  * @dev Deploy this contract on Base L2
  * 
  * Architecture:

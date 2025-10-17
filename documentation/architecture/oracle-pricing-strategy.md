@@ -5,8 +5,8 @@
 Your L3 paymaster needs accurate **elizaOS/ETH exchange rates** to calculate how much elizaOS to charge users for gas. The problem:
 
 - **ElizaOS token trades on Base L2** (Uniswap, Aerodrome, etc.)
-- **Your paymaster runs on Jeju L3**
-- **Can't directly access Base state** from Jeju L3
+- **Your paymaster runs on Jeju**
+- **Can't directly access Base state** from Jeju
 - **Prices change constantly** as people trade
 
 Without accurate prices, you risk:
@@ -23,7 +23,7 @@ Without accurate prices, you risk:
 ```
 Base L2 (Chainlink + Uniswap) 
     → Price Bot (off-chain)
-    → ManualPriceOracle on Jeju L3
+    → ManualPriceOracle on Jeju
     → LiquidityPaymaster uses prices
 ```
 
@@ -64,8 +64,8 @@ Base L2 (Chainlink + Uniswap)
 ```
 Base L2 (PriceSource contract reads prices)
     → L2CrossDomainMessenger
-    → CrossChainPriceRelay on Jeju L3
-    → ManualPriceOracle on Jeju L3
+    → CrossChainPriceRelay on Jeju
+    → ManualPriceOracle on Jeju
 ```
 
 **Implementation Status**: 🚧 **Prototype exists**
@@ -100,7 +100,7 @@ Base L2 (PriceSource contract reads prices)
 
 ### Option 3: Chainlink on Jeju
 
-**What**: Wait for Chainlink to deploy price feeds on Jeju L3.
+**What**: Wait for Chainlink to deploy price feeds on Jeju.
 
 **Implementation Status**: ❌ **Not available**
 - Chainlink exists on Base
@@ -114,7 +114,7 @@ Base L2 (PriceSource contract reads prices)
 - ✅ Trusted by all major protocols
 
 **Cons:**
-- ❌ Not available on Jeju L3
+- ❌ Not available on Jeju
 - ❌ Very expensive ($2k-10k/month for custom feed)
 - ❌ ElizaOS price feed doesn't exist
 - ❌ Would still need ETH/USD → elizaOS/ETH conversion

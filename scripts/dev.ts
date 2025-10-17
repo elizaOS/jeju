@@ -16,7 +16,7 @@ import { $ } from "bun";
 
 const startIndexer = process.argv.includes("--indexer");
 
-console.log("🚀 Starting Jeju L3 Development Environment...\n");
+console.log("🚀 Starting Jeju Development Environment...\n");
 
 console.log("1️⃣  Starting Kurtosis Localnet...");
 const result = await $`bun run localnet:start`.nothrow();

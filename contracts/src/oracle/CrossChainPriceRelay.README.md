@@ -108,7 +108,7 @@ Base L2:
     ↓ sendMessage()
   L2CrossDomainMessenger
     ↓ relay (1-2 minutes)
-Jeju L3:
+Jeju:
   L2CrossDomainMessenger
     ↓ receivePriceUpdate()
   CrossChainPriceRelay

@@ -1,6 +1,6 @@
 # DeFi Protocols on Jeju
 
-Guide to integrating with DeFi protocols deployed on Jeju L3.
+Guide to integrating with DeFi protocols deployed on Jeju.
 
 ## Available Protocols
 

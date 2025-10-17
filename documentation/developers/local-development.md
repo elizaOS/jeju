@@ -1,6 +1,6 @@
 # Local Development
 
-Complete guide to developing on Jeju L3 locally.
+Complete guide to developing on Jeju locally.
 
 ## Quick Start
 

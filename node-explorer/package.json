@@ -1,7 +1,7 @@
 {
   "name": "@jeju/node-explorer",
   "version": "1.0.0",
-  "description": "Node explorer dashboard for Jeju L3 network",
+  "description": "Node explorer dashboard for Jeju network",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3001",

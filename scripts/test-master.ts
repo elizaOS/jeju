@@ -329,7 +329,7 @@ function printSummary() {
     process.exit(1);
   } else {
     console.log(`${COLORS.GREEN}${COLORS.BRIGHT}✅ ALL TESTS PASSED!${COLORS.RESET}\n`);
-    console.log('🎉 Complete Jeju L3 test suite validated.\n');
+    console.log('🎉 Complete Jeju test suite validated.\n');
     
     if (skipped > 0) {
       console.log(`ℹ️  ${skipped} test(s) skipped (optional or unavailable)\n`);

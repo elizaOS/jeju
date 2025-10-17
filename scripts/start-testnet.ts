@@ -21,7 +21,7 @@
 
 import { $ } from "bun";
 
-console.log("🚀 Starting Jeju L3 Testnet Deployment...\n");
+console.log("🚀 Starting Jeju Testnet Deployment...\n");
 
 // Step 1: Validate configuration
 console.log("1️⃣  Validating configuration...");

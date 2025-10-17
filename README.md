@@ -1,4 +1,4 @@
-# Jeju L3
+# Jeju
 
 OP-Stack L3 blockchain settling on Base with Flashblocks, EigenDA, and Subsquid indexer.
 

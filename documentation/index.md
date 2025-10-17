@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: Jeju L3
+  name: Jeju
   text: Fast, Cheap Ethereum L3 Appchain
   tagline: Built by Eliza Labs, maintainers of ElizaOS. OP-Stack L3 settling on Base with sub-second blocks.
   image:
     src: /logo.svg
-    alt: Jeju L3
+    alt: Jeju
   actions:
     - theme: brand
       text: Get Started
@@ -42,13 +42,13 @@ features:
     details: Full EVM compatibility. Works with Foundry, Hardhat, and Remix.
 ---
 
-## About Jeju L3
+## About Jeju
 
 Jeju is a Layer 3 blockchain built by **Eliza Labs**, the maintainers of ElizaOS. It settles on Base (Layer 2), which settles on Ethereum (Layer 1).
 
 ### Architecture
 ```
-Ethereum L1 ← Base L2 ← Jeju L3
+Ethereum L1 ← Base L2 ← Jeju
 ```
 
 ### Technical Highlights
@@ -81,9 +81,9 @@ Ethereum L1 ← Base L2 ← Jeju L3
 ## Community & Support
 
 - **Discord**: [Join our community](https://discord.gg/jeju)
-- **Twitter**: [@jejul3](https://twitter.com/jejul3)
+- **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 - **GitHub**: [github.com/your-org/jeju](https://github.com/your-org/jeju)
-- **Telegram**: [t.me/jejul3](https://t.me/jejul3)
+- **Telegram**: [t.me/jejunetwork](https://t.me/jejunetwork)
 
 ## Next Steps
 

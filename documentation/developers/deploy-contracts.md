@@ -1,6 +1,6 @@
 # Deploy Contracts
 
-Guide to deploying smart contracts on Jeju L3.
+Guide to deploying smart contracts on Jeju.
 
 ## Quick Deploy
 

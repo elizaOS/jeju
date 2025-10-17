@@ -1,6 +1,6 @@
 # RPC Methods
 
-Jeju L3 supports all standard Ethereum JSON-RPC methods.
+Jeju supports all standard Ethereum JSON-RPC methods.
 
 ## Standard Methods
 

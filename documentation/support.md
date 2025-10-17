@@ -1,6 +1,6 @@
 # Support & Community
 
-Get help, connect with the community, and stay updated on Jeju L3.
+Get help, connect with the community, and stay updated on Jeju.
 
 ## Quick Help
 
@@ -44,7 +44,7 @@ Active community with 5000+ members:
 
 ### Telegram
 
-**[t.me/jejul3](https://t.me/jejul3)**
+**[t.me/jejunetwork](https://t.me/jejunetwork)**
 
 Quick updates and casual chat:
 - Price discussion
@@ -53,7 +53,7 @@ Quick updates and casual chat:
 
 ### Twitter/X
 
-**[@jejul3](https://twitter.com/jejul3)**
+**[@jejunetwork](https://twitter.com/jejunetwork)**
 
 Follow for:
 - Network announcements
@@ -406,7 +406,7 @@ Upcoming events:
 
 ### General
 
-**Q: What is Jeju L3?**  
+**Q: What is Jeju?**  
 A: A Layer 3 blockchain settling on Base L2, providing high performance and low costs while maintaining Ethereum security.
 
 **Q: How is L3 different from L2?**  
@@ -457,9 +457,9 @@ A: Yes! See [Running a Node](/developers/run-node).
 
 ### Social Media
 
-- **Twitter**: [@jejul3](https://twitter.com/jejul3)
+- **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 - **Discord**: [discord.gg/jeju](https://discord.gg/jeju)
-- **Telegram**: [t.me/jejul3](https://t.me/jejul3)
+- **Telegram**: [t.me/jejunetwork](https://t.me/jejunetwork)
 - **GitHub**: [github.com/your-org/jeju](https://github.com/your-org/jeju)
 - **LinkedIn**: [linkedin.com/company/jeju-l3](https://linkedin.com/company/jeju-l3)
 

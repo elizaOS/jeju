@@ -1,6 +1,6 @@
 # Jeju Network Smart Contracts
 
-Complete smart contract system for Jeju L3, including paymaster, liquidity management, price oracles, and ERC-8004 service registry.
+Complete smart contract system for Jeju, including paymaster, liquidity management, price oracles, and ERC-8004 service registry.
 
 ## Quick Start
 

@@ -1,10 +1,10 @@
-# Jeju L3 Helm Charts
+# Jeju Helm Charts
 
 Production-grade Kubernetes deployments for all Jeju infrastructure components.
 
 ## Overview
 
-This directory contains Helm charts for deploying Jeju L3 infrastructure on Kubernetes:
+This directory contains Helm charts for deploying Jeju infrastructure on Kubernetes:
 
 ### Core Services
 - **op-node** - OP-Stack consensus layer with Flashblocks

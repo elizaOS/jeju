@@ -1,4 +1,4 @@
-# Introduction to Jeju L3
+# Introduction to Jeju
 
 Jeju is a Layer 3 blockchain built on the OP-Stack, settling on Base L2. It provides fast block times and low costs while maintaining Ethereum security.
 
@@ -17,7 +17,7 @@ Jeju is a Layer 3 blockchain built on the OP-Stack, settling on Base L2. It prov
 └──────────────┬──────────────────────────────────────────┘
                │
 ┌──────────────▼──────────────────────────────────────────┐
-│ Jeju L3                                                  │
+│ Jeju                                                  │
 │ - 200ms Flashblocks                                      │
 │ - Full EVM compatibility                                 │
 │ - Pre-deployed DeFi protocols                            │
@@ -69,7 +69,7 @@ Transaction data stored on EigenDA with automatic fallback to calldata.
 
 ## Next Steps
 
-1. [**What is Jeju L3?**](./what-is-jeju) - Deep dive into the technology
+1. [**What is Jeju?**](./what-is-jeju) - Deep dive into the technology
 2. [**Quick Start**](./quick-start) - Run a local node
 3. [**Installation**](./installation) - Set up your development environment
 

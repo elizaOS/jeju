@@ -1,6 +1,6 @@
 # Installation Guide
 
-Complete guide to installing all prerequisites for Jeju L3 development.
+Complete guide to installing all prerequisites for Jeju development.
 
 ## System Requirements
 
@@ -192,7 +192,7 @@ Run this verification script:
 cat > verify-install.sh << 'EOF'
 #!/bin/bash
 
-echo "🔍 Verifying Jeju L3 Prerequisites..."
+echo "🔍 Verifying Jeju Prerequisites..."
 echo ""
 
 # Check Docker
@@ -238,7 +238,7 @@ else
 fi
 
 echo ""
-echo "🎉 Ready to build on Jeju L3!"
+echo "🎉 Ready to build on Jeju!"
 EOF
 
 chmod +x verify-install.sh

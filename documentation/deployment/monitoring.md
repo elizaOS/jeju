@@ -1,6 +1,6 @@
 # Monitoring
 
-Set up comprehensive monitoring for your Jeju L3 deployment.
+Set up comprehensive monitoring for your Jeju deployment.
 
 ## Quick Setup
 
