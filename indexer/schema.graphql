@@ -1,4 +1,4 @@
-# Comprehensive Jeju L2 Chain Schema
+# Comprehensive Jeju Chain Schema
 # Auto-generates TypeScript entities and GraphQL API
 
 type Block @entity {

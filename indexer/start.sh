@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Jeju L2 Indexer"
+echo "🚀 Starting Jeju Indexer"
 echo "================================"
 echo ""
 

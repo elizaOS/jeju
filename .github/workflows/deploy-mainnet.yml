@@ -247,11 +247,11 @@ jobs:
           L1_RPC_URL: https://mainnet.base.org
           L2_RPC_URL: https://rpc.jeju.network
         run: |
-          # Test L2 is responding
+          # Test Jeju is responding
           cast block latest --rpc-url $L2_RPC_URL
           
           # Test can send transactions
-          echo "✅ L2 RPC responding"
+          echo "✅ Jeju RPC responding"
           
           # Verify settlement layer connectivity
           cast block latest --rpc-url $L1_RPC_URL

@@ -335,9 +335,9 @@ Compare to L2 on Ethereum: **$455,000/month**
 ### Fee Structure
 
 ```
-Total Fee = L2 Execution Fee + L1 Data Fee
+Total Fee = Execution Fee + L1 Data Fee
 
-L2 Execution Fee:
+Execution Fee:
   = Gas Used × Gas Price
   = Covers sequencer costs
   = ~$0.0001 per transfer
@@ -352,12 +352,12 @@ Total: ~$0.0002 per transfer
 
 ### Fee Collection
 
-Fees accumulate in three vaults:
+Fees accumulate in three vaults on Jeju:
 
 ```solidity
-SequencerFeeVault: 0x4200000000000000000000000000000000000011
-BaseFeeVault:      0x4200000000000000000000000000000000000019
-L1FeeVault:        0x420000000000000000000000000000000000001A
+SequencerFeeVault: 0x4200000000000000000000000000000000000011  // Execution fees
+BaseFeeVault:      0x4200000000000000000000000000000000000019  // EIP-1559 base fees
+L1FeeVault:        0x420000000000000000000000000000000000001A  // Settlement layer fees
 ```
 
 Operators withdraw periodically.

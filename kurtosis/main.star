@@ -1,4 +1,4 @@
-# Jeju L2 Localnet - Minimal Working Implementation for macOS
+# Jeju Localnet - Minimal Working Implementation for macOS
 # Pure TCP ports only - no UDP/QUIC issues!
 
 def run(plan, args={}):
@@ -11,7 +11,7 @@ def run(plan, args={}):
     - Only TCP ports = works on macOS Docker Desktop
     """
     
-    plan.print("🚀 Starting Jeju L2 Localnet...")
+    plan.print("🚀 Starting Jeju Localnet...")
     plan.print("")
     
     # L1: Geth in dev mode
@@ -81,7 +81,7 @@ def run(plan, args={}):
     
     plan.print("")
     plan.print("=" * 70)
-    plan.print("✅ Jeju L2 Deployed!")
+    plan.print("✅ Localnet Deployed!")
     plan.print("=" * 70)
     plan.print("")
     plan.print("Get endpoints with:")

@@ -377,7 +377,7 @@ forge create src/Counter.sol:Counter \
 - [**Local Development**](./local-development) - Deep dive into development
 - [**Deploy Contracts**](./deploy-contracts) - Advanced deployment
 - [**DeFi Integration**](./defi-protocols) - Use DeFi protocols
-- [**Run a Node**](./run-node) - Operate your own infrastructure
+- [**Run an RPC Node**](/developers/run-rpc-node) - Operate your own infrastructure
 
 ## Need Help?
 

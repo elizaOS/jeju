@@ -10,13 +10,15 @@
 cd indexer
 
 # Test everything works
-bun run test
+npm run test
 
-# Start indexing
-bun run dev
+# Start indexing (auto-cleans stale containers)
+npm run dev
 ```
 
 **Access**: http://localhost:4350/graphql
+
+> **Note**: The `dev` command automatically cleans up any stale Docker containers before starting, so you never get container name conflicts.
 
 ---
 

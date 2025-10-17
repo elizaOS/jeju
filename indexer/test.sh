@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🧪 Testing Jeju L2 Indexer"
+echo "🧪 Testing Jeju Indexer"
 echo "=========================="
 echo ""
 

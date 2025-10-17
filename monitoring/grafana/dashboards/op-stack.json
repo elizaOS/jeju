@@ -1,6 +1,6 @@
 {
   "dashboard": {
-    "title": "Jeju L2 - OP Stack Overview",
+    "title": "Jeju - OP Stack Overview",
     "tags": ["op-stack", "l2", "jeju"],
     "timezone": "browser",
     "refresh": "30s",

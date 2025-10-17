@@ -24,8 +24,8 @@
       },
       "migration:generate": {
         "description": "Generate a DB migration matching the TypeORM entities",
-        "deps": ["build", "migration:clean"],
-        "cmd": ["squid-typeorm-migration", "generate"],
+        "deps": ["migration:clean"],
+        "cmd": ["squid-typeorm-migration", "generate"]
       },
       "migration:clean": {
         "description": "Clean the migrations folder",
@@ -54,6 +54,10 @@
         "deps": ["migration:apply"],
         "cmd": ["node", "lib/main.js"],
         "hidden": true
+      },
+      "process:dev": {
+        "description": "Start the squid processor (dev mode, no build)",
+        "cmd": ["node", "--require=dotenv/config", "lib/main.js"]
       },
       "serve": {
         "description": "Start the GraphQL API server",

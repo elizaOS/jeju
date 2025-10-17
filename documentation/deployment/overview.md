@@ -98,7 +98,7 @@ You'll deploy these components:
 
 ### Smart Contracts
 
-On Base (your L1):
+On Base (Jeju's settlement layer):
 - `OptimismPortal` - Main entry point
 - `L2OutputOracle` - Stores state roots
 - `L1StandardBridge` - Asset bridging
@@ -106,7 +106,7 @@ On Base (your L1):
 - `SystemConfig` - Configuration
 - And more...
 
-On Jeju (your L2):
+On Jeju (your L3):
 - Predeploys (standard addresses)
 - DeFi protocols (optional)
 - Your application contracts

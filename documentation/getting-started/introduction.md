@@ -1,6 +1,6 @@
 # Introduction to Jeju L3
 
-Jeju is a Layer 3 blockchain built by **Eliza Labs** (maintainers of ElizaOS) on the OP-Stack, settling on Base L2. It provides fast block times and low costs while maintaining Ethereum security.
+Jeju is a Layer 3 blockchain built on the OP-Stack, settling on Base L2. It provides fast block times and low costs while maintaining Ethereum security.
 
 ## Architecture Overview
 
@@ -41,19 +41,6 @@ Inherits Ethereum security through Base's fraud proofs and Ethereum finality.
 
 ### 📦 EigenDA Integration
 Transaction data stored on EigenDA with automatic fallback to calldata.
-
-### 🏦 DeFi Ready
-Pre-deployed protocols:
-- **Uniswap V4** - AMM with hooks
-- **Synthetix V3** - Decentralized perpetuals
-- **Compound V3** - Lending markets
-- **ERC-4337** - Account abstraction support
-
-### 🚀 Developer Experience
-- Full EVM compatibility
-- Works with existing tools (Foundry, Hardhat, Remix)
-- Local development environment
-- Comprehensive documentation
 
 ## Technical Stack
 

@@ -87,10 +87,6 @@ temp/
 generated/
 *.generated.*
 
-# Snapshots
-snapshots/
-*.snapshot
-
 # AWS
 .aws/
 
@@ -100,8 +96,7 @@ grafana-data/
 loki-data/
 
 # Node modules
-node_modules/
-node_modules
+**/node_modules/
 
 # Documentation build artifacts
 documentation/.vitepress/cache/
@@ -111,3 +106,12 @@ documentation/node_modules/
 # Indexer build artifacts
 indexer/lib/
 indexer/node_modules/
+
+# Forge deployment artifacts (broadcast directories)
+broadcast/
+**/broadcast/
+contracts/broadcast/
+registry/broadcast/
+
+# Root lib directory (duplicate - use contracts/lib or registry/lib instead)
+/lib/

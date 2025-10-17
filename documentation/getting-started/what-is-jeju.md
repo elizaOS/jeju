@@ -7,13 +7,13 @@ Jeju is a Layer 3 blockchain - an application-specific rollup that settles on Ba
 ### Traditional L2 Architecture
 ```
 ┌─────────────┐
-│ Ethereum L1 │ ← Your L2 posts here ($450k/month)
+│ Ethereum L1 │ ← L2 posts here ($450k/month)
 └─────────────┘
        ↑
        │ Expensive!
        │
 ┌─────────────┐
-│  Your L2    │
+│  Typical L2 │
 └─────────────┘
 ```
 

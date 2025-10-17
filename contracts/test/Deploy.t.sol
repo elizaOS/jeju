@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
 
@@ -13,7 +13,7 @@ contract DeployTest is Test {
         // Setup runs before each test
     }
     
-    function testFoundrySetup() public {
+    function testFoundrySetup() public pure {
         // Basic test to verify Foundry is working
         assertTrue(true);
     }

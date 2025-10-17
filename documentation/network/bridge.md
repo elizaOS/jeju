@@ -180,7 +180,7 @@ See [Bridge Custom Tokens](/developers/bridge-tokens) for details.
 **On Base (L1):**
 <ContractAddresses network="mainnet" layer="l1" />
 
-**On Jeju (L2):**
+**On Jeju (L3):**
 <ContractAddresses network="mainnet" layer="l2" />
 
 ### Testnet
@@ -188,7 +188,7 @@ See [Bridge Custom Tokens](/developers/bridge-tokens) for details.
 **On Base Sepolia (L1):**
 <ContractAddresses network="testnet" layer="l1" />
 
-**On Jeju Testnet (L2):**
+**On Jeju Testnet (L3):**
 <ContractAddresses network="testnet" layer="l2" />
 
 ## Programmatic Bridging

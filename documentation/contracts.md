@@ -40,12 +40,12 @@ Provides L1 (Base) gas price information for fee calculation.
 ```typescript
 L1Block: '0x4200000000000000000000000000000000000015'
 ```
-Stores L1 (Base) block information on L2.
+Stores L1 (Base) block information on Jeju.
 
 ```typescript
 SequencerFeeVault: '0x4200000000000000000000000000000000000011'
 ```
-Collects L2 execution fees (sequencer revenue).
+Collects Jeju execution fees (sequencer revenue).
 
 ```typescript
 BaseFeeVault: '0x4200000000000000000000000000000000000019'
@@ -95,14 +95,19 @@ Mainnet contract addresses will be added after mainnet deployment.
 
 ```typescript
 // On Base Testnet (Sepolia)
-OptimismPortal:          '0x...' // TODO: Add after deployment
-L2OutputOracle:          '0x...' // TODO: Add after deployment
-L1CrossDomainMessenger:  '0x...' // TODO: Add after deployment
-L1StandardBridge:        '0x...' // TODO: Add after deployment
-L1ERC721Bridge:          '0x...' // TODO: Add after deployment
-SystemConfig:            '0x...' // TODO: Add after deployment
-AddressManager:          '0x...' // TODO: Add after deployment
-ProxyAdmin:              '0x...' // TODO: Add after deployment
+// Deploy with: cd contracts && forge script script/Deploy.s.sol --rpc-url <base-sepolia-rpc> --broadcast --verify
+// Addresses will be saved to: contracts/deployments/testnet/l1-contracts.json
+
+OptimismPortal:          'TBD - Deploy L1 contracts first'
+L2OutputOracle:          'TBD - Deploy L1 contracts first'
+L1CrossDomainMessenger:  'TBD - Deploy L1 contracts first'
+L1StandardBridge:        'TBD - Deploy L1 contracts first'
+L1ERC721Bridge:          'TBD - Deploy L1 contracts first'
+SystemConfig:            'TBD - Deploy L1 contracts first'
+AddressManager:          'TBD - Deploy L1 contracts first'
+ProxyAdmin:              'TBD - Deploy L1 contracts first'
+
+// See deployment guide: documentation/deployment/overview.md
 ```
 
 ### Proxy Contracts
@@ -125,18 +130,21 @@ Next-generation AMM with custom hooks.
 
 ```typescript
 // Testnet
-PoolManager:             '0x...' // TODO: Add after deployment
-SwapRouter:              '0x...'
-PositionManager:         '0x...'
-QuoterV4:                '0x...'
-StateView:               '0x...'
+// Deploy with: bun run deploy:defi --network testnet
+// Addresses will be saved to: contracts/deployments/testnet/defi.json
+
+PoolManager:             'TBD - DeFi protocols not yet deployed'
+SwapRouter:              'TBD - DeFi protocols not yet deployed'
+PositionManager:         'TBD - DeFi protocols not yet deployed'
+QuoterV4:                'TBD - DeFi protocols not yet deployed'
+StateView:               'TBD - DeFi protocols not yet deployed'
 
 // Mainnet
-PoolManager:             '0x...' // TODO: Add after deployment
-SwapRouter:              '0x...'
-PositionManager:         '0x...'
-QuoterV4:                '0x...'
-StateView:               '0x...'
+PoolManager:             'TBD - DeFi protocols not yet deployed'
+SwapRouter:              'TBD - DeFi protocols not yet deployed'
+PositionManager:         'TBD - DeFi protocols not yet deployed'
+QuoterV4:                'TBD - DeFi protocols not yet deployed'
+StateView:               'TBD - DeFi protocols not yet deployed'
 ```
 
 **Documentation**: [Uniswap V4 Docs](https://docs.uniswap.org/contracts/v4/overview)
@@ -147,20 +155,23 @@ Decentralized perpetuals and synthetic assets.
 
 ```typescript
 // Testnet
-CoreProxy:               '0x...' // TODO: Add after deployment
-AccountProxy:            '0x...'
-USDProxy:                '0x...'
-PerpsMarketProxy:        '0x...'
-SpotMarketProxy:         '0x...'
-OracleManager:           '0x...'
+// Deploy with: bun run deploy:defi --network testnet
+// Synthetix V3 requires additional configuration - see DeFi deployment guide
 
-// Mainnet
-CoreProxy:               '0x...' // TODO: Add after deployment
-AccountProxy:            '0x...'
-USDProxy:                '0x...'
-PerpsMarketProxy:        '0x...'
-SpotMarketProxy:         '0x...'
-OracleManager:           '0x...'
+CoreProxy:               'TBD - Synthetix not yet deployed'
+AccountProxy:            'TBD - Synthetix not yet deployed'
+USDProxy:                'TBD - Synthetix not yet deployed'
+PerpsMarketProxy:        'TBD - Synthetix not yet deployed'
+SpotMarketProxy:         'TBD - Synthetix not yet deployed'
+OracleManager:           'TBD - Synthetix not yet deployed'
+
+// Mainnet  
+CoreProxy:               'TBD - Synthetix not yet deployed'
+AccountProxy:            'TBD - Synthetix not yet deployed'
+USDProxy:                'TBD - Synthetix not yet deployed'
+PerpsMarketProxy:        'TBD - Synthetix not yet deployed'
+SpotMarketProxy:         'TBD - Synthetix not yet deployed'
+OracleManager:           'TBD - Synthetix not yet deployed'
 ```
 
 **Documentation**: [Synthetix V3 Docs](https://docs.synthetix.io/v/v3/)

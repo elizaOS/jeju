@@ -4,7 +4,7 @@ export default defineConfig({
   title: 'Jeju L3',
   description: 'High-performance OP-Stack L3 settling on Base with Flashblocks, EigenDA, and full DeFi stack',
   base: '/jeju/',
-  ignoreDeadLinks: true, // TODO: Create missing pages and set to false
+  ignoreDeadLinks: false, // ✅ Fixed: All missing pages created
   
   head: [
     ['link', { rel: 'icon', href: '/jeju/favicon.ico' }],

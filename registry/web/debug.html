@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERC-8004 Discovery Debug</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+    <h1>ERC-8004 Discovery Debug</h1>
+    <button onclick="testDiscovery()">Test Discovery</button>
+    <pre id="output"></pre>
+
+    <script>
+        function log(message) {
+            document.getElementById('output').innerHTML += message + '\n';
+            console.log(message);
+        }
+
+        async function testDiscovery() {
+            document.getElementById('output').innerHTML = '';
+            log('🔍 Starting discovery test...');
+
+            const contracts = {
+                sepolia: "0x127C86a24F46033E77C347258354ee4C739b139C",
+                base_sepolia: "0x19fad4adD9f8C4A129A078464B22E1506275FbDd",
+                optimism_sepolia: "0x19fad4adD9f8C4A129A078464B22E1506275FbDd"
+            };
+
+            const rpcs = {
+                sepolia: "https://ethereum-sepolia-rpc.publicnode.com",
+                base_sepolia: "https://sepolia.base.org",
+                optimism_sepolia: "https://sepolia.optimism.io"
+            };
+
+            const abi = [
+                "function getAgentCount() external view returns (uint256)",
+                "function getAgent(uint256 agentId) external view returns (tuple(uint256 agentId, string agentDomain, address agentAddress))"
+            ];
+
+            for (const [network, contractAddress] of Object.entries(contracts)) {
+                try {
+                    log(`\n🌐 Testing ${network}...`);
+                    log(`Contract: ${contractAddress}`);
+                    log(`RPC: ${rpcs[network]}`);
+
+                    const provider = new ethers.providers.JsonRpcProvider(rpcs[network]);
+                    const contract = new ethers.Contract(contractAddress, abi, provider);
+
+                    // Test getAgentCount
+                    log('📞 Calling getAgentCount()...');
+                    const count = await contract.getAgentCount();
+                    log(`📊 Agent count: ${count.toString()}`);
+
+                    // If there are agents, get the first few
+                    if (count.gt(0)) {
+                        const maxToShow = Math.min(3, count.toNumber());
+                        for (let i = 1; i <= maxToShow; i++) {
+                            try {
+                                log(`📞 Getting agent ${i}...`);
+                                const agent = await contract.getAgent(i);
+                                log(`👤 Agent ${i}:`);
+                                log(`   ID: ${agent.agentId.toString()}`);
+                                log(`   Domain: ${agent.agentDomain}`);
+                                log(`   Address: ${agent.agentAddress}`);
+
+                                // Test AgentCard fetch
+                                try {
+                                    const agentCardUrl = `https://${agent.agentDomain}/.well-known/agent-card.json`;
+                                    log(`   AgentCard URL: ${agentCardUrl}`);
+
+                                    const response = await fetch(agentCardUrl, { 
+                                        signal: AbortSignal.timeout(5000),
+                                        headers: { 'Accept': 'application/json' }
+                                    });
+
+                                    if (response.ok) {
+                                        const agentCard = await response.json();
+                                        log(`   ✅ AgentCard found: ${agentCard.name || 'Unnamed'}`);
+                                        if (agentCard.aiModel) {
+                                            log(`   🧠 AI Model: ${agentCard.aiModel.model} (${agentCard.aiModel.provider})`);
+                                        }
+                                    } else {
+                                        log(`   ⚠️ AgentCard not accessible (${response.status})`);
+                                    }
+                                } catch (cardError) {
+                                    log(`   ❌ AgentCard fetch failed: ${cardError.message}`);
+                                }
+                            } catch (error) {
+                                log(`   ❌ Error fetching agent ${i}: ${error.message}`);
+                            }
+                        }
+                    } else {
+                        log('   No agents registered on this network');
+                    }
+
+                } catch (error) {
+                    log(`❌ Error testing ${network}: ${error.message}`);
+                }
+            }
+
+            log('\n✅ Discovery test complete!');
+        }
+    </script>
+</body>
+</html>

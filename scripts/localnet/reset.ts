@@ -8,7 +8,7 @@ const ENCLAVE_NAME = "jeju-localnet";
 const OUTPUT_DIR = join(process.cwd(), ".kurtosis");
 
 async function main() {
-  console.log("🔄 Resetting Jeju L2 Localnet...");
+  console.log("🔄 Resetting Jeju Localnet...");
   
   // Remove the enclave
   console.log("🧹 Removing existing enclave...");

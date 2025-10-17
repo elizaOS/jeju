@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: jeju-explorer-api
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+    volumes:
+      - ./node-explorer.db:/app/node-explorer.db
+    networks:
+      - jeju-explorer
+
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile.collector
+    container_name: jeju-explorer-collector
+    restart: unless-stopped
+    environment:
+      - API_URL=http://api:3002
+      - COLLECTOR_PRIVATE_KEY=${COLLECTOR_PRIVATE_KEY}
+      - SCAN_INTERVAL=300000
+    depends_on:
+      - api
+    networks:
+      - jeju-explorer
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jeju-explorer-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3002
+    depends_on:
+      - api
+    networks:
+      - jeju-explorer
+
+networks:
+  jeju-explorer:
+    name: jeju-explorer
+

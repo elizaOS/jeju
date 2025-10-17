@@ -9,7 +9,7 @@ const ENCLAVE_NAME = "jeju-localnet";
 const OUTPUT_DIR = join(process.cwd(), ".kurtosis");
 
 async function main() {
-  console.log("🚀 Starting Jeju L2 Localnet...");
+  console.log("🚀 Starting Jeju Localnet...");
   
   // Ensure output directory exists
   if (!existsSync(OUTPUT_DIR)) {
@@ -36,7 +36,7 @@ async function main() {
   await $`kurtosis enclave rm -f ${ENCLAVE_NAME}`.quiet().nothrow();
 
   // Start the localnet
-  console.log("📦 Deploying Jeju L2 stack with Kurtosis...");
+  console.log("📦 Deploying Jeju stack with Kurtosis...");
   console.log("   This may take 5-10 minutes on first run...");
   console.log("   - Deploying L1 Ethereum (Geth dev mode)");
   console.log("   - Deploying L2 Execution Layer (op-geth dev mode)");
@@ -61,11 +61,11 @@ async function main() {
   const l2Port = l2RpcPort.trim().split(":")[1];
   
   // Extract and display key endpoints
-  console.log("\n✅ Jeju L2 Localnet is running!");
+  console.log("\n✅ Jeju Localnet is running!");
   console.log("\n📌 Key Endpoints:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`   L1 RPC:  http://127.0.0.1:${l1Port}`);
-  console.log(`   L2 RPC:  http://127.0.0.1:${l2Port}`);
+  console.log(`   L1 RPC: http://127.0.0.1:${l1Port}`);
+  console.log(`   L2 RPC: http://127.0.0.1:${l2Port}`);
   console.log("\n🔧 Chain Info:");
   console.log("   L1 Chain ID: 1337");
   console.log("   L2 Chain ID: 1337 (dev mode)");
