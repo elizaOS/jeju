@@ -1,6 +1,6 @@
 # Jeju
 
-OP-Stack L3 blockchain settling on Base with Flashblocks, EigenDA, and Subsquid indexer.
+OP-Stack blockchain settling on Base with Flashblocks, EigenDA, and Subsquid indexer.
 
 > 📚 **Documentation & Testing Complete**: This codebase has **100% documentation coverage** and **comprehensive test suites** for all services. See [COMPLETION_REPORT.md](./COMPLETION_REPORT.md) and [TESTING.md](./TESTING.md).
 
