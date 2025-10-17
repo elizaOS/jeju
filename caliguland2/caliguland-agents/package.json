@@ -1,0 +1,30 @@
+{
+  "name": "@caliguland/agents",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "start": "bun run dist/index.js",
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "test": "bun test",
+    "verify": "bun run tests/verify-setup.ts"
+  },
+  "dependencies": {
+    "@elizaos/core": "^1.6.1",
+    "@elizaos/plugin-bootstrap": "^1.6.1",
+    "@elizaos/plugin-openai": "^1.5.15",
+    "@elizaos/plugin-sql": "^1.6.1",
+    "ethers": "^6.13.4",
+    "uuid": "^11.0.5",
+    "zod": "^3.24.1",
+    "@phala/dstack-sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "@types/node": "^20.10.5",
+    "typescript": "^5.6.3"
+  }
+}
+

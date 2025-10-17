@@ -1,0 +1,409 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Gateway (nginx reverse proxy with auth)
+  # ==========================================
+  caliguland-gateway:
+    build:
+      context: ./caliguland-gateway
+      dockerfile: Dockerfile
+    container_name: caliguland-gateway
+    ports:
+      - "8080:80"
+    depends_on:
+      - caliguland-auth
+      - caliguland-game
+      - aio-sandbox
+    restart: unless-stopped
+    networks:
+      - caliguland-network
+
+  # ==========================================
+  # Authentication Service (TypeScript/Express)
+  # ==========================================
+  caliguland-auth:
+    build:
+      context: ./caliguland-auth
+      dockerfile: Dockerfile
+    container_name: caliguland-auth
+    environment:
+      - VIBEVM_AUTH_ENABLED=${VIBEVM_AUTH_ENABLED:-true}
+      - VIBEVM_USERNAME=${VIBEVM_USERNAME:-admin}
+      - VIBEVM_PASSWORD=${VIBEVM_PASSWORD:-vibevm4454}
+      - JWT_KEY_PATH=${JWT_KEY_PATH:-caliguland/auth/signing}
+      - JWT_PURPOSE=${JWT_PURPOSE:-caliguland-session}
+      - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-24}
+      - DSTACK_SOCKET_PATH=${DSTACK_SOCKET_PATH:-/var/run/dstack.sock}
+    expose:
+      - "3000"
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock
+    restart: unless-stopped
+    networks:
+      - caliguland-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # Prediction Game Server (TypeScript/Express)
+  # ==========================================
+  caliguland-game:
+    build:
+      context: ./caliguland-game
+      dockerfile: Dockerfile
+    container_name: caliguland-game
+    environment:
+      - PORT=8000
+      - GAME_DURATION_MS=${GAME_DURATION_MS:-3600000}
+      - MAX_PLAYERS=${MAX_PLAYERS:-20}
+      - MIN_PLAYERS=${MIN_PLAYERS:-5}
+      - DSTACK_SOCKET_PATH=${DSTACK_SOCKET_PATH:-/var/run/dstack.sock}
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"  # Expose game API
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock
+      - game_data:/app/data
+    restart: unless-stopped
+    networks:
+      - caliguland-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # AIO Sandbox (no direct port exposure)
+  # ==========================================
+  aio-sandbox:
+    image: ghcr.io/agent-infra/sandbox:1.0.0.126
+    container_name: aio-sandbox
+    # NOTE: Ports are now ONLY exposed internally (no external access)
+    expose:
+      - "8079"
+      - "8000"
+      - "8080"
+      - "8089"
+      - "8091"
+      - "8100"
+      - "8101"
+      - "8102"
+      - "8200"
+      - "9222"
+    ports:
+      # NOTE: Add port mapping for internal services here if you need to access them from outside the sandbox
+      - "8000:8000"
+    environment:
+      # Git repository configuration (format: owner/repo-name)
+      - GITHUB_REPO=${GITHUB_REPO:-Phala-Network/erc-8004-tee-agent}
+      - GH_TOKEN=${GH_TOKEN}
+      ## OPTIONAL ENVIRONMENT VARIABLES FOR CUSTOMIZATION - CHANGE IF YOU KNOW WHAT YOU ARE DOING ##
+      - USER=gem  # Force to gem, not root
+      - USER_UID=${USER_UID:-1000}
+      - USER_GID=${USER_GID:-1000}
+      - LOG_DIR=${LOG_DIR:-/tmp/logs}
+      - GEM_SERVER_PORT=${GEM_SERVER_PORT:-8088}
+      - PUBLIC_PORT=${PUBLIC_PORT:-8080}
+      - TZ=${TZ:-Asia/Singapore}
+      - DISPLAY_WIDTH=${DISPLAY_WIDTH:-1920}
+      - DISPLAY_HEIGHT=${DISPLAY_HEIGHT:-1080}
+      # Additional environment variables for services
+      - DISPLAY=:99.0
+      - HOME=/home/gem
+      - XDG_RUNTIME_DIR=/tmp/runtime-gem
+      - PYTHONPATH=/opt/gem
+      - BROWSER_EXECUTABLE_PATH=/usr/local/bin/browser
+      - PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/browser
+      - BROWSER_REMOTE_DEBUGGING_PORT=${BROWSER_REMOTE_DEBUGGING_PORT:-9222}
+      - WEBSOCKET_PROXY_PORT=${WEBSOCKET_PROXY_PORT:-6080}
+      - VNC_SERVER_PORT=${VNC_SERVER_PORT:-5900}
+      - AUTH_BACKEND_PORT=${AUTH_BACKEND_PORT:-8081}
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8089}
+      - SUPERVISOR_GROUP_NAME=python-server
+      - SUPERVISOR_SERVER_URL=unix:///var/run/supervisor.sock
+      - WORKSPACE=/home/gem
+      - BROWSER_USER_AGENT=${BROWSER_USER_AGENT:-}
+      - BROWSER_NO_SANDBOX=${BROWSER_NO_SANDBOX:---no-sandbox}
+      - BROWSER_EXTRA_ARGS=${BROWSER_EXTRA_ARGS:-}
+      - HOMEPAGE=${HOMEPAGE:-}
+      - PROXY_SERVER=${PROXY_SERVER:-}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+      - DNS_OVER_HTTPS_TEMPLATES=${DNS_OVER_HTTPS_TEMPLATES:-}
+      - NGINX_LOG_LEVEL=${NGINX_LOG_LEVEL:-debug}
+      - DEBIAN_FRONTEND=noninteractive
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - OTEL_SDK_DISABLED=true
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+      - LANGUAGE=en_US:en
+    volumes:
+      - sandbox_data:/workspace
+      - /var/run/dstack.sock:/var/run/dstack.sock
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+
+        # Create a non-root user
+        if ! getent group $$USER >/dev/null; then
+          groupadd --gid $$USER_GID $$USER
+        fi
+        if ! id -u $$USER >/dev/null 2>&1; then
+          useradd --uid $$USER_UID --gid $$USER --shell /bin/bash --create-home $$USER
+        fi
+
+        # Add user to sudoers with NOPASSWD (only if we have permission)
+        if [ -w /etc/sudoers.d ]; then
+          mkdir -p /etc/sudoers.d
+          # Check if sudoers entry already exists to avoid duplicates
+          if [ ! -f /etc/sudoers.d/$$USER ]; then
+            echo "$$USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$$USER
+            chmod 440 /etc/sudoers.d/$$USER
+          fi
+        else
+          echo "Warning: Cannot modify sudoers (running in restricted environment)"
+        fi
+
+        # 确保必要的目录存在
+        mkdir -p /var/run/tinyproxy
+        chmod 755 /var/run/tinyproxy
+        chown nobody /var/run/tinyproxy
+        mkdir -p /home/$$USER/.npm-global/lib
+        chmod 755 /home/$$USER/.npm-global
+        # Only chown if /opt/jupyter exists
+        [ -d /opt/jupyter ] && chown -R $$USER:$$USER /opt/jupyter
+
+        # bashrc - only move if source exists and destination doesn't
+        [ -f /opt/gem/bashrc ] && [ ! -f /home/$$USER/.bashrc ] && mv /opt/gem/bashrc /home/$$USER/.bashrc
+
+        if [ -f /home/$$USER/.bashrc ]; then
+          # Add GH_TOKEN if provided
+          if [ -n "$${GH_TOKEN}" ]; then
+            if ! grep -q "export GH_TOKEN" /home/$$USER/.bashrc; then
+              echo "export GH_TOKEN=\"$${GH_TOKEN}\"" >> /home/$$USER/.bashrc
+            fi
+          fi
+        fi
+
+        # code-server
+        mkdir -p /home/$$USER/.config/code-server /home/$$USER/.local/share/code-server
+        chmod -R 755 /home/$$USER/.local/share/code-server/
+        # Only move if source exists and destination doesn't
+        [ -d /opt/gem/vscode ] && [ ! -d /home/$$USER/.config/code-server/vscode ] && mv /opt/gem/vscode /home/$$USER/.config/code-server/vscode
+
+        # jupyter - only move if source exists and destination doesn't
+        [ -d /opt/gem/jupyter ] && [ ! -d /home/$$USER/.jupyter ] && mv /opt/gem/jupyter /home/$$USER/.jupyter
+
+        # matplotlib
+        mkdir -p /home/$$USER/.config/matplotlib
+        # Only move if source exists and destination doesn't
+        [ -f /opt/gem/matplotlibrc ] && [ ! -f /home/$$USER/.config/matplotlib/matplotlibrc ] && mv /opt/gem/matplotlibrc /home/$$USER/.config/matplotlib/matplotlibrc
+
+        # Nginx - only process if template exists
+        if [ -f "/opt/gem/nginx/nginx.python_srv.conf" ]; then
+          envsubst '$${GEM_SERVER_PORT}' <"/opt/gem/nginx/nginx.python_srv.conf" >"/opt/gem/nginx/python_srv.conf"
+          rm -rf /opt/gem/nginx/nginx.python_srv.conf
+        fi
+
+        # Set up GitHub authentication and clone repository if configured
+        if [ -n "$${GITHUB_REPO}" ]; then
+          echo "Setting up GitHub repository: $$GITHUB_REPO"
+
+          # Authenticate with GitHub CLI if token is provided
+          if [ -n "$${GH_TOKEN}" ]; then
+            echo "Authenticating with GitHub..."
+            # Set up git credentials for token-based authentication
+            su - $$USER -c "git config --global credential.helper store"
+            su - $$USER -c "echo \"https://\$${GH_TOKEN}@github.com\" > ~/.git-credentials"
+            # Also configure gh CLI (skip validation if read:org scope is missing)
+            su - $$USER -c "echo \"$${GH_TOKEN}\" | GH_TOKEN=\"$${GH_TOKEN}\" gh auth login --with-token --skip-ssh-key 2>/dev/null || true"
+            echo "GitHub authentication configured"
+          fi
+
+          # Extract repo name from owner/repo format
+          REPO_NAME=$$(echo "$$GITHUB_REPO" | cut -d'/' -f2)
+
+          cd /home/$$USER
+          if [ -d "$$REPO_NAME" ]; then
+            echo "Repository already exists, pulling latest..."
+            su - $$USER -c "cd $$REPO_NAME && git pull" || echo "Pull failed, continuing..."
+          else
+            echo "Cloning repository..."
+            su - $$USER -c "git clone https://github.com/$$GITHUB_REPO.git" || echo "Clone failed, continuing..."
+          fi
+
+          # Ensure ownership of cloned repo
+          [ -d "$$REPO_NAME" ] && chown -R $$USER:$$USER /home/$$USER/$$REPO_NAME 2>/dev/null || true
+          echo "GitHub repository setup completed"
+        fi
+
+        # in the end ensure the home directory is owned by the user
+        chown -R $$USER:$$USER /home/$$USER
+
+        mkdir -p $$LOG_DIR
+        touch $$LOG_DIR/entrypoint.log
+
+        # Export all necessary environment variables for supervisord and child processes
+        export IMAGE_VERSION=$$(cat /etc/aio_version 2>/dev/null || echo "unknown")
+        export OTEL_SDK_DISABLED=true
+        export NGINX_LOG_LEVEL=$${NGINX_LOG_LEVEL:-debug}
+        export NPM_CONFIG_PREFIX=/home/$$USER/.npm-global
+        export PATH=$$NPM_CONFIG_PREFIX/bin:$$PATH
+        export HOMEPAGE=$${HOMEPAGE:-""}
+        export BROWSER_NO_SANDBOX=$${BROWSER_NO_SANDBOX:-"--no-sandbox"}
+        export BROWSER_EXTRA_ARGS="$${BROWSER_NO_SANDBOX} --lang=en-US --time-zone-for-testing=$${TZ} --window-position=0,0 --window-size=$${DISPLAY_WIDTH},$${DISPLAY_HEIGHT}  --homepage $${HOMEPAGE} $${BROWSER_EXTRA_ARGS}"
+
+        # Additional exports for gem-server
+        export HOME=/home/$$USER
+        export USER=$$USER
+        export DISPLAY=:99.0
+        export XDG_RUNTIME_DIR=/tmp/runtime-$$USER
+        mkdir -p $$XDG_RUNTIME_DIR
+        chown $$USER:$$USER $$XDG_RUNTIME_DIR
+
+        # Ensure gem-server dependencies are available
+        export PYTHONPATH=/opt/gem:$$PYTHONPATH
+        export GEM_SERVER_PORT=$${GEM_SERVER_PORT:-8088}
+        export PUBLIC_PORT=$${PUBLIC_PORT:-8080}
+        export WORKSPACE=/home/$$USER
+        export SUPERVISOR_GROUP_NAME=python-server
+        export SUPERVISOR_SERVER_URL=unix:///var/run/supervisor.sock
+        export BROWSER_EXECUTABLE_PATH=/usr/local/bin/browser
+        export PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/browser
+        export BROWSER_REMOTE_DEBUGGING_PORT=$${BROWSER_REMOTE_DEBUGGING_PORT:-9222}
+        export WEBSOCKET_PROXY_PORT=$${WEBSOCKET_PROXY_PORT:-6080}
+        export VNC_SERVER_PORT=$${VNC_SERVER_PORT:-5900}
+        export AUTH_BACKEND_PORT=$${AUTH_BACKEND_PORT:-8081}
+        export MCP_SERVER_PORT=$${MCP_SERVER_PORT:-8089}
+        export MCP_SERVERS_CONFIG=$${MCP_SERVERS_CONFIG:-/opt/gem/mcp-hub.json}
+        export MCP_FILTER_SERVERS=$${MCP_FILTER_SERVERS:-sandbox}
+        export LANG=en_US.UTF-8
+        export LC_ALL=en_US.UTF-8
+        export LANGUAGE=en_US:en
+        export DEBIAN_FRONTEND=noninteractive
+        export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+        export LITELLM_LOCAL_MODEL_COST_MAP=True
+        export SESSION_ID=$${SESSION_ID:-$$(cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "session-$$(date +%s)-$$RANDOM")}
+        export DISPLAY_DEPTH=$${DISPLAY_DEPTH:-24}
+        export MAX_SHELL_SESSIONS=$${MAX_SHELL_SESSIONS:-50}
+        export WAIT_PORTS=$${WAIT_PORTS:-8091}
+        export WAIT_INTERVAL=$${WAIT_INTERVAL:-0.25}
+        export WAIT_TIMEOUT=$${WAIT_TIMEOUT:-300}
+
+        # Add user-agent if BROWSER_USER_AGENT is set
+        if [ -n "$${BROWSER_USER_AGENT}" ]; then
+          export BROWSER_EXTRA_ARGS=" --user-agent=\"$${BROWSER_USER_AGENT}\" $${BROWSER_EXTRA_ARGS}"
+        fi
+
+        # Only process if template exists
+        [ -f "/opt/gem/nginx-server-port-proxy.conf.template" ] && envsubst '$${PUBLIC_PORT}' <"/opt/gem/nginx-server-port-proxy.conf.template" >"/opt/gem/nginx-server-port-proxy.conf"
+        # 处理代理配置
+        PROXY_SERVER="$$(echo -n "$$PROXY_SERVER" | xargs)"
+        if [ -n "$${PROXY_SERVER}" ]; then
+          PROXY_SERVER=$${PROXY_SERVER#\"}
+          PROXY_SERVER=$${PROXY_SERVER%\"}
+
+          TINYPROXY_CONFIG_DIR="/opt/gem/tinyproxy"
+          TINYPROXY_CONFIG="/etc/tinyproxy.conf"
+
+          if [ -d "$${TINYPROXY_CONFIG_DIR}" ]; then
+            # base.conf exists check
+            if [ ! -f "$${TINYPROXY_CONFIG_DIR}/base.conf" ]; then
+              echo "ERROR: $${TINYPROXY_CONFIG_DIR}/base.conf is required but not found!" >&2
+              exit 1
+            fi
+
+            # clean up old config
+            > "$${TINYPROXY_CONFIG}"
+
+            # load base.conf first (mandatory)
+            echo "# === base.conf ===" >> "$${TINYPROXY_CONFIG}"
+            cat "$${TINYPROXY_CONFIG_DIR}/base.conf" >> "$${TINYPROXY_CONFIG}"
+            echo "" >> "$${TINYPROXY_CONFIG}"
+
+            # load gfw.conf second (if exists and PROXY_SERVER is not "true")
+            if [ "$${PROXY_SERVER}" != "true" ] && [ -f "$${TINYPROXY_CONFIG_DIR}/gfw.conf" ]; then
+              echo "# === gfw.conf ===" >> "$${TINYPROXY_CONFIG}"
+              envsubst '$${PROXY_SERVER}' < "$${TINYPROXY_CONFIG_DIR}/gfw.conf" >> "$${TINYPROXY_CONFIG}"
+              echo "" >> "$${TINYPROXY_CONFIG}"
+            fi
+
+            # load other .conf files recursively in alphabetical order (excluding base.conf and gfw.conf)
+            for conf_file in $$(find "$${TINYPROXY_CONFIG_DIR}" -type f -name "*.conf" 2>/dev/null | grep -vE "base.conf|gfw.conf" | sort); do
+              if [ -f "$${conf_file}" ]; then
+                # get relative path for better comment
+                rel_path="$${conf_file#$${TINYPROXY_CONFIG_DIR}/}"
+                # add separator comment with relative path
+                echo "# === $${rel_path} ===" >> "$${TINYPROXY_CONFIG}"
+                # Replace `$${PROXY_SERVER}` and append to the configuration file.
+                envsubst '$${PROXY_SERVER}' < "$${conf_file}" >> "$${TINYPROXY_CONFIG}"
+                echo "" >> "$${TINYPROXY_CONFIG}"  # add empty line separator
+              fi
+            done
+
+            echo "Tinyproxy configuration assembled from $${TINYPROXY_CONFIG_DIR}"
+          else
+            echo "ERROR: Tinyproxy config directory $${TINYPROXY_CONFIG_DIR} not found!" >&2
+            exit 1
+          fi
+
+          export BROWSER_EXTRA_ARGS="$${BROWSER_EXTRA_ARGS} --proxy-server=http://127.0.0.1:8118 --proxy-bypass-list=\"localhost,127.0.0.1,*.byted.org,*.bytedance.net,*.baidu.com,baidu.com,*.phala.network\""
+        else
+          rm -f /opt/gem/supervisord/supervisord.tinyproxy.conf
+        fi
+
+        # Display startup banner
+        print_banner() {
+          echo ""
+          echo -e "\033[36m██╗   ██╗██╗██████╗ ███████╗██╗   ██╗███╗   ███╗\033[0m"
+          echo -e "\033[36m██║   ██║██║██╔══██╗██╔════╝██║   ██║████╗ ████║\033[0m"
+          echo -e "\033[36m██║   ██║██║██████╔╝█████╗  ██║   ██║██╔████╔██║\033[0m"
+          echo -e "\033[36m╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚██╗ ██╔╝██║╚██╔╝██║\033[0m"
+          echo -e "\033[36m ╚████╔╝ ██║██████╔╝███████╗ ╚████╔╝ ██║ ╚═╝ ██║\033[0m"
+          echo -e "\033[36m  ╚═══╝  ╚═╝╚═════╝ ╚══════╝  ╚═══╝  ╚═╝     ╚═╝\033[0m"
+          echo ""
+          echo -e "\033[32m🚀 VibeVM - A Confidential VM built on top of AIO(All-in-One) Agent Sandbox Environment\033[0m"
+          if [ -n "$${IMAGE_VERSION}" ]; then
+            echo -e "\033[34m📦 Image Version: $${IMAGE_VERSION}\033[0m"
+          fi
+          echo -e "\033[33m🌈 Dashboard: http://$${DSTACK_APP_ID}-8080.$${DSTACK_GATEWAY_DOMAIN}\033[0m"
+          echo -e "\033[33m📚 Documentation: http://$${DSTACK_APP_ID}-8080.$${DSTACK_GATEWAY_DOMAIN}/v1/docs\033[0m"
+          echo ""
+          echo -e "\033[35m================================================================\033[0m"
+        }
+
+        print_banner
+
+        # Ensure gem-server can run with proper permissions
+        # Create supervisor runtime directory
+        mkdir -p /var/run
+        chmod 755 /var/run
+
+        # Ensure log directories exist with proper permissions
+        mkdir -p /var/log/supervisor
+        chmod 755 /var/log/supervisor
+
+        # Ensure the gem user owns their home directory completely
+        chown -R gem:gem /home/gem
+
+        # 启动 supervisord
+        exec /opt/gem/entrypoint.sh
+    restart: unless-stopped
+
+    networks:
+      - caliguland-network
+
+volumes:
+  sandbox_data:
+  game_data:
+
+networks:
+  caliguland-network:
+    driver: bridge

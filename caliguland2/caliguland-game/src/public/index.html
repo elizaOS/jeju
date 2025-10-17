@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeVM Prediction Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e4e4e4;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 60px 1fr 100px;
+            gap: 10px;
+            height: 100vh;
+            padding: 10px;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #C4F144;
+        }
+
+        .game-info {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .feed {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .market {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .post {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid #C4F144;
+        }
+
+        .post.system {
+            border-left-color: #FF6B6B;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .post-author {
+            font-weight: bold;
+            color: #C4F144;
+            margin-bottom: 5px;
+        }
+
+        .post-meta {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .post-content {
+            line-height: 1.5;
+        }
+
+        .bet-button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .bet-button.yes {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+        }
+
+        .bet-button.no {
+            background: linear-gradient(135deg, #F44336 0%, #C62828 100%);
+            color: white;
+        }
+
+        .bet-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(196, 241, 68, 0.3);
+        }
+
+        .odds {
+            flex: 1;
+            text-align: center;
+        }
+
+        .odds-bar {
+            height: 30px;
+            display: flex;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .odds-yes {
+            background: #4CAF50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .odds-no {
+            background: #F44336;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            color: #C4F144;
+        }
+
+        .player-list {
+            list-style: none;
+        }
+
+        .player-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .npc-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(196, 241, 68, 0.1);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .npc-name {
+            font-weight: bold;
+            color: #C4F144;
+        }
+
+        .npc-bio {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 3px;
+        }
+
+        #status {
+            color: #4CAF50;
+        }
+
+        .post-form {
+            margin-top: 15px;
+        }
+
+        .post-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(196, 241, 68, 0.3);
+            border-radius: 6px;
+            color: #e4e4e4;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .post-submit {
+            margin-top: 10px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #C4F144 0%, #97B748 100%);
+            color: #36411D;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎮 VibeVM Prediction Game</div>
+            <div class="game-info">
+                <div>Phase: <span id="phase">Lobby</span></div>
+                <div>Day: <span id="day">-</span>/30</div>
+                <div><span id="status">Connecting...</span></div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3>👥 Players</h3>
+            <ul id="player-list" class="player-list"></ul>
+        </div>
+
+        <div class="feed">
+            <h3>📰 Feed</h3>
+            <div id="feed-content"></div>
+            <div class="post-form">
+                <textarea id="post-input" class="post-input" placeholder="Share your thoughts..." rows="3" maxlength="280"></textarea>
+                <button class="post-submit" onclick="postMessage()">Post</button>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3>🎭 NPCs</h3>
+            <div id="npc-list"></div>
+        </div>
+
+        <div class="market">
+            <div style="flex: 1;">
+                <h3>🎯 Question: <span id="question">Loading...</span></h3>
+                <div class="odds">
+                    <div class="odds-bar">
+                        <div class="odds-yes" id="odds-yes" style="width: 50%">YES 50%</div>
+                        <div class="odds-no" id="odds-no" style="width: 50%">NO 50%</div>
+                    </div>
+                </div>
+            </div>
+            <button class="bet-button yes" onclick="placeBet('YES')">Bet YES</button>
+            <button class="bet-button no" onclick="placeBet('NO')">Bet NO</button>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let agentId = 'player-' + Math.random().toString(36).substr(2, 9);
+        let currentGame = null;
+
+        // Connect to WebSocket
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws?agentId=${agentId}`;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('Connected to game server');
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('status').style.color = '#4CAF50';
+                
+                // Join game
+                fetch('/api/v1/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId })
+                }).then(r => r.json()).then(data => {
+                    console.log('Joined game:', data);
+                    loadGameState();
+                });
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected');
+                document.getElementById('status').textContent = 'Disconnected';
+                document.getElementById('status').style.color = '#F44336';
+                setTimeout(connect, 3000);
+            };
+        }
+
+        function handleMessage(message) {
+            console.log('Received:', message);
+
+            switch (message.type) {
+                case 'game_state':
+                    updateGameState(message.data);
+                    break;
+                case 'game_started':
+                    currentGame = message.data;
+                    updateGameState(message.data);
+                    break;
+                case 'day_changed':
+                    document.getElementById('day').textContent = message.data.day;
+                    document.getElementById('phase').textContent = message.data.phase;
+                    break;
+                case 'new_post':
+                    addPost(message.data);
+                    break;
+                case 'market_update':
+                    updateMarket(message.data);
+                    break;
+                case 'betting_closed':
+                    alert('Betting is now closed!');
+                    break;
+                case 'game_ended':
+                    handleGameEnd(message.data);
+                    break;
+            }
+        }
+
+        function updateGameState(data) {
+            if (data.phase) {
+                document.getElementById('phase').textContent = data.phase;
+            }
+            if (data.day) {
+                document.getElementById('day').textContent = data.day;
+            }
+            if (data.market) {
+                updateMarket(data.market);
+            }
+            if (data.feed) {
+                data.feed.forEach(post => addPost(post));
+            }
+        }
+
+        function loadGameState() {
+            fetch('/api/v1/game')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.active) {
+                        document.getElementById('question').textContent = data.question;
+                        document.getElementById('phase').textContent = data.phase;
+                        document.getElementById('day').textContent = data.day;
+                        updatePlayers(data.players);
+                        updateNPCs(data.npcs);
+                        updateMarket(data.market);
+                    }
+                });
+
+            fetch('/api/v1/feed')
+                .then(r => r.json())
+                .then(data => {
+                    data.posts.forEach(post => addPost(post));
+                });
+        }
+
+        function updatePlayers(players) {
+            const list = document.getElementById('player-list');
+            list.innerHTML = players.map(p => 
+                `<li class="player-item">${p.name} (Rep: ${p.reputation})</li>`
+            ).join('');
+        }
+
+        function updateNPCs(npcs) {
+            const list = document.getElementById('npc-list');
+            list.innerHTML = npcs.map(npc => 
+                `<div class="npc-item">
+                    <div class="npc-name">${npc.name}</div>
+                    <div class="npc-bio">${npc.bio}</div>
+                </div>`
+            ).join('');
+        }
+
+        function updateMarket(market) {
+            const yesOdds = market.yesOdds || 50;
+            const noOdds = market.noOdds || 50;
+
+            document.getElementById('odds-yes').style.width = `${yesOdds}%`;
+            document.getElementById('odds-yes').textContent = `YES ${yesOdds}%`;
+            
+            document.getElementById('odds-no').style.width = `${noOdds}%`;
+            document.getElementById('odds-no').textContent = `NO ${noOdds}%`;
+        }
+
+        function addPost(post) {
+            const feed = document.getElementById('feed-content');
+            const postEl = document.createElement('div');
+            postEl.className = 'post' + (post.isSystemMessage ? ' system' : '');
+            postEl.innerHTML = `
+                <div class="post-author">${post.authorName}</div>
+                <div class="post-meta">Day ${post.gameDay} • ${new Date(post.timestamp).toLocaleTimeString()}</div>
+                <div class="post-content">${post.content}</div>
+            `;
+            feed.appendChild(postEl);
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        function postMessage() {
+            const input = document.getElementById('post-input');
+            const content = input.value.trim();
+            
+            if (!content) return;
+
+            fetch('/api/v1/post', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    agentId,
+                    content
+                })
+            }).then(() => {
+                input.value = '';
+            }).catch(err => {
+                alert('Failed to post: ' + err.message);
+            });
+        }
+
+        function placeBet(outcome) {
+            const amount = prompt(`How much to bet on ${outcome}?`, '100');
+            if (!amount) return;
+
+            fetch('/api/v1/bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    agentId,
+                    outcome,
+                    amount: parseFloat(amount)
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    alert(`Bet placed: ${amount} on ${outcome}`);
+                    updateMarket(data.market);
+                } else {
+                    alert('Bet failed: ' + (data.error || 'Unknown error'));
+                }
+            }).catch(err => {
+                alert('Failed to place bet: ' + err.message);
+            });
+        }
+
+        function handleGameEnd(result) {
+            const isWinner = result.winners.includes(agentId);
+            const payout = result.payouts[agentId] || 0;
+            
+            alert(`🎯 Game Over!\n\nOutcome: ${result.outcome}\n${isWinner ? `✅ You won! Payout: ${payout}` : '❌ You lost.'}`);
+        }
+
+        // Start connection
+        connect();
+
+        // Keyboard shortcut for posting (Enter)
+        document.getElementById('post-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                postMessage();
+            }
+        });
+    </script>
+</body>
+</html>
+
