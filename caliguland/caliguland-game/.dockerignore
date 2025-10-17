@@ -1,9 +1,0 @@
-node_modules
-npm-debug.log
-.env
-.git
-.gitignore
-*.md
-dist
-.DS_Store
-
