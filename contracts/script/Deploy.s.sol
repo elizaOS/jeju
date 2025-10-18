@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "forge-std/Script.sol";
 
 /**
  * @title Deploy L1 Contracts
- * @notice Deploys OP Stack settlement contracts on Base L2
+ * @notice Deploys OP Stack settlement contracts on Base
  * 
  * NOTE: This script is for reference. In production, use the official OP Stack
  * deployment tooling (op-deployer) which handles the full deployment process:
@@ -38,7 +38,7 @@ import "forge-std/Script.sol";
  *     --verify
  */
 contract DeployL1Contracts is Script {
-    function run() external {
+    function run() external view {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         

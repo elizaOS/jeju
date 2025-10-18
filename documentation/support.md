@@ -73,7 +73,7 @@ Long-form discussions:
 
 ### GitHub
 
-**[github.com/your-org/jeju](https://github.com/your-org/jeju)**
+**[github.com/elizaos/jeju](https://github.com/elizaos/jeju)**
 
 For developers:
 - Source code
@@ -201,9 +201,9 @@ forge verify-contract \
 #### "RPC rate limited"
 
 Public RPC has limits (100 req/sec). For production:
-- Use [Alchemy](https://alchemy.com) - Unlimited
-- Use [QuickNode](https://quicknode.com) - Unlimited
-- Run your own node - See [docs](/developers/run-node)
+- Use [Alchemy](https://alchemy.com) - Higher limits
+- Use [QuickNode](https://quicknode.com) - Higher limits
+- Run your own node - See [docs](/developers/run-rpc-node)
 
 ## Status & Monitoring
 
@@ -261,10 +261,10 @@ Maintenance windows announced:
 
 ### Example Code
 
-GitHub repositories:
-- **Starter Template**: [jeju-starter](https://github.com/your-org/jeju-starter)
-- **DeFi Examples**: [jeju-defi-examples](https://github.com/your-org/jeju-defi-examples)
-- **NFT Examples**: [jeju-nft-examples](https://github.com/your-org/jeju-nft-examples)
+Example code and templates available in the main repository:
+- Foundry contract templates
+- Frontend integration examples
+- DeFi protocol integrations
 
 ## Enterprise Support
 
@@ -299,7 +299,7 @@ Partnership opportunities:
 
 Jeju is open source! Contribute on GitHub:
 
-**[github.com/your-org/jeju](https://github.com/your-org/jeju)**
+**[github.com/elizaos/jeju](https://github.com/elizaos/jeju)**
 
 Ways to contribute:
 - Code contributions
@@ -310,7 +310,7 @@ Ways to contribute:
 
 ### Bounties
 
-Active bounties: https://github.com/your-org/jeju/issues?label=bounty
+Check GitHub issues for active bounties and contribution opportunities.
 
 Topics:
 - Developer tooling
@@ -400,17 +400,14 @@ Upcoming events:
 
 - Blog: https://blog.jeju.network/rss
 - Status: https://status.jeju.network/rss
-- GitHub: https://github.com/your-org/jeju/releases.atom
+- GitHub: https://github.com/elizaos/jeju/releases.atom
 
 ## FAQs
 
 ### General
 
 **Q: What is Jeju?**  
-A: A Layer 3 blockchain settling on Base L2, providing high performance and low costs while maintaining Ethereum security.
-
-**Q: How is L3 different from L2?**  
-A: L3 settles on L2 (Base) instead of L1 (Ethereum), reducing costs by 600x while maintaining security.
+A: A blockchain settling on Base, providing high performance and low costs while maintaining Ethereum security.
 
 **Q: Is Jeju secure?**  
 A: Yes. Jeju inherits Ethereum's security through Base's fraud proofs and Ethereum's finality.
@@ -435,7 +432,7 @@ A: Yes, 100%. All Ethereum tools work.
 A: https://faucet.jeju.network or ask in Discord.
 
 **Q: Can I run a node?**  
-A: Yes! See [Running a Node](/developers/run-node).
+A: Yes! See [Running an RPC Node](/developers/run-rpc-node).
 
 ## Contact Information
 
@@ -460,7 +457,7 @@ A: Yes! See [Running a Node](/developers/run-node).
 - **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 - **Discord**: [discord.gg/jeju](https://discord.gg/jeju)
 - **Telegram**: [t.me/jejunetwork](https://t.me/jejunetwork)
-- **GitHub**: [github.com/your-org/jeju](https://github.com/your-org/jeju)
+- **GitHub**: [github.com/elizaos/jeju](https://github.com/elizaos/jeju)
 - **LinkedIn**: [linkedin.com/company/jeju-l3](https://linkedin.com/company/jeju-l3)
 
 ---

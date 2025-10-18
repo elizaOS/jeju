@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: CC0-1.0
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -32,6 +32,15 @@ import "./interfaces/IIdentityRegistry.sol";
  * @custom:security-contact security@jeju.network
  */
 contract IdentityRegistry is ERC721URIStorage, ReentrancyGuard, IIdentityRegistry {
+    // ============ Constants ============
+    
+    /// @notice Maximum metadata value size to prevent gas griefing
+    /// @dev Limit to 8KB per metadata entry (costs ~500k gas)
+    uint256 public constant MAX_METADATA_SIZE = 8192;
+    
+    /// @notice Maximum metadata key length
+    uint256 public constant MAX_KEY_LENGTH = 256;
+    
     // ============ State Variables ============
     
     /// @notice Counter for agent IDs (tokenIds)
@@ -41,6 +50,11 @@ contract IdentityRegistry is ERC721URIStorage, ReentrancyGuard, IIdentityRegistr
     /// @notice Mapping from agentId to metadata key to metadata value
     /// @dev Stores on-chain metadata for each agent
     mapping(uint256 => mapping(string => bytes)) private _metadata;
+    
+    // ============ Errors ============
+    
+    error MetadataTooLarge();
+    error KeyTooLong();
 
     // ============ Constructor ============
     
@@ -112,6 +126,8 @@ contract IdentityRegistry is ERC721URIStorage, ReentrancyGuard, IIdentityRegistr
             "Not authorized"
         );
         require(bytes(key).length > 0, "Empty key");
+        if (bytes(key).length > MAX_KEY_LENGTH) revert KeyTooLong();
+        if (value.length > MAX_METADATA_SIZE) revert MetadataTooLarge();
         
         _metadata[agentId][key] = value;
         
@@ -196,6 +212,8 @@ contract IdentityRegistry is ERC721URIStorage, ReentrancyGuard, IIdentityRegistr
     ) internal {
         for (uint256 i = 0; i < metadata.length; i++) {
             require(bytes(metadata[i].key).length > 0, "Empty key");
+            if (bytes(metadata[i].key).length > MAX_KEY_LENGTH) revert KeyTooLong();
+            if (metadata[i].value.length > MAX_METADATA_SIZE) revert MetadataTooLarge();
             _metadata[agentId][metadata[i].key] = metadata[i].value;
             emit MetadataSet(
                 agentId, 

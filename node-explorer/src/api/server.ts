@@ -14,7 +14,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { ethers } from 'ethers';
 
 // ============ Database Setup ============

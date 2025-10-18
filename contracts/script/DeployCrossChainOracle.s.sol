@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "forge-std/Script.sol";
 import "../src/oracle/PriceSource.sol";
@@ -38,7 +38,7 @@ contract DeployPriceSourceOnBase is Script {
         address priceUpdater = vm.envOr("PRICE_UPDATER", deployer);
         
         console.log("============================================================");
-        console.log("Deploying PriceSource on Base L2");
+        console.log("Deploying PriceSource on Base");
         console.log("============================================================");
         console.log("Deployer:", deployer);
         console.log("Chain ID:", block.chainid);
@@ -141,7 +141,7 @@ contract DeployCrossChainRelayOnJeju is Script {
     }
     
     function _getNetworkName() internal view returns (string memory) {
-        if (block.chainid == 8888) return "mainnet";
+        if (block.chainid == 420691) return "mainnet";
         if (block.chainid == 420690) return "testnet";
         return "localnet";
     }

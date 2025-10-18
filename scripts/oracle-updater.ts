@@ -20,7 +20,7 @@ import { ethers } from 'ethers';
 // ============ Configuration ============
 
 const CONFIG = {
-  // Base L2 RPC URLs (failover support - tries in order)
+  // Base RPC URLs (failover support - tries in order)
   BASE_RPCS: (process.env.BASE_RPC_URLS || process.env.BASE_RPC_URL || 'https://mainnet.base.org')
     .split(',').map(url => url.trim()),
   
@@ -108,13 +108,15 @@ class FailoverProvider {
   private providers: ethers.JsonRpcProvider[];
   private currentIndex: number = 0;
   private name: string;
-  
-  constructor(urls: string[], name: string) {
+  private onFailover?: () => void;
+
+  constructor(urls: string[], name: string, onFailover?: () => void) {
     this.name = name;
     this.providers = urls.map(url => new ethers.JsonRpcProvider(url));
+    this.onFailover = onFailover;
     console.log(`✅ ${name} provider initialized with ${urls.length} RPC endpoint(s)`);
   }
-  
+
   async getProvider(): Promise<ethers.Provider> {
     // Try current provider first
     try {
@@ -122,11 +124,16 @@ class FailoverProvider {
       return this.providers[this.currentIndex];
     } catch (error) {
       console.warn(`⚠️  ${this.name} RPC ${this.currentIndex} failed, trying fallback...`);
-      
+
+      // Notify failover callback
+      if (this.onFailover) {
+        this.onFailover();
+      }
+
       // Try other providers
       for (let i = 0; i < this.providers.length; i++) {
         if (i === this.currentIndex) continue;
-        
+
         try {
           await this.providers[i].getBlockNumber();
           this.currentIndex = i;
@@ -136,7 +143,7 @@ class FailoverProvider {
           console.warn(`⚠️  ${this.name} RPC ${i} also failed`);
         }
       }
-      
+
       throw new Error(`All ${this.name} RPC endpoints failed`);
     }
   }
@@ -148,10 +155,10 @@ class PriceFetcher {
   private lastETHPrice: number = 0;
   private lastElizaPrice: number = 0;
   private consecutiveFailures: number = 0;
-  
-  constructor() {
-    this.baseProviderFailover = new FailoverProvider(CONFIG.BASE_RPCS, 'Base');
-    this.jejuProviderFailover = new FailoverProvider(CONFIG.JEJU_RPCS, 'Jeju');
+
+  constructor(onRpcFailover?: () => void) {
+    this.baseProviderFailover = new FailoverProvider(CONFIG.BASE_RPCS, 'Base', onRpcFailover);
+    this.jejuProviderFailover = new FailoverProvider(CONFIG.JEJU_RPCS, 'Jeju', onRpcFailover);
   }
   
   async getBaseProvider(): Promise<ethers.Provider> {
@@ -330,15 +337,21 @@ class PriceFetcher {
 // ============ Health Check Server ============
 
 class HealthCheckServer {
-  private server: any;
   private status: {
     healthy: boolean;
     lastUpdate: number;
     consecutiveFailures: number;
     totalUpdates: number;
     uptime: number;
+    isLeader: boolean;
+    ethPrice: number;
+    elizaPrice: number;
+    walletBalance: number;
+    gasPrice: number;
+    rpcFailovers: number;
+    updateFailures: number;
   };
-  
+
   constructor() {
     this.status = {
       healthy: true,
@@ -346,24 +359,31 @@ class HealthCheckServer {
       consecutiveFailures: 0,
       totalUpdates: 0,
       uptime: Date.now(),
+      isLeader: false,
+      ethPrice: 0,
+      elizaPrice: 0,
+      walletBalance: 0,
+      gasPrice: 0,
+      rpcFailovers: 0,
+      updateFailures: 0,
     };
-    
+
     if (CONFIG.ENABLE_HEALTH_CHECK) {
       this.start();
     }
   }
-  
+
   start() {
     // Simple HTTP health check server (using Bun's built-in server)
-    this.server = Bun.serve({
+    Bun.serve({
       port: CONFIG.HEALTH_CHECK_PORT,
       fetch: (req) => {
         const url = new URL(req.url);
-        
+
         if (url.pathname === '/health') {
-          const healthy = this.status.healthy && 
+          const healthy = this.status.healthy &&
                          (Date.now() - this.status.lastUpdate < 600000); // 10 min
-          
+
           return new Response(JSON.stringify({
             status: healthy ? 'healthy' : 'unhealthy',
             botId: CONFIG.BOT_ID,
@@ -374,21 +394,69 @@ class HealthCheckServer {
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        
+
         if (url.pathname === '/metrics') {
-          return new Response(JSON.stringify(this.status), {
-            headers: { 'Content-Type': 'application/json' },
+          // Prometheus-compatible metrics format
+          const metrics = [
+            `# HELP oracle_last_update_timestamp Unix timestamp of last successful update`,
+            `# TYPE oracle_last_update_timestamp gauge`,
+            `oracle_last_update_timestamp{bot_id="${CONFIG.BOT_ID}"} ${this.status.lastUpdate}`,
+            ``,
+            `# HELP oracle_consecutive_failures Number of consecutive update failures`,
+            `# TYPE oracle_consecutive_failures gauge`,
+            `oracle_consecutive_failures{bot_id="${CONFIG.BOT_ID}"} ${this.status.consecutiveFailures}`,
+            ``,
+            `# HELP oracle_total_updates Total number of successful updates`,
+            `# TYPE oracle_total_updates counter`,
+            `oracle_total_updates{bot_id="${CONFIG.BOT_ID}"} ${this.status.totalUpdates}`,
+            ``,
+            `# HELP oracle_update_failures_total Total number of failed updates`,
+            `# TYPE oracle_update_failures_total counter`,
+            `oracle_update_failures_total{bot_id="${CONFIG.BOT_ID}"} ${this.status.updateFailures}`,
+            ``,
+            `# HELP oracle_is_leader Whether this bot is the current leader`,
+            `# TYPE oracle_is_leader gauge`,
+            `oracle_is_leader{bot_id="${CONFIG.BOT_ID}"} ${this.status.isLeader ? 1 : 0}`,
+            ``,
+            `# HELP oracle_eth_usd_price Current ETH/USD price (8 decimals)`,
+            `# TYPE oracle_eth_usd_price gauge`,
+            `oracle_eth_usd_price{bot_id="${CONFIG.BOT_ID}"} ${this.status.ethPrice}`,
+            ``,
+            `# HELP oracle_eliza_usd_price Current elizaOS/USD price (8 decimals)`,
+            `# TYPE oracle_eliza_usd_price gauge`,
+            `oracle_eliza_usd_price{bot_id="${CONFIG.BOT_ID}"} ${this.status.elizaPrice}`,
+            ``,
+            `# HELP oracle_wallet_balance_eth Bot wallet balance in ETH`,
+            `# TYPE oracle_wallet_balance_eth gauge`,
+            `oracle_wallet_balance_eth{bot_id="${CONFIG.BOT_ID}"} ${this.status.walletBalance}`,
+            ``,
+            `# HELP oracle_gas_price_gwei Current gas price in gwei`,
+            `# TYPE oracle_gas_price_gwei gauge`,
+            `oracle_gas_price_gwei{bot_id="${CONFIG.BOT_ID}"} ${this.status.gasPrice}`,
+            ``,
+            `# HELP oracle_rpc_failover_total Number of RPC failovers`,
+            `# TYPE oracle_rpc_failover_total counter`,
+            `oracle_rpc_failover_total{bot_id="${CONFIG.BOT_ID}"} ${this.status.rpcFailovers}`,
+            ``,
+            `# HELP oracle_uptime_seconds Bot uptime in seconds`,
+            `# TYPE oracle_uptime_seconds gauge`,
+            `oracle_uptime_seconds{bot_id="${CONFIG.BOT_ID}"} ${Math.floor((Date.now() - this.status.uptime) / 1000)}`,
+            ``,
+          ].join('\n');
+
+          return new Response(metrics, {
+            headers: { 'Content-Type': 'text/plain; version=0.0.4' },
           });
         }
-        
+
         return new Response('Oracle Price Updater Bot', { status: 200 });
       },
     });
-    
+
     console.log(`✅ Health check server listening on :${CONFIG.HEALTH_CHECK_PORT}`);
   }
-  
-  updateStatus(success: boolean) {
+
+  updateStatus(success: boolean, additionalData?: Partial<typeof this.status>) {
     this.status.lastUpdate = Date.now();
     if (success) {
       this.status.totalUpdates++;
@@ -396,10 +464,24 @@ class HealthCheckServer {
       this.status.healthy = true;
     } else {
       this.status.consecutiveFailures++;
+      this.status.updateFailures++;
       if (this.status.consecutiveFailures > 5) {
         this.status.healthy = false;
       }
     }
+
+    // Update additional metrics
+    if (additionalData) {
+      Object.assign(this.status, additionalData);
+    }
+  }
+
+  setLeaderStatus(isLeader: boolean) {
+    this.status.isLeader = isLeader;
+  }
+
+  incrementRpcFailover() {
+    this.status.rpcFailovers++;
   }
 }
 
@@ -488,10 +570,10 @@ class OracleUpdater {
   private lastUpdateTime: number = 0;
   private healthCheck: HealthCheckServer;
   private leaderElection: LeaderElection;
-  
+
   constructor() {
-    this.priceFetcher = new PriceFetcher();
     this.healthCheck = new HealthCheckServer();
+    this.priceFetcher = new PriceFetcher(() => this.healthCheck.incrementRpcFailover());
     this.leaderElection = new LeaderElection();
   }
   
@@ -508,103 +590,147 @@ class OracleUpdater {
     try {
       // Check if we're the leader (if election enabled)
       const isLeader = await this.leaderElection.checkIsLeader();
+      this.healthCheck.setLeaderStatus(isLeader);
+
       if (!isLeader) {
         console.log(`👥 Bot ${CONFIG.BOT_ID} is follower, skipping update`);
         return;
       }
-      
+
       console.log('\n' + '='.repeat(60));
       console.log(`🚀 Starting oracle update - ${new Date().toISOString()} [${CONFIG.BOT_ID}]`);
       console.log('='.repeat(60));
-      
+
+      // Check wallet balance
+      if (this.wallet) {
+        const provider = await this.priceFetcher.getJejuProvider();
+        const balance = await provider.getBalance(this.wallet.address);
+        const balanceEth = Number(ethers.formatEther(balance));
+
+        console.log(`\n💰 Wallet Balance: ${balanceEth.toFixed(4)} ETH`);
+
+        // Update health check metrics
+        this.healthCheck.updateStatus(true, { walletBalance: balanceEth });
+
+        // Alert if balance is low
+        if (balanceEth < 0.01) {
+          console.warn(`⚠️  Low wallet balance: ${balanceEth.toFixed(4)} ETH`);
+          await this.sendAlert(`Low wallet balance: ${balanceEth.toFixed(4)} ETH. Please top up soon.`);
+        }
+
+        if (balanceEth < 0.001) {
+          console.error(`🚨 CRITICAL: Very low wallet balance: ${balanceEth.toFixed(4)} ETH`);
+          await this.sendAlert(`CRITICAL: Very low wallet balance: ${balanceEth.toFixed(4)} ETH. Top up immediately!`);
+          return; // Don't try to update with insufficient balance
+        }
+      }
+
       // Check if we should update (rate limiting)
       const now = Date.now() / 1000;
       if (now - this.lastUpdateTime < CONFIG.MIN_UPDATE_INTERVAL_S) {
         console.log('⏭️  Skipping update (too soon since last update)');
         return;
       }
-      
+
       if (!this.oracle) {
         throw new Error('Oracle not initialized');
       }
-      
+
       // Check current oracle state
       const [currentEthPrice, currentElizaPrice, lastUpdate, fresh] = await this.oracle.getPrices();
-      
+
       console.log('\n📊 Current Oracle State:');
       console.log(`   ETH/USD: $${(Number(currentEthPrice) / 1e8).toFixed(2)}`);
       console.log(`   elizaOS/USD: $${(Number(currentElizaPrice) / 1e8).toFixed(6)}`);
       console.log(`   Last Update: ${new Date(Number(lastUpdate) * 1000).toISOString()}`);
       console.log(`   Fresh: ${fresh}`);
-      
+
       // Fetch new prices
       const { ethPrice, elizaPrice } = await this.priceFetcher.fetchPrices();
-      
+
+      // Update health metrics with current prices
+      this.healthCheck.updateStatus(true, {
+        ethPrice: ethPrice,
+        elizaPrice: elizaPrice,
+      });
+
       // Check if update is needed (>1% change)
       const ethChangePercent = Math.abs(ethPrice - Number(currentEthPrice)) / Number(currentEthPrice) * 100;
       const elizaChangePercent = Math.abs(elizaPrice - Number(currentElizaPrice)) / Number(currentElizaPrice) * 100;
-      
+
       if (ethChangePercent < 1 && elizaChangePercent < 1 && fresh) {
         console.log('\n✅ Prices haven\'t changed significantly, skipping update');
         return;
       }
-      
+
       console.log('\n📝 New Prices:');
       console.log(`   ETH/USD: $${(ethPrice / 1e8).toFixed(2)} (${ethChangePercent >= 0 ? '+' : ''}${ethChangePercent.toFixed(2)}%)`);
       console.log(`   elizaOS/USD: $${(elizaPrice / 1e8).toFixed(6)} (${elizaChangePercent >= 0 ? '+' : ''}${elizaChangePercent.toFixed(2)}%)`);
-      
+
       // Check gas price
       const provider = await this.priceFetcher.getJejuProvider();
       const feeData = await provider.getFeeData();
       const gasPriceGwei = Number(feeData.gasPrice) / 1e9;
-      
+
+      // Update health metrics with gas price
+      this.healthCheck.updateStatus(true, { gasPrice: gasPriceGwei });
+
       if (gasPriceGwei > CONFIG.MAX_GAS_PRICE_GWEI) {
         console.log(`⚠️  Gas price too high (${gasPriceGwei.toFixed(2)} gwei), skipping update`);
         return;
       }
-      
+
       // Update oracle
       console.log('\n🔄 Submitting transaction to oracle...');
       console.log(`   Gas price: ${gasPriceGwei.toFixed(2)} gwei`);
-      
+
       const tx = await this.oracle.updatePrices(
         Math.floor(ethPrice),
         Math.floor(elizaPrice),
         {
-          maxFeePerGas: feeData.maxFeePerGas ? 
-            (feeData.maxFeePerGas * BigInt(Math.floor(CONFIG.GAS_PRICE_MULTIPLIER * 100)) / 100n) : 
+          maxFeePerGas: feeData.maxFeePerGas ?
+            (feeData.maxFeePerGas * BigInt(Math.floor(CONFIG.GAS_PRICE_MULTIPLIER * 100)) / 100n) :
             undefined,
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?
             (feeData.maxPriorityFeePerGas * BigInt(Math.floor(CONFIG.GAS_PRICE_MULTIPLIER * 100)) / 100n) :
             undefined,
         }
       );
-      
+
       console.log(`   Transaction: ${tx.hash}`);
       console.log('   Waiting for confirmation...');
-      
+
       const receipt = await tx.wait();
-      
+
       console.log(`\n✅ Oracle updated successfully!`);
       console.log(`   Block: ${receipt.blockNumber}`);
       console.log(`   Gas used: ${receipt.gasUsed.toString()}`);
-      
+
       this.lastUpdateTime = now;
-      this.healthCheck.updateStatus(true);
-      
+      this.healthCheck.updateStatus(true, {
+        ethPrice: ethPrice,
+        elizaPrice: elizaPrice,
+        gasPrice: gasPriceGwei,
+      });
+
     } catch (error: any) {
       console.error('\n❌ Oracle update failed:', error.message);
       this.healthCheck.updateStatus(false);
-      
+
       // Alert on critical errors
       if (error.message.includes('PriceDeviationTooLarge')) {
         console.error('🚨 CRITICAL: Price deviation too large - manual intervention required');
         await this.sendAlert('CRITICAL: Price deviation too large');
       }
-      
+
       if (error.message.includes('InsufficientLiquidity')) {
         console.error('🚨 CRITICAL: Insufficient liquidity in vault');
         await this.sendAlert('CRITICAL: Insufficient liquidity');
+      }
+
+      if (error.message.includes('insufficient funds')) {
+        console.error('🚨 CRITICAL: Insufficient wallet balance for gas');
+        await this.sendAlert('CRITICAL: Bot wallet has insufficient funds for gas');
       }
     }
   }
@@ -656,8 +782,6 @@ class OracleUpdater {
     if (!this.wallet) {
       throw new Error('Failed to initialize wallet');
     }
-    
-    const _server = this.healthCheck; // Reference to avoid unused warning
     
     console.log('🤖 Oracle updater bot started');
     console.log(`   Bot ID: ${CONFIG.BOT_ID}`);

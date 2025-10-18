@@ -411,7 +411,7 @@ describe('Service Interaction Tests', () => {
     it('should verify oracle can update prices', async () => {
       console.log('   ℹ️  Oracle integration test');
       console.log('   ℹ️  Requires deployed contracts');
-      console.log('   ℹ️  See scripts/test-oracle-prices.ts for full test');
+      console.log('   ℹ️  See scripts/test.ts for comprehensive oracle tests');
       
       // In a full implementation, we'd:
       // 1. Deploy ManualPriceOracle
@@ -498,4 +498,5 @@ describe('Cleanup and Teardown', () => {
     console.log('\n');
   });
 });
+
 

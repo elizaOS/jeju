@@ -5,7 +5,7 @@ Start building on Jeju in minutes. This guide assumes you have basic Ethereum de
 ## Prerequisites
 
 - Node.js or Bun installed
-- Foundry or Hardhat
+- Foundry (Anvil + Forge)
 - MetaMask or another web3 wallet
 - Basic Solidity knowledge
 
@@ -74,54 +74,37 @@ forge create src/Counter.sol:Counter \
 # Deployed to: 0x... (save this address)
 ```
 
-### Using Hardhat
+### Using Foundry with Forge Script
 
 ```bash
-# Create new project
-mkdir my-jeju-project && cd my-jeju-project
-npm init -y
-npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+# Create new project (already initialized with Foundry)
+cd my-jeju-project
 
-# Initialize Hardhat
-npx hardhat init
-# Choose "Create a TypeScript project"
+# Write a deployment script
+cat > script/Deploy.s.sol << 'EOF'
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-# Configure hardhat.config.ts
-cat > hardhat.config.ts << 'EOF'
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import "forge-std/Script.sol";
+import "../src/Counter.sol";
 
-const config: HardhatUserConfig = {
-  solidity: "0.8.20",
-  networks: {
-    jejuTestnet: {
-      url: "https://testnet-rpc.jeju.network",
-      chainId: 420690,
-      accounts: [process.env.PRIVATE_KEY!],
-    },
-  },
-  etherscan: {
-    apiKey: {
-      jejuTestnet: "YOUR_EXPLORER_API_KEY",
-    },
-    customChains: [
-      {
-        network: "jejuTestnet",
-        chainId: 420690,
-        urls: {
-          apiURL: "https://testnet-explorer.jeju.network/api",
-          browserURL: "https://testnet-explorer.jeju.network",
-        },
-      },
-    ],
-  },
-};
+contract DeployScript is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
 
-export default config;
+        Counter counter = new Counter();
+        
+        vm.stopBroadcast();
+    }
+}
 EOF
 
-# Deploy
-npx hardhat run scripts/deploy.ts --network jejuTestnet
+# Deploy to Jeju Testnet
+forge script script/Deploy.s.sol:DeployScript \
+  --rpc-url https://testnet-rpc.jeju.network \
+  --broadcast \
+  --verify
 ```
 
 ## 4. Interact with Contract
@@ -333,22 +316,18 @@ forge create src/Counter.sol:Counter \
 
 # Update frontend to use mainnet
 # RPC: https://rpc.jeju.network
-# Chain ID: 8888
+# Chain ID: 420691
 ```
 
 ## Example Projects
 
-### Starter Templates
+### Example Code
 
-- **Foundry Template**: [github.com/your-org/jeju-foundry-template](https://github.com/your-org/jeju-foundry-template)
-- **Hardhat Template**: [github.com/your-org/jeju-hardhat-template](https://github.com/your-org/jeju-hardhat-template)
-- **Next.js + Wagmi**: [github.com/your-org/jeju-nextjs-template](https://github.com/your-org/jeju-nextjs-template)
-
-### Example dApps
-
-- **Token Swap**: [github.com/your-org/jeju-swap-example](https://github.com/your-org/jeju-swap-example)
-- **NFT Minting**: [github.com/your-org/jeju-nft-example](https://github.com/your-org/jeju-nft-example)
-- **DAO**: [github.com/your-org/jeju-dao-example](https://github.com/your-org/jeju-dao-example)
+Example contracts and integrations are available in the main repository. Check the repository for:
+- Foundry contract templates
+- Frontend integration examples
+- DeFi protocol integrations
+- Testing examples
 
 ## Resources
 
@@ -369,7 +348,7 @@ forge create src/Counter.sol:Counter \
 ### Community
 
 - **Discord**: [discord.gg/jeju](https://discord.gg/jeju)
-- **GitHub**: [github.com/your-org/jeju](https://github.com/your-org/jeju)
+- **GitHub**: [github.com/elizaos/jeju](https://github.com/elizaos/jeju)
 - **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
 
 ## Next Steps

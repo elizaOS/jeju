@@ -8,7 +8,7 @@ This guide covers deploying **multiple oracle bots with automatic failover** for
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Base L2 (Price Sources)              │
+│                    Base (Price Sources)              │
 │     Chainlink ETH/USD + Uniswap V3 elizaOS Pools       │
 └───────────────────────┬─────────────────────────────────┘
                         │

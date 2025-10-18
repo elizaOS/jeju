@@ -17,15 +17,15 @@ This guide explains how to run your own Jeju RPC node for maximum decentralizati
 #### Full RPC Node (Pruned)
 - **CPU**: 8+ cores
 - **RAM**: 16+ GB
-- **Storage**: 500+ GB SSD (grows ~10GB/month)
-- **Network**: 100+ Mbps, 5+ TB/month bandwidth
+- **Storage**: 500+ GB SSD (grows over time)
+- **Network**: 100+ Mbps, high bandwidth
 - **Uptime**: 99%+ recommended
 
 #### Archive Node (Full History)
 - **CPU**: 16+ cores
 - **RAM**: 64+ GB
-- **Storage**: 2+ TB NVMe SSD (grows ~50GB/month)
-- **Network**: 1+ Gbps, 10+ TB/month bandwidth
+- **Storage**: 2+ TB NVMe SSD (grows over time)
+- **Network**: 1+ Gbps, very high bandwidth
 - **Uptime**: 99.9%+ recommended
 
 ### Software Requirements
@@ -134,7 +134,7 @@ openssl rand -hex 32 > jwt-secret.txt
 
 ```bash
 # Get the rollup configuration from Jeju
-curl -o rollup.json https://raw.githubusercontent.com/jeju-l3/config/main/rollup.json
+curl -o rollup.json https://raw.githubusercontent.com/elizaos/jeju/main/config/rollup/mainnet.json
 ```
 
 ### 5. Start Node
@@ -164,7 +164,7 @@ For production RPC hosting at scale, use Kubernetes:
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/jeju-l3/jeju.git
+git clone https://github.com/elizaos/jeju.git
 cd jeju
 ```
 
@@ -352,44 +352,41 @@ df -h
 # For bare metal: add disk and migrate data
 ```
 
-## Costs
+## Infrastructure Options
 
-### Cloud (AWS)
+### Cloud (AWS, GCP, Azure)
 
 **General RPC Node**:
-- EC2 c6i.2xlarge: ~$250/month
-- 500GB gp3 storage: ~$40/month
-- Network transfer: ~$50/month
-- **Total: ~$340/month**
+- 8-core instance with good CPU performance
+- 500GB high-performance storage
+- Sufficient network bandwidth
+- Suitable for most RPC workloads
 
 **Archive Node**:
-- EC2 r6i.4xlarge: ~$800/month
-- 2TB gp3 storage: ~$160/month
-- Network transfer: ~$100/month
-- **Total: ~$1,060/month**
+- 16-core instance with high memory
+- 2TB+ high-performance NVMe storage
+- High network bandwidth for historical queries
+- Required for full historical data access
 
-**At Scale (5 RPC + 2 Archive)**:
-- ~$3,820/month
-- Can serve millions of requests/day
-- Cost per request: <$0.0001
+**At Scale**: Multiple nodes provide high availability and can serve millions of requests per day
 
 ### Bare Metal
 
-- Server: $200-500 one-time
-- Colocation: $50-200/month
-- Network: $50-100/month
-- **Total: $100-300/month** (after hardware cost)
+- Purchase server hardware
+- Colocation or home hosting
+- Network connectivity
+- Lower operating costs after initial hardware investment
 
 ## Support
 
 - **Documentation**: [docs.jeju.network](https://docs.jeju.network)
 - **Discord**: [#node-operators](https://discord.gg/jeju)
-- **GitHub**: [github.com/jeju-l3/jeju](https://github.com/jeju-l3/jeju)
+- **GitHub**: [github.com/elizaos/jeju](https://github.com/elizaos/jeju)
 
 ## Next Steps
 
-- [**Monitor Performance**](/developers/monitoring) - Setup alerting
-- [**Join P2P Network**](/network/p2p) - Connect to peers
-- [**Earn Rewards**](/developers/rpc-rewards) - Monetize your RPC (coming soon)
+- [**Network Information**](/network/mainnet) - Production network details
+- [**Node Operator Handbook**](/operators/node-operator-handbook) - Comprehensive operator guide
+- [**Monitoring Guide**](/deployment/monitoring) - Setup monitoring and alerting
 
 

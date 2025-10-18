@@ -18,7 +18,7 @@ Get your Jeju node up and running in 5 minutes.
 Run the one-command installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jeju-l3/jeju/main/scripts/install-node.sh | bash
+curl -fsSL https://raw.githubusercontent.com/elizaos/jeju/main/scripts/install-node.sh | bash
 ```
 
 This will:
@@ -200,24 +200,24 @@ docker stats
 
 - **Discord:** https://discord.gg/jeju (#node-operators)
 - **Docs:** https://docs.jeju.network
-- **GitHub:** https://github.com/jeju-l3/jeju/issues
+- **GitHub:** https://github.com/elizaos/jeju/issues
 
 ---
 
 ## Earning Potential
 
-### Example Node (99.5% uptime, 1M requests/month)
+### Example High-Performance Node
 
 ```
-Base Reward:          100 JEJU
-Uptime Multiplier:    ×1.5 = 150 JEJU
-Volume Bonus:         10 JEJU
-Geographic Bonus:     +50% = 80 JEJU
+Base Reward:          Monthly allocation
+Uptime Multiplier:    High uptime bonus (99.5%+)
+Volume Bonus:         High-traffic bonus
+Geographic Bonus:     Underserved region bonus
 ─────────────────────────────────
-Total Monthly:        240 JEJU
+Total Monthly:        Significant JEJU rewards
 ```
 
-**Current JEJU Price:** Check https://coinmarketcap.com
+Actual rewards vary based on network parameters and token economics.
 
 ---
 

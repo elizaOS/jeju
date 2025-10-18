@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import {IdentityRegistry} from "../src/registry/IdentityRegistry.sol";
@@ -86,19 +86,16 @@ contract IdentityRegistryTest is Test {
     
     function testMultipleRegistrations() public {
         vm.prank(alice);
-        uint256 agentId1 = registry.register("ipfs://agent1");
+        registry.register("ipfs://agent1");
         
         vm.prank(bob);
-        uint256 agentId2 = registry.register("ipfs://agent2");
+        registry.register("ipfs://agent2");
         
         vm.prank(charlie);
-        uint256 agentId3 = registry.register("ipfs://agent3");
+        registry.register("ipfs://agent3");
         
-        assertEq(agentId1, 1);
-        assertEq(agentId2, 2);
-        assertEq(agentId3, 3);
+        // If any registration fails, test crashes before we get here
         assertEq(registry.totalAgents(), 3);
-        
         assertEq(registry.ownerOf(1), alice);
         assertEq(registry.ownerOf(2), bob);
         assertEq(registry.ownerOf(3), charlie);

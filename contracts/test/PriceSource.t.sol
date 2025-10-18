@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import "../src/oracle/PriceSource.sol";
@@ -21,7 +21,7 @@ contract PriceSourceTest is Test {
         );
     }
     
-    function testDeployment() public {
+    function testDeployment() public view {
         assertEq(priceSource.elizaOSToken(), elizaToken);
         assertEq(priceSource.crossChainRelayOnJeju(), crossChainRelay);
         assertEq(priceSource.priceUpdater(), updater);
@@ -83,7 +83,7 @@ contract PriceSourceTest is Test {
         // but it won't fail due to pause
     }
     
-    function testGetLastPrices() public {
+    function testGetLastPrices() public view {
         (uint256 ethPrice, uint256 elizaPrice, uint256 timestamp) = priceSource.getLastPrices();
         
         // Initial values should be zero

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: CC0-1.0
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "./IdentityRegistry.sol";
 import "./interfaces/IValidationRegistry.sol";
@@ -23,6 +23,15 @@ import "./interfaces/IValidationRegistry.sol";
  * @author ChaosChain Labs
  */
 contract ValidationRegistry is IValidationRegistry {
+    
+    // ============ Constants ============
+    
+    /// @notice Maximum URI length to prevent gas griefing
+    uint256 public constant MAX_URI_LENGTH = 2048;
+    
+    // ============ Errors ============
+    
+    error URITooLong();
     
     // ============ State Variables ============
     
@@ -92,6 +101,7 @@ contract ValidationRegistry is IValidationRegistry {
         // Validate inputs
         require(validatorAddress != address(0), "Invalid validator address");
         require(bytes(requestUri).length > 0, "Empty request URI");
+        if (bytes(requestUri).length > MAX_URI_LENGTH) revert URITooLong();
         require(identityRegistry.agentExists(agentId), "Agent does not exist");
         
         // Verify caller is owner or approved operator
@@ -160,6 +170,9 @@ contract ValidationRegistry is IValidationRegistry {
     ) external {
         // Validate response range
         require(response <= 100, "Response must be 0-100");
+        
+        // Prevent gas griefing (responseUri is optional)
+        if (bytes(responseUri).length > MAX_URI_LENGTH) revert URITooLong();
         
         // Get request
         Request storage request = _requests[requestHash];

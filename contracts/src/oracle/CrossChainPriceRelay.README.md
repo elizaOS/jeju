@@ -103,7 +103,7 @@ When to consider migration:
 
 ### Architecture
 ```
-Base L2:
+Base:
   PriceSource reads Chainlink + Uniswap
     ↓ sendMessage()
   L2CrossDomainMessenger

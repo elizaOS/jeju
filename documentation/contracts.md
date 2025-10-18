@@ -98,16 +98,19 @@ Mainnet contract addresses will be added after mainnet deployment.
 // Deploy with: cd contracts && forge script script/Deploy.s.sol --rpc-url <base-sepolia-rpc> --broadcast --verify
 // Addresses will be saved to: contracts/deployments/testnet/l1-contracts.json
 
-OptimismPortal:          'TBD - Deploy L1 contracts first'
-L2OutputOracle:          'TBD - Deploy L1 contracts first'
-L1CrossDomainMessenger:  'TBD - Deploy L1 contracts first'
-L1StandardBridge:        'TBD - Deploy L1 contracts first'
-L1ERC721Bridge:          'TBD - Deploy L1 contracts first'
-SystemConfig:            'TBD - Deploy L1 contracts first'
-AddressManager:          'TBD - Deploy L1 contracts first'
-ProxyAdmin:              'TBD - Deploy L1 contracts first'
+OptimismPortal:          '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+L2OutputOracle:          '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+L1CrossDomainMessenger:  '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+L1StandardBridge:        '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+L1ERC721Bridge:          '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+SystemConfig:            '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+AddressManager:          '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
+ProxyAdmin:              '[TO BE DEPLOYED - see scripts/deploy-*.ts]'
 
-// See deployment guide: documentation/deployment/overview.md
+// Deployment guides:
+// - Testnet: /documentation/deployment/testnet-checklist.md
+// - Mainnet: /documentation/deployment/mainnet-checklist.md
+// - Scripts: /scripts/deploy/l2-genesis.ts
 ```
 
 ### Proxy Contracts
@@ -130,21 +133,21 @@ Next-generation AMM with custom hooks.
 
 ```typescript
 // Testnet
-// Deploy with: bun run deploy:defi --network testnet
+// Deploy with: bun run scripts/deploy-uniswap-v4.ts --network testnet
 // Addresses will be saved to: contracts/deployments/testnet/defi.json
 
-PoolManager:             'TBD - DeFi protocols not yet deployed'
-SwapRouter:              'TBD - DeFi protocols not yet deployed'
-PositionManager:         'TBD - DeFi protocols not yet deployed'
-QuoterV4:                'TBD - DeFi protocols not yet deployed'
-StateView:               'TBD - DeFi protocols not yet deployed'
+PoolManager:             '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+SwapRouter:              '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+PositionManager:         '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+QuoterV4:                '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+StateView:               '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
 
 // Mainnet
-PoolManager:             'TBD - DeFi protocols not yet deployed'
-SwapRouter:              'TBD - DeFi protocols not yet deployed'
-PositionManager:         'TBD - DeFi protocols not yet deployed'
-QuoterV4:                'TBD - DeFi protocols not yet deployed'
-StateView:               'TBD - DeFi protocols not yet deployed'
+PoolManager:             '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+SwapRouter:              '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+PositionManager:         '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+QuoterV4:                '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
+StateView:               '[TO BE DEPLOYED - see scripts/deploy-uniswap-v4.ts]'
 ```
 
 **Documentation**: [Uniswap V4 Docs](https://docs.uniswap.org/contracts/v4/overview)
@@ -155,23 +158,23 @@ Decentralized perpetuals and synthetic assets.
 
 ```typescript
 // Testnet
-// Deploy with: bun run deploy:defi --network testnet
-// Synthetix V3 requires additional configuration - see DeFi deployment guide
+// Synthetix V3 deployment pending - complex multi-contract system
+// Requires oracle configuration and market setup
 
-CoreProxy:               'TBD - Synthetix not yet deployed'
-AccountProxy:            'TBD - Synthetix not yet deployed'
-USDProxy:                'TBD - Synthetix not yet deployed'
-PerpsMarketProxy:        'TBD - Synthetix not yet deployed'
-SpotMarketProxy:         'TBD - Synthetix not yet deployed'
-OracleManager:           'TBD - Synthetix not yet deployed'
+CoreProxy:               '[TO BE DEPLOYED - contact Synthetix for deployment]'
+AccountProxy:            '[TO BE DEPLOYED - contact Synthetix for deployment]'
+USDProxy:                '[TO BE DEPLOYED - contact Synthetix for deployment]'
+PerpsMarketProxy:        '[TO BE DEPLOYED - contact Synthetix for deployment]'
+SpotMarketProxy:         '[TO BE DEPLOYED - contact Synthetix for deployment]'
+OracleManager:           '[TO BE DEPLOYED - contact Synthetix for deployment]'
 
-// Mainnet  
-CoreProxy:               'TBD - Synthetix not yet deployed'
-AccountProxy:            'TBD - Synthetix not yet deployed'
-USDProxy:                'TBD - Synthetix not yet deployed'
-PerpsMarketProxy:        'TBD - Synthetix not yet deployed'
-SpotMarketProxy:         'TBD - Synthetix not yet deployed'
-OracleManager:           'TBD - Synthetix not yet deployed'
+// Mainnet
+CoreProxy:               '[TO BE DEPLOYED - contact Synthetix for deployment]'
+AccountProxy:            '[TO BE DEPLOYED - contact Synthetix for deployment]'
+USDProxy:                '[TO BE DEPLOYED - contact Synthetix for deployment]'
+PerpsMarketProxy:        '[TO BE DEPLOYED - contact Synthetix for deployment]'
+SpotMarketProxy:         '[TO BE DEPLOYED - contact Synthetix for deployment]'
+OracleManager:           '[TO BE DEPLOYED - contact Synthetix for deployment]'
 ```
 
 **Documentation**: [Synthetix V3 Docs](https://docs.synthetix.io/v/v3/)
@@ -182,18 +185,18 @@ Efficient lending and borrowing protocol.
 
 ```typescript
 // Testnet
-Comet (USDC):            '0x...' // TODO: Add after deployment
-Comet (ETH):             '0x...'
-CometRewards:            '0x...'
-Configurator:            '0x...'
-ProxyAdmin:              '0x...'
+Comet (USDC):            '[TO BE DEPLOYED - contact Compound for deployment]'
+Comet (ETH):             '[TO BE DEPLOYED - contact Compound for deployment]'
+CometRewards:            '[TO BE DEPLOYED - contact Compound for deployment]'
+Configurator:            '[TO BE DEPLOYED - contact Compound for deployment]'
+ProxyAdmin:              '[TO BE DEPLOYED - contact Compound for deployment]'
 
 // Mainnet
-Comet (USDC):            '0x...' // TODO: Add after deployment
-Comet (ETH):             '0x...'
-CometRewards:            '0x...'
-Configurator:            '0x...'
-ProxyAdmin:              '0x...'
+Comet (USDC):            '[TO BE DEPLOYED - contact Compound for deployment]'
+Comet (ETH):             '[TO BE DEPLOYED - contact Compound for deployment]'
+CometRewards:            '[TO BE DEPLOYED - contact Compound for deployment]'
+Configurator:            '[TO BE DEPLOYED - contact Compound for deployment]'
+ProxyAdmin:              '[TO BE DEPLOYED - contact Compound for deployment]'
 ```
 
 **Documentation**: [Compound V3 Docs](https://docs.compound.finance/)
@@ -206,14 +209,14 @@ Native support for smart contract wallets.
 
 ```typescript
 // Testnet
-EntryPoint:              '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789' // v0.6
-AccountFactory:          '0x...' // TODO: Add after deployment
-Paymaster:               '0x...'
+EntryPoint:              '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789' // v0.6 (standard address)
+AccountFactory:          '[TO BE DEPLOYED - see contracts/src/paymaster/]'
+Paymaster:               '[TO BE DEPLOYED - see contracts/src/paymaster/LiquidityPaymaster.sol]'
 
 // Mainnet
-EntryPoint:              '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789' // v0.6
-AccountFactory:          '0x...' // TODO: Add after deployment
-Paymaster:               '0x...'
+EntryPoint:              '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789' // v0.6 (standard address)
+AccountFactory:          '[TO BE DEPLOYED - see contracts/src/paymaster/]'
+Paymaster:               '[TO BE DEPLOYED - see contracts/src/paymaster/LiquidityPaymaster.sol]'
 ```
 
 **Documentation**: [ERC-4337 Docs](https://eips.ethereum.org/EIPS/eip-4337)
@@ -234,14 +237,18 @@ Price feeds for DeFi applications.
 
 ```typescript
 // Testnet Price Feeds
-ETH/USD:                 '0x...' // TODO: Add after deployment
-BTC/USD:                 '0x...'
-USDC/USD:                '0x...'
+ETH/USD:                 '[TO BE DEPLOYED - see scripts/deploy-oracle.ts]'
+BTC/USD:                 '[TO BE DEPLOYED - see scripts/deploy-oracle.ts]'
+USDC/USD:                '[TO BE DEPLOYED - see scripts/deploy-oracle.ts]'
 
 // Mainnet Price Feeds
-ETH/USD:                 '0x...' // TODO: Add after deployment
-BTC/USD:                 '0x...'
-USDC/USD:                '0x...'
+ETH/USD:                 '[TO BE DEPLOYED - see scripts/deploy-oracle.ts]'
+BTC/USD:                 '[TO BE DEPLOYED - see scripts/deploy-oracle.ts]'
+USDC/USD:                '[TO BE DEPLOYED - see scripts/deploy-oracle.ts]'
+
+// Custom oracle implementation:
+// - contracts/src/oracle/CrossChainPriceRelay.sol
+// - contracts/src/oracle/ManualPriceOracle.sol
 ```
 
 **Documentation**: [Chainlink Feeds](https://docs.chain.link/data-feeds)
@@ -274,17 +281,19 @@ GovernanceToken:         '0x...' // Voting token
 Tokens bridged from Base to Jeju:
 
 ```typescript
-// Stablecoins
-USDC:                    '0x...' // TODO: Add after deployment
-USDT:                    '0x...'
-DAI:                     '0x...'
+// Stablecoins (bridged from Base via L1StandardBridge)
+USDC:                    '[BRIDGE FROM BASE - use L1StandardBridge]'
+USDT:                    '[BRIDGE FROM BASE - use L1StandardBridge]'
+DAI:                     '[BRIDGE FROM BASE - use L1StandardBridge]'
 
 // Wrapped Assets
-WETH:                    '0x4200000000000000000000000000000000000006'
-WBTC:                    '0x...'
+WETH:                    '0x4200000000000000000000000000000000000006' // Predeploy
+WBTC:                    '[BRIDGE FROM BASE - use L1StandardBridge]'
 
 // Base Ecosystem
-cbETH:                   '0x...'
+cbETH:                   '[BRIDGE FROM BASE - use L1StandardBridge]'
+
+// Bridge guide: /documentation/network/bridge.md
 ```
 
 ## Verified Contracts
@@ -361,7 +370,7 @@ function YourComponent() {
 All ABIs are available in the GitHub repository:
 
 ```bash
-git clone https://github.com/your-org/jeju.git
+git clone https://github.com/elizaos/jeju.git
 cd jeju/contracts/out
 ```
 
@@ -395,18 +404,13 @@ Track all upgrades: https://upgrades.jeju.network
 
 ### Audits
 
-All contracts have been audited by:
-- Trail of Bits (2024)
-- Spearbit (2024)
-- OpenZeppelin (2024)
-
-View reports: [/audits](/audits)
+All contracts undergo security audits before mainnet deployment.
 
 ### Bug Bounty
 
 Report vulnerabilities: [Immunefi](https://immunefi.com/bounty/jeju)
 
-**Max Bounty**: $1,000,000
+Active bug bounty program with significant rewards for valid findings.
 
 ## Next Steps
 

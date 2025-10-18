@@ -73,7 +73,7 @@ console.log('Deployed to:', await contract.getAddress());
 
 ```bash
 forge verify-contract \
-  --chain-id 8888 \
+  --chain-id 420691 \
   --compiler-version v0.8.28 \
   $CONTRACT_ADDRESS \
   src/YourContract.sol:YourContract

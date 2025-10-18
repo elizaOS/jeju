@@ -16,7 +16,7 @@ Always verify the URL. Scam sites may try to steal your funds. Bookmark the offi
 ```
 Ethereum L1
     ↕️
-  Base L2
+  Base
     ↕️
  Jeju  ← You are here
 ```
@@ -50,10 +50,10 @@ Fast and cheap: **~2 minutes, minimal gas**
 6. Wait ~2 minutes for confirmation
 7. Funds appear in your wallet on Jeju
 
-**Costs**:
-- Gas on Base: ~$0.02-0.05
+**Details**:
 - Time: ~2 minutes
-- No fees (pay only gas)
+- No bridge fees (pay only gas)
+- Very low gas costs
 
 ### Withdrawal (Jeju → Base)
 
@@ -72,10 +72,9 @@ Slower due to fraud proof window: **7-14 days**
 9. Confirm transaction on Base
 10. Funds released to your wallet
 
-**Costs**:
-- Gas on Jeju: ~$0.0001
-- Gas on Base: ~$0.02-0.05
-- Time: 7 days
+**Details**:
+- Time: 7 days (challenge period)
+- Very low gas costs on both networks
 
 #### Fast Withdrawal (15 minutes)
 
@@ -84,24 +83,24 @@ Use third-party bridges for instant liquidity:
 **Hop Protocol** (Recommended):
 - Visit [hop.exchange](https://hop.exchange)
 - Select Jeju → Base
-- Fee: ~0.1-0.5%
+- Small fee for instant liquidity
 - Time: ~15 minutes
 
 **Across Protocol**:
 - Visit [across.to](https://across.to)
 - Select Jeju → Base
-- Fee: ~0.05-0.2%
+- Small fee for instant liquidity
 - Time: ~10 minutes
 
 ::: tip When to Use Fast Bridge
 - Need funds quickly
-- Small amounts (<$10k)
-- Willing to pay 0.1-0.5% fee
+- Small amounts
+- Willing to pay small fee for speed
 
 Use standard bridge for:
 - Large amounts
 - No rush
-- Save on fees
+- No fees beyond gas
 :::
 
 ## Supported Assets
@@ -135,11 +134,11 @@ New tokens can be bridged permissionlessly. Deploy a bridged token on Jeju and a
 ### Bridge Your Own Token
 
 1. Deploy token on Jeju
-2. Register with Standard Bridge
-3. Deploy bridge contracts
+2. Register with Standard Bridge using `OptimismMintableERC20Factory`
+3. Configure bridge mappings
 4. Start bridging
 
-See [Bridge Custom Tokens](/developers/bridge-tokens) for details.
+For custom token bridging, refer to the OP Stack bridging documentation and our developer guides.
 
 ## How Bridging Works
 
@@ -206,7 +205,7 @@ const jejuProvider = new ethers.JsonRpcProvider('https://rpc.jeju.network');
 // Create messenger
 const messenger = new CrossChainMessenger({
   l1ChainId: 8453, // Base
-  l2ChainId: 8888, // Jeju
+  l2ChainId: 420691, // Jeju
   l1SignerOrProvider: baseSigner,
   l2SignerOrProvider: jejuSigner,
   bedrock: true,
@@ -293,9 +292,9 @@ The time it takes for Base to produce a block and Jeju to derive it.
 
 ### Are there fees?
 
-**Bridge Fee**: None (only gas)  
-**Gas on Base**: ~$0.02-0.05  
-**Gas on Jeju**: ~$0.0001
+**Standard Bridge**: No bridge fees (only gas)  
+**Fast Bridge**: Small fee for instant liquidity
+Gas costs are very low on both Base and Jeju.
 
 ### What if I send to wrong address?
 
@@ -353,5 +352,5 @@ Deposits and withdrawals are **smart contract operations**, not dependent on UI:
 
 - [**Wallet Setup**](./wallet-setup) - Configure your wallet
 - [**Testnet**](./testnet) - Practice on testnet first
-- [**Developer Guide**](/developers/bridge-tokens) - Bridge custom tokens
+- [**Developer Guide**](/developers/quick-start) - Start building on Jeju
 

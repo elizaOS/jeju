@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
 import { resolve } from "path";
-import { getChainConfig } from "../../config";
 import type { NetworkType } from "../../types";
 import { readFileSync } from "fs";
 

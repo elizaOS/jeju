@@ -351,6 +351,6 @@ See the [Quick Start Guide](./quick-start) for next steps.
 If you're stuck:
 
 - **Discord**: [Join our community](https://discord.gg/jeju)
-- **GitHub Issues**: [Report a bug](https://github.com/your-org/jeju/issues)
+- **GitHub Issues**: [Report a bug](https://github.com/elizaos/jeju/issues)
 - **Documentation**: [Browse all docs](/)
 

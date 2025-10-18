@@ -11,7 +11,7 @@
  * 
  * // Load mainnet config
  * const mainnet = getChainConfig('mainnet');
- * console.log(mainnet.chainId); // 8888
+ * console.log(mainnet.chainId); // 420691
  * 
  * // Get RPC URL (supports env var override)
  * const rpcUrl = getRpcUrl('testnet');

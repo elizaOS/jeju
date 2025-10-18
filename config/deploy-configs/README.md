@@ -24,7 +24,7 @@ op-node genesis l2 \
 
 ### Chain Configuration
 - `l1ChainID`: Base chain ID (8453 mainnet, 84532 sepolia)
-- `l2ChainID`: Jeju chain ID (8888 mainnet, 420690 testnet)
+- `l2ChainID`: Jeju chain ID (420691 mainnet, 420690 testnet)
 - `l2BlockTime`: 2 seconds (fixed)
 
 ### Sequencer

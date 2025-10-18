@@ -1,6 +1,6 @@
 # Introduction to Jeju
 
-Jeju is a Layer 3 blockchain built on the OP-Stack, settling on Base L2. It provides fast block times and low costs while maintaining Ethereum security.
+Jeju is a Layer 3 blockchain built on the OP-Stack, settling on Base. It provides fast block times and low costs while maintaining Ethereum security.
 
 ## Architecture Overview
 
@@ -11,7 +11,7 @@ Jeju is a Layer 3 blockchain built on the OP-Stack, settling on Base L2. It prov
 └──────────────┬──────────────────────────────────────────┘
                │
 ┌──────────────▼──────────────────────────────────────────┐
-│ Base L2                                                  │
+│ Base                                                  │
 │ - Settlement layer for Jeju                              │
 │ - Validates fault proofs                                 │
 └──────────────┬──────────────────────────────────────────┘

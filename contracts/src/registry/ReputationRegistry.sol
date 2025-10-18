@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: CC0-1.0
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -28,6 +28,15 @@ import "./interfaces/IReputationRegistry.sol";
  */
 contract ReputationRegistry is IReputationRegistry {
     using ECDSA for bytes32;
+
+    // ============ Constants ============
+    
+    /// @notice Maximum URI length to prevent gas griefing
+    uint256 public constant MAX_URI_LENGTH = 2048;
+    
+    // ============ Errors ============
+    
+    error URITooLong();
 
     // ============ State Variables ============
     
@@ -105,6 +114,9 @@ contract ReputationRegistry is IReputationRegistry {
     ) external {
         // Validate score
         require(score <= 100, "Score must be 0-100");
+        
+        // Prevent gas griefing via huge URIs
+        if (bytes(fileuri).length > MAX_URI_LENGTH) revert URITooLong();
         
         // Verify agent exists
         require(identityRegistry.agentExists(agentId), "Agent does not exist");
@@ -227,6 +239,7 @@ contract ReputationRegistry is IReputationRegistry {
     ) external {
         require(feedbackIndex > 0 && feedbackIndex <= _lastIndex[agentId][clientAddress], "Invalid index");
         require(bytes(responseUri).length > 0, "Empty URI");
+        if (bytes(responseUri).length > MAX_URI_LENGTH) revert URITooLong();
         
         // Increment response count for this responder
         _responseCount[agentId][clientAddress][feedbackIndex][msg.sender]++;

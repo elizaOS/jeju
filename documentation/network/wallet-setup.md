@@ -12,7 +12,7 @@ Complete guide to setting up your wallet to use Jeju on testnet and mainnet.
 3. Approve the connection
 
 **Mainnet**:
-1. Visit [chainlist.org/chain/8888](https://chainlist.org/chain/8888)
+1. Visit [chainlist.org/chain/420691](https://chainlist.org/chain/420691)
 2. Click "Add to MetaMask"
 3. Approve the connection
 
@@ -45,7 +45,7 @@ Block Explorer URL: https://testnet-explorer.jeju.network
 ```
 Network Name: Jeju
 New RPC URL: https://rpc.jeju.network
-Chain ID: 8888
+Chain ID: 420691
 Currency Symbol: ETH
 Block Explorer URL: https://explorer.jeju.network
 ```
@@ -326,7 +326,7 @@ import { useNetwork } from 'wagmi';
 function YourComponent() {
   const { chain } = useNetwork();
   
-  if (chain?.id !== 8888) {
+  if (chain?.id !== 420691) {
     return <div>Please switch to Jeju Mainnet</div>;
   }
   
@@ -343,7 +343,7 @@ function SwitchNetworkButton() {
   const { switchNetwork } = useSwitchNetwork();
   
   return (
-    <button onClick={() => switchNetwork?.(8888)}>
+    <button onClick={() => switchNetwork?.(420691)}>
       Switch to Jeju
     </button>
   );
@@ -357,7 +357,7 @@ function SwitchNetworkButton() {
 await window.ethereum.request({
   method: 'wallet_addEthereumChain',
   params: [{
-    chainId: '0x22B8', // 8888 in hex
+    chainId: '0x66B53', // 420691 in hex
     chainName: 'Jeju',
     nativeCurrency: {
       name: 'Ether',

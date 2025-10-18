@@ -2,12 +2,15 @@ name: Documentation CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'documentation/**'
       - '*.md'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+    paths:
+      - 'documentation/**'
+      - '*.md'
 
 jobs:
   lint-markdown:
@@ -36,32 +39,18 @@ jobs:
       
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
       
       - name: Install dependencies
-        working-directory: documentation
         run: bun install
       
       - name: Build documentation
-        working-directory: documentation
         run: bun run docs:build
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
+          name: docs-build
           path: documentation/.vitepress/dist
-
-  deploy-docs:
-    if: github.ref == 'refs/heads/main'
-    needs: build-docs
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
 

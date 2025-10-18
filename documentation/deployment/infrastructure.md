@@ -83,7 +83,8 @@ helmfile -e testnet sync
 
 ## Resources
 
-- [Deployment Overview](./overview.md)
-- [Prerequisites](./prerequisites.md)
-- [Kubernetes Helm Charts](../../kubernetes/helm/README.md)
+- [Deployment Overview](./overview)
+- [Prerequisites](./prerequisites)
+- [Monitoring Guide](./monitoring)
+
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -20,7 +20,7 @@ interface ICrossDomainMessenger {
 /**
  * @title CrossChainPriceRelay
  * @notice Receives price updates from Base via CrossDomainMessenger
- * @dev Deploy on Jeju. Works with PriceSource.sol deployed on Base L2.
+ * @dev Deploy on Jeju. Works with PriceSource.sol deployed on Base.
  * 
  * Architecture:
  * 1. PriceSource on Base reads Chainlink + DEX prices
@@ -46,7 +46,7 @@ contract CrossChainPriceRelay is Ownable {
     address public constant L2_CROSS_DOMAIN_MESSENGER = 
         0x4200000000000000000000000000000000000007;
     
-    /// @notice Address of PriceSource contract on Base L2
+    /// @notice Address of PriceSource contract on Base
     address public priceSourceOnBase;
     
     /// @notice Address of ManualPriceOracle to update

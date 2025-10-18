@@ -1,237 +1,236 @@
 /**
- * @fileoverview Tests for shared logger utility
+ * @fileoverview AGGRESSIVE tests for logger utility
  * @module scripts/shared/logger.test
+ * 
+ * These tests VERIFY actual behavior, not just "doesn't throw".
+ * Every test checks REAL output and FAILS if broken.
  */
 
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { Logger } from './logger';
 
-describe('Logger', () => {
-  let originalLog: any;
-  let originalWarn: any;
-  let originalError: any;
-  let consoleLogSpy: any;
-  let consoleWarnSpy: any;
-  let consoleErrorSpy: any;
+describe('Logger - AGGRESSIVE BEHAVIORAL TESTS', () => {
+  let originalLog: typeof console.log;
+  let originalWarn: typeof console.warn;
+  let originalError: typeof console.error;
+  let loggedMessages: string[];
+  let warnedMessages: string[];
+  let erroredMessages: string[];
 
   beforeEach(() => {
-    // Save originals
     originalLog = console.log;
     originalWarn = console.warn;
     originalError = console.error;
     
-    // Create fresh spies
-    consoleLogSpy = mock(() => {});
-    consoleWarnSpy = mock(() => {});
-    consoleErrorSpy = mock(() => {});
+    loggedMessages = [];
+    warnedMessages = [];
+    erroredMessages = [];
     
-    console.log = consoleLogSpy;
-    console.warn = consoleWarnSpy;
-    console.error = consoleErrorSpy;
+    console.log = mock((...args: any[]) => {
+      loggedMessages.push(args.join(' '));
+    });
+    console.warn = mock((...args: any[]) => {
+      warnedMessages.push(args.join(' '));
+    });
+    console.error = mock((...args: any[]) => {
+      erroredMessages.push(args.join(' '));
+    });
   });
 
   afterEach(() => {
-    // Restore originals
     console.log = originalLog;
     console.warn = originalWarn;
     console.error = originalError;
   });
 
-  describe('Basic Logging', () => {
-    it('should log info messages', () => {
+  describe('Basic Logging - VERIFY OUTPUT', () => {
+    it('should log info with info emoji', () => {
       const logger = new Logger({ timestamp: false });
       logger.info('Test message');
       
-      expect(consoleLogSpy).toHaveBeenCalled();
+      // ASSERT: Actually logged
+      expect(loggedMessages.length).toBe(1);
+      
+      // ASSERT: Contains info emoji
+      expect(loggedMessages[0]).toContain('ℹ️');
+      expect(loggedMessages[0]).toContain('Test message');
     });
 
-    it('should log success messages', () => {
+    it('should log success with success emoji', () => {
       const logger = new Logger({ timestamp: false });
       logger.success('Operation completed');
       
-      expect(consoleLogSpy).toHaveBeenCalled();
+      // ASSERT: Actually logged
+      expect(loggedMessages.length).toBe(1);
+      
+      // ASSERT: Contains success emoji
+      expect(loggedMessages[0]).toContain('✅');
+      expect(loggedMessages[0]).toContain('Operation completed');
     });
 
-    it('should log warning messages', () => {
+    it('should warn with warning emoji to console.warn', () => {
       const logger = new Logger({ timestamp: false });
       logger.warn('Warning message');
       
-      expect(consoleWarnSpy).toHaveBeenCalled();
+      // ASSERT: Used console.warn, not console.log
+      expect(warnedMessages.length).toBe(1);
+      expect(loggedMessages.length).toBe(0);
+      
+      // ASSERT: Contains warning emoji
+      expect(warnedMessages[0]).toContain('⚠️');
+      expect(warnedMessages[0]).toContain('Warning message');
     });
 
-    it('should log error messages', () => {
+    it('should error with error emoji to console.error', () => {
       const logger = new Logger({ timestamp: false });
       logger.error('Error message');
       
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      // ASSERT: Used console.error, not console.log
+      expect(erroredMessages.length).toBe(1);
+      expect(loggedMessages.length).toBe(0);
+      
+      // ASSERT: Contains error emoji
+      expect(erroredMessages[0]).toContain('❌');
+      expect(erroredMessages[0]).toContain('Error message');
     });
   });
 
-  describe('Log Level Filtering', () => {
-    it('should filter debug logs when level is info', () => {
+  describe('Log Level Filtering - MUST ACTUALLY FILTER', () => {
+    it('should NOT log debug when level is info', () => {
       const logger = new Logger({ level: 'info', timestamp: false });
       
       logger.debug('Debug message');
-      expect(consoleLogSpy).not.toHaveBeenCalled();
       
-      logger.info('Info message');
-      expect(consoleLogSpy).toHaveBeenCalled();
+      // ASSERT: Nothing logged
+      expect(loggedMessages.length).toBe(0);
+      expect(warnedMessages.length).toBe(0);
+      expect(erroredMessages.length).toBe(0);
     });
 
-    it('should filter info logs when level is warn', () => {
+    it('should log info when level is info', () => {
+      const logger = new Logger({ level: 'info', timestamp: false });
+      
+      logger.info('Info message');
+      
+      // ASSERT: Message logged
+      expect(loggedMessages.length).toBe(1);
+    });
+
+    it('should NOT log info when level is warn', () => {
       const logger = new Logger({ level: 'warn', timestamp: false });
       
       logger.info('Info message');
-      expect(consoleLogSpy).not.toHaveBeenCalled();
+      logger.debug('Debug message');
       
-      logger.warn('Warning message');
-      expect(consoleWarnSpy).toHaveBeenCalled();
+      // ASSERT: Nothing logged
+      expect(loggedMessages.length).toBe(0);
     });
 
-    it('should only show errors when level is error', () => {
+    it('should ONLY log errors when level is error', () => {
       const logger = new Logger({ level: 'error', timestamp: false });
       
+      logger.debug('Debug');
       logger.info('Info');
       logger.warn('Warning');
-      expect(consoleLogSpy).not.toHaveBeenCalled();
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
-      
       logger.error('Error');
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      
+      // ASSERT: Only error was logged
+      expect(loggedMessages.length).toBe(0);
+      expect(warnedMessages.length).toBe(0);
+      expect(erroredMessages.length).toBe(1);
     });
   });
 
-  describe('Prefix Support', () => {
-    it('should include prefix in log messages', () => {
-      const logger = new Logger({ prefix: 'TEST', timestamp: false });
+  describe('Prefix Support - VERIFY ACTUAL PREFIX', () => {
+    it('should include prefix in output', () => {
+      const logger = new Logger({ prefix: 'TEST-PREFIX', timestamp: false });
       logger.info('Message');
       
-      // Check that logged message contains prefix
-      const call = consoleLogSpy.mock.calls[0];
-      const message = call[0];
-      
-      expect(message).toContain('[TEST]');
+      // ASSERT: Prefix is in output
+      expect(loggedMessages[0]).toContain('[TEST-PREFIX]');
+      expect(loggedMessages[0]).toContain('Message');
     });
 
-    it('should support multiple prefixes via child logger', () => {
-      const logger = new Logger({ prefix: 'MAIN', timestamp: false });
-      const child = logger.child('SUB');
+    it('should support nested prefixes via child logger', () => {
+      const logger = new Logger({ prefix: 'PARENT', timestamp: false });
+      const child = logger.child('CHILD');
       
-      // Just verify child logger can be created and called
       child.info('Child message');
       
-      // Verify spy was called
-      expect(consoleLogSpy).toHaveBeenCalled();
+      // ASSERT: Combined prefix format [PARENT:CHILD]
+      expect(loggedMessages[0]).toContain('[PARENT:CHILD]');
+      expect(loggedMessages[0]).toContain('Child message');
+      
+      // ASSERT: Has info emoji
+      expect(loggedMessages[0]).toContain('ℹ️');
     });
   });
 
-  describe('Timestamp Support', () => {
-    it('should include timestamp when enabled', () => {
+  describe('Timestamp Support - VERIFY FORMAT', () => {
+    it('should include ISO timestamp when enabled', () => {
       const logger = new Logger({ timestamp: true });
       logger.info('Message');
       
-      const call = consoleLogSpy.mock.calls[0];
-      const message = call[0];
-      
-      // Check for ISO timestamp format
-      expect(message).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      // ASSERT: Contains ISO 8601 timestamp
+      expect(loggedMessages[0]).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]/);
     });
 
-    it('should not include timestamp when disabled', () => {
+    it('should NOT include timestamp when disabled', () => {
       const logger = new Logger({ timestamp: false });
       logger.info('Message');
       
-      const call = consoleLogSpy.mock.calls[0];
-      const message = call[0];
-      
-      expect(message).not.toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      // ASSERT: No timestamp pattern
+      expect(loggedMessages[0]).not.toMatch(/\[\d{4}-\d{2}-\d{2}T/);
     });
   });
 
-  describe('Helper Methods', () => {
-    it('should create separators', () => {
+  describe('Helper Methods - VERIFY ACTUAL OUTPUT', () => {
+    it('should create separator of exact length', () => {
       const logger = new Logger({ timestamp: false });
-      logger.separator('=', 40);
+      logger.separator('=', 60);
       
-      const call = consoleLogSpy.mock.calls[0];
-      const message = call[0];
-      
-      expect(message).toBe('='.repeat(40));
+      // ASSERT: Exact length
+      expect(loggedMessages[0]).toBe('='.repeat(60));
     });
 
-    it('should create box around message', () => {
+    it('should create box with borders', () => {
       const logger = new Logger({ timestamp: false });
-      logger.box('Test Message');
+      logger.box('Test\nMessage');
       
-      // Should log 3 lines: top, message, bottom
-      expect(consoleLogSpy).toHaveBeenCalledTimes(3);
+      // ASSERT: Three lines (top, content, bottom)
+      expect(loggedMessages.length).toBe(4); // Top, 2 content lines, bottom
+      
+      // ASSERT: Has box characters
+      expect(loggedMessages[0]).toContain('╔');
+      expect(loggedMessages[0]).toContain('╗');
     });
   });
 
-  describe('Formatting', () => {
-    it('should include emoji icons', () => {
-      const logger = new Logger({ timestamp: false });
-      
-      logger.info('Info');
-      expect(consoleLogSpy.mock.calls[0][0]).toContain('ℹ️');
-      
-      logger.success('Success');
-      expect(consoleLogSpy.mock.calls[1][0]).toContain('✅');
-      
-      logger.warn('Warning');
-      expect(consoleWarnSpy.mock.calls[0][0]).toContain('⚠️');
-      
-      logger.error('Error');
-      expect(consoleErrorSpy.mock.calls[0][0]).toContain('❌');
-    });
-
-    it('should support additional arguments', () => {
+  describe('Additional Arguments - VERIFY PASSED THROUGH', () => {
+    it('should pass additional arguments to console', () => {
       const logger = new Logger({ timestamp: false });
       const data = { key: 'value' };
       
-      logger.info('Message with data', data);
+      logger.info('Message', data);
       
-      // Should log message and data
-      expect(consoleLogSpy).toHaveBeenCalledTimes(1);
-      expect(consoleLogSpy.mock.calls[0].length).toBeGreaterThan(1);
+      // ASSERT: Called with multiple arguments
+      expect(console.log).toHaveBeenCalled();
+      const calls = (console.log as any).mock.calls;
+      expect(calls[0].length).toBeGreaterThan(1);
+    });
+  });
+
+  describe('Color Codes - VERIFY APPLIED', () => {
+    it('should apply color codes to output', () => {
+      const logger = new Logger({ timestamp: false });
+      
+      logger.info('Info');
+      // ASSERT: Contains ANSI color codes
+      expect(loggedMessages[0]).toContain('\x1b[');
+      
+      logger.success('Success');
+      // ASSERT: Contains reset code
+      expect(loggedMessages[1]).toContain('\x1b[0m');
     });
   });
 });
-
-describe('Logger Integration Examples', () => {
-  it('should demonstrate deployment script logging', () => {
-    // Verify logger can be created and used without errors
-    const logger = new Logger({ prefix: 'DEPLOY', timestamp: false });
-    
-    // These should not throw
-    logger.info('Starting deployment...');
-    logger.success('Token deployed at 0x123...');
-    logger.warn('High gas price detected');
-    logger.error('Deployment failed');
-    
-    expect(true).toBe(true);
-  });
-
-  it('should demonstrate oracle bot logging', () => {
-    const logger = new Logger({ prefix: 'ORACLE', level: 'info', timestamp: false });
-    
-    // These should not throw
-    logger.debug('Price fetch details'); // Filtered out
-    logger.info('Fetching prices...');
-    logger.success('Prices updated');
-    
-    expect(true).toBe(true);
-  });
-
-  it('should demonstrate monitoring script logging', () => {
-    const logger = new Logger({ prefix: 'MONITOR', timestamp: false });
-    const nodeLogger = logger.child('NODE-1');
-    
-    // Child logger should work without errors
-    nodeLogger.info('Checking node health...');
-    nodeLogger.success('Node is healthy');
-    
-    expect(true).toBe(true);
-  });
-});
-

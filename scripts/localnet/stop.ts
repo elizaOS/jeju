@@ -11,7 +11,8 @@ async function main() {
   
   if (result.exitCode === 0) {
     console.log("✅ Localnet stopped successfully");
-    console.log("\n💡 To completely remove the enclave:");
+    console.log("\n💡 Lifecycle is managed by 'bun run dev' (Ctrl+C to stop)");
+    console.log("   To completely remove the enclave:");
     console.log(`   kurtosis enclave rm ${ENCLAVE_NAME}`);
   } else {
     console.error("❌ Failed to stop localnet");

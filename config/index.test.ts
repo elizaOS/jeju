@@ -3,7 +3,7 @@
  * Tests configuration loading, validation, and environment variable overrides
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, afterEach } from 'bun:test';
 import { 
   loadChainConfig, 
   loadBaseNetworks,
@@ -28,7 +28,7 @@ describe('Configuration Loaders', () => {
     it('should load mainnet configuration', () => {
       const config = loadChainConfig('mainnet');
       
-      expect(config.chainId).toBe(8888);
+      expect(config.chainId).toBe(420691);
       expect(config.name).toBe('Jeju');
       expect(config.rpcUrl).toBe('https://rpc.jeju.network');
       expect(config.l1ChainId).toBe(8453); // Base Mainnet
@@ -88,7 +88,7 @@ describe('Configuration Loaders', () => {
   describe('getChainConfig', () => {
     it('should default to mainnet', () => {
       const config = getChainConfig();
-      expect(config.chainId).toBe(8888);
+      expect(config.chainId).toBe(420691);
     });
 
     it('should respect explicit network parameter', () => {
@@ -118,17 +118,17 @@ describe('Configuration Loaders', () => {
       expect(weth).toBe('0x4200000000000000000000000000000000000006');
     });
 
-    it('should throw for non-existent contracts', () => {
+    it('should throw with SPECIFIC error message for non-existent contracts', () => {
       expect(() => 
         getContractAddress('mainnet', 'l2', 'NonExistentContract')
-      ).toThrow();
+      ).toThrow('Contract NonExistentContract not found on l2 for mainnet');
     });
 
-    it('should throw for undeployed L1 contracts', () => {
+    it('should throw with SPECIFIC error message for undeployed L1 contracts', () => {
       // L1 contracts may not be deployed yet (empty strings)
       expect(() => 
         getContractAddress('mainnet', 'l1', 'OptimismPortal')
-      ).toThrow();
+      ).toThrow('Contract OptimismPortal not found on l1 for mainnet');
     });
 
     it('should work across all networks', () => {
@@ -239,7 +239,7 @@ describe('Configuration Loaders', () => {
       const testnet = loadChainConfig('testnet');
       const localnet = loadChainConfig('localnet');
 
-      expect(mainnet.chainId).toBe(8888);
+      expect(mainnet.chainId).toBe(420691);
       expect(testnet.chainId).toBe(420690);
       expect(localnet.chainId).toBe(1337);
     });

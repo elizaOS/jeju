@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title PriceSource
- * @notice Reads prices on Base L2 and relays them to Jeju via CrossDomainMessenger
- * @dev Deploy this contract on Base L2
+ * @notice Reads prices on Base and relays them to Jeju via CrossDomainMessenger
+ * @dev Deploy this contract on Base
  * 
  * Architecture:
  * 1. Reads ETH/USD from Chainlink on Base

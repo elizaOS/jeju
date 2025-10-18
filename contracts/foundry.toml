@@ -3,14 +3,32 @@ src = "src"
 out = "out"
 libs = ["lib"]
 solc_version = "0.8.28"
+auto_detect_solc = true
 optimizer = true
 optimizer_runs = 999999
 via_ir = true
 evm_version = "cancun"
 
+# Exclude incomplete contracts and problematic dependencies
+deny_warnings = false
+exclude = [
+    "lib/account-abstraction/**",
+    "lib/openzeppelin-contracts/test/**",
+    "lib/openzeppelin-contracts/lib/**",
+    "lib/openzeppelin-contracts-upgradeable/test/**",
+    "lib/openzeppelin-contracts-upgradeable/lib/**",
+    "src/paymaster/CloudPaymaster.sol",
+    "src/prediction/JejuMarket.sol",
+    "src/uniswap-v4/**",
+    "src/hyperscape/src/test/**",
+    "src/hyperscape/src/systems/**",
+    "src/hyperscape/src/codegen/**"
+]
+
 # Test settings
 verbosity = 2
 fuzz_runs = 256
+fs_permissions = [{ access = "read-write", path = "./deployments" }, { access = "read", path = "./" }]
 
 # Remappings
 remappings = [
@@ -19,7 +37,11 @@ remappings = [
     "@optimism/=lib/optimism/packages/contracts-bedrock/src/",
     "forge-std/=lib/forge-std/src/",
     "@eth-optimism-bedrock/=lib/optimism/packages/contracts-bedrock/src/",
-    "account-abstraction/=lib/account-abstraction/contracts/"
+    "account-abstraction/=lib/account-abstraction/contracts/",
+    "@latticexyz/store/=src/hyperscape/node_modules/@latticexyz/store/",
+    "@latticexyz/world/=src/hyperscape/node_modules/@latticexyz/world/",
+    "@latticexyz/schema-type/=src/hyperscape/node_modules/@latticexyz/schema-type/",
+    "@latticexyz/config/=src/hyperscape/node_modules/@latticexyz/config/",
 ]
 
 # RPC endpoints (override with env vars)

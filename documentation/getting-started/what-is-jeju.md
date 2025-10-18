@@ -1,16 +1,16 @@
 # What is Jeju?
 
-Jeju is a Layer 3 blockchain - an application-specific rollup that settles on Base L2 instead of directly on Ethereum L1. This architecture provides the optimal balance of security, performance, and cost.
+Jeju is a Layer 3 blockchain - an application-specific rollup that settles on Base instead of directly on Ethereum L1. This architecture provides the optimal balance of security, performance, and cost.
 
 ## Layer 3 Explained
 
 ### Traditional L2 Architecture
 ```
 ┌─────────────┐
-│ Ethereum L1 │ ← L2 posts here ($450k/month)
+│ Ethereum L1 │ ← L2 posts here (expensive)
 └─────────────┘
        ↑
-       │ Expensive!
+       │ High costs
        │
 ┌─────────────┐
 │  Typical L2 │
@@ -26,10 +26,10 @@ Jeju is a Layer 3 blockchain - an application-specific rollup that settles on Ba
        │ Base pays this
        │
 ┌─────────────┐
-│   Base L2   │ ← You post here ($750/month)
+│   Base   │ ← You post here (much cheaper)
 └─────────────┘
        ↑
-       │ Much cheaper!
+       │ Very low cost
        │
 ┌─────────────┐
 │  Jeju    │ ← Your application chain
@@ -61,7 +61,7 @@ op-batcher (collects ~100 blocks)
     ↓
 EigenDA (stores full data)
     ↓
-Base L2 (validates + DA certificate)
+Base (validates + DA certificate)
     ↓
 Ethereum L1 (ultimate finality)
 ```
@@ -174,7 +174,7 @@ Flashblocks provides **200ms pre-confirmations** without waiting for full blocks
 - **Status**: Live and stable
 
 ### Jeju Mainnet
-- **Chain ID**: 8888
+- **Chain ID**: 420691
 - **Block Time**: 2 seconds
 - **Sub-block Time**: 200ms
 - **Settlement**: Base (8453)
@@ -272,16 +272,9 @@ Fees automatically accumulate in vaults:
 
 Operators can withdraw anytime.
 
-### Break-Even Analysis
-```
-Monthly costs: $6,550
-Average tx fee: $0.002
-Break-even: ~100,000 tx/day
+### Economic Sustainability
 
-Conservative: 100k tx/day = break-even
-Good: 500k tx/day = $200k/mo profit
-Great: 1M tx/day = $540k/mo profit
-```
+Transaction fees accumulate and can be withdrawn by operators. The L3 architecture provides significant cost advantages, enabling sustainable operations at moderate transaction volumes.
 
 ## Monitoring & Operations
 

@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Jeju paymaster requires accurate elizaOS/ETH exchange rates to calculate gas costs. Since the elizaOS token trades on Base L2 (Uniswap, Aerodrome), we need a reliable way to get those prices onto Jeju.
+The Jeju paymaster requires accurate elizaOS/ETH exchange rates to calculate gas costs. Since the elizaOS token trades on Base (Uniswap, Aerodrome), we need a reliable way to get those prices onto Jeju.
 
 ## Solution: Automated Price Bot
 
 ```
 ┌──────────────────┐
-│    Base L2       │  
+│    Base       │  
 │  (Price Source)  │  Chainlink ETH/USD + Uniswap elizaOS pools
 └────────┬─────────┘
          │
@@ -52,11 +52,11 @@ Required values:
 - `ELIZAOS_TOKEN_BASE`: ElizaOS token address on Base
 - `PRICE_UPDATER_PRIVATE_KEY`: Dedicated wallet for bot
 
-### 3. Test Price Fetching
+### 3. Test Oracle System
 
 ```bash
-# Test that bot can fetch prices from Base
-bun run scripts/test-oracle-prices.ts
+# Run comprehensive oracle tests (included in main test suite)
+bun run test
 ```
 
 ### 4. Run Bot

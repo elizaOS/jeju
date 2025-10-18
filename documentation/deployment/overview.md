@@ -34,7 +34,6 @@ If you just want to build on Jeju:
 **Purpose**: Local development and testing
 
 **Time**: 10 minutes  
-**Cost**: $0 (runs on your laptop)  
 **Requirements**: Docker, Kurtosis, Bun
 
 **Guide**: [Quick Start](/getting-started/quick-start)
@@ -44,7 +43,6 @@ If you just want to build on Jeju:
 **Purpose**: Public testing before mainnet
 
 **Time**: 2-4 hours  
-**Cost**: ~$500/month (AWS)  
 **Requirements**: AWS account, Base Sepolia ETH
 
 **Guide**: [Testnet Deployment](./testnet)
@@ -54,8 +52,7 @@ If you just want to build on Jeju:
 **Purpose**: Production deployment
 
 **Time**: 1-2 days  
-**Cost**: ~$6,000/month + $60k initial capital  
-**Requirements**: Full audit, legal entity, 24/7 operations
+**Requirements**: Full audit, legal entity, 24/7 operations, significant infrastructure budget
 
 **Guide**: [Mainnet Deployment](./mainnet)
 
@@ -84,7 +81,7 @@ You'll deploy these components:
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│ Base L2 (Settlement Layer)                           │
+│ Base (Settlement Layer)                           │
 │  • L1 contracts (OptimismPortal, etc.)               │
 │  • Receives your batches & state roots               │
 └─────────────────────────────────────────────────────┘
@@ -113,52 +110,31 @@ On Jeju (your L3):
 
 ## Cost Breakdown
 
-### Testnet (Monthly)
+### Testnet
 
-```
-AWS EKS:           $300
-RDS:               $100
-Load Balancers:    $50
-Monitoring:        $50
-──────────────────────
-Total:             $500/month
-```
+Primary costs:
+- AWS EKS infrastructure
+- RDS database
+- Load balancers and networking
+- Monitoring and observability
 
-### Mainnet (Monthly)
+### Mainnet
 
-```
-AWS EKS:           $3,000
-RDS (Production):  $1,500
-Load Balancers:    $300
-Monitoring:        $200
-Base Settlement:   $750
-EigenDA:           $300
-──────────────────────
-Total:             $6,050/month
+Infrastructure costs include:
+- AWS EKS cluster (production-grade)
+- RDS with high availability
+- Load balancers and CDN
+- Monitoring and alerting
+- Base settlement fees (L1 gas)
+- EigenDA data availability
 
-Initial Capital:
-  - Deployer ETH:  $10,000
-  - Batcher ETH:   $30,000
-  - Proposer ETH:  $10,000
-  - Emergency:     $10,000
-  ──────────────────────
-  Total:           $60,000
-```
+Initial capital requirements:
+- ETH for contract deployment
+- ETH for batcher operations
+- ETH for proposer operations
+- Emergency reserve funds
 
-### Break-Even Analysis
-
-```
-Revenue per transaction: $0.0002
-Monthly costs: $6,050
-
-Break-even: 30.25M transactions/month
-           = ~1M transactions/day
-
-At 10M tx/day:
-  Revenue: $60,000/month
-  Profit:  $53,950/month
-  Annual:  $647,400
-```
+L3 architecture provides significant cost savings compared to L2 on Ethereum.
 
 ## Deployment Process
 

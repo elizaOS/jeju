@@ -17,22 +17,6 @@
 
 import { ethers } from 'ethers';
 
-/** Test configuration */
-const EXPECTED_SERVICES = {
-  'geth-l1': {
-    rpcPort: 8545,
-    wsPort: 8546,
-    chainId: 1337,
-    name: 'L1 Settlement Layer',
-  },
-  'op-geth': {
-    rpcPort: 9545,
-    wsPort: 9546,
-    chainId: 1337,
-    name: 'L2 Execution Layer (Jeju)',
-  },
-} as const;
-
 const FOUNDRY_ACCOUNTS = [
   {
     address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',

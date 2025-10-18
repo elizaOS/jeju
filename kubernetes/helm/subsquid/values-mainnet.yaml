@@ -21,7 +21,7 @@ processor:
     - name: START_BLOCK
       value: "0"
     - name: CHAIN_ID
-      value: "8888"
+      value: "420691"
     - name: DB_HOST
       value: "subsquid-postgres"
     - name: DB_PORT

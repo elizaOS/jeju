@@ -3,7 +3,7 @@
 ## The Problem
 
 Your L3 paymaster needs accurate elizaOS/ETH exchange rates, but:
-- ElizaOS token trades on **Base L2** (Uniswap, Aerodrome, etc.)
+- ElizaOS token trades on **Base** (Uniswap, Aerodrome, etc.)
 - Your paymaster runs on **Jeju**
 - Can't directly access Base state from L3
 - Manual updates are fragile and dangerous
@@ -20,7 +20,7 @@ We use an automated keeper bot that:
 
 ```
 ┌──────────────────────────────────────────────┐
-│           Base L2 (Price Sources)            │
+│           Base (Price Sources)            │
 ├──────────────────────────────────────────────┤
 │                                              │
 │  📊 Chainlink Feed                           │
@@ -258,18 +258,19 @@ If deviation is too large, bot alerts admin and waits for manual approval.
 ### Bot Operating Costs
 
 **Gas per update:**
-- Jeju: ~50,000 gas @ 0.1 gwei = $0.000015
-- Updates per day: 288 (every 5 minutes)
-- **Daily cost: $0.0043**
-- **Monthly cost: $0.13**
+- Very low gas costs on L3 Jeju
+- Updates every 5 minutes (288/day)
+- Minimal daily gas expenditure
 
 **Infrastructure:**
-- Small VPS: $5/month
-- **Total monthly: ~$5.13**
+- Small VPS required for bot hosting
+- Very low total operational costs
 
 Compare this to:
-- Chainlink custom feed: $2,000-10,000/month
+- Chainlink custom feeds: Very expensive
 - Manual updates: Risk of stale prices → exploits
+
+Price bot provides the most cost-effective solution for oracle updates.
 
 ## Backup Plans
 

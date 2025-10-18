@@ -30,7 +30,7 @@ As a Jeju node operator, you:
 ### Why Run a Node?
 
 **🎁 Earn Rewards**
-- 100-240 JEJU tokens per month per node
+- Earn JEJU tokens for operating nodes
 - Based on uptime, performance, and geographic location
 - Additional volume bonuses for high-traffic nodes
 
@@ -54,17 +54,19 @@ As a Jeju node operator, you:
 | **Network** | 100 Mbps | 1 Gbps |
 | **Bandwidth** | 5 TB/month | 10 TB/month |
 
-### Operating Costs
+### Operating Considerations
 
-**Cloud (AWS/GCP/Azure):**
-- ~$340/month for standard node
-- ~$1,060/month for archive node
+**Cloud Hosting:**
+- Standard node: Moderate monthly infrastructure costs
+- Archive node: Higher costs due to storage and compute requirements
 
 **Bare Metal:**
-- ~$100-300/month after hardware
+- Lower monthly costs after initial hardware investment
+- Requires technical setup and maintenance
 
 **Rewards:**
-- ~100-240 JEJU/month (value varies with token price)
+- Earn JEJU tokens for reliable operation
+- Amount varies based on uptime, performance, and location
 
 ---
 
@@ -75,7 +77,7 @@ As a Jeju node operator, you:
 The easiest way to get started:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jeju-l3/jeju/main/scripts/install-node.sh | bash
+curl -fsSL https://raw.githubusercontent.com/elizaos/jeju/main/scripts/install-node.sh | bash
 ```
 
 This will:
@@ -96,7 +98,7 @@ If you prefer to install manually:
 curl -fsSL https://get.docker.com | sh
 
 # 2. Clone repository
-git clone https://github.com/jeju-l3/jeju.git
+git clone https://github.com/elizaos/jeju.git
 cd jeju
 
 # 3. Configure
@@ -107,7 +109,7 @@ cd ~/.jeju
 openssl rand -hex 32 > config/jwt-secret.txt
 
 # 5. Download configs
-curl -fsSL https://raw.githubusercontent.com/jeju-l3/config/main/rollup-mainnet.json \
+curl -fsSL https://raw.githubusercontent.com/elizaos/jeju/main/config/rollup/mainnet.json \
   -o config/rollup.json
 
 # 6. Create docker-compose.yml (see full config below)
@@ -122,7 +124,7 @@ Snapshots dramatically reduce sync time from days to hours:
 
 ```bash
 # Download and apply latest snapshot
-curl -fsSL https://raw.githubusercontent.com/jeju-l3/jeju/main/scripts/snapshots/download-snapshot.sh | bash
+curl -fsSL https://raw.githubusercontent.com/elizaos/jeju/main/scripts/snapshots/download-snapshot.sh | bash
 ```
 
 Or manually:
@@ -144,7 +146,7 @@ docker-compose up -d
 ```bash
 export JEJU_NETWORK=mainnet
 # RPC: https://rpc.jeju.network
-# Chain ID: 8888
+# Chain ID: 420691
 ```
 
 **Testnet (Testing):**
@@ -386,10 +388,10 @@ df -h ~/.jeju/data
 
 Earn JEJU tokens for running reliable infrastructure.
 
-**Base Reward:** 100 JEJU/month per node
-**Uptime Multiplier:** 0.5x - 2x (based on 99%+ uptime)
-**Geographic Bonus:** +50% for underserved regions
-**Volume Bonus:** +0.01 JEJU per 1000 requests
+**Base Reward:** Monthly JEJU allocation per node
+**Uptime Multiplier:** Bonus for high uptime (99%+)
+**Geographic Bonus:** Additional rewards for underserved regions
+**Volume Bonus:** Extra rewards for high-traffic nodes
 
 ### Registration
 
@@ -665,8 +667,8 @@ services:
 - #node-operators channel
 
 **GitHub:**
-- Issues: https://github.com/jeju-l3/jeju/issues
-- Discussions: https://github.com/jeju-l3/jeju/discussions
+- Issues: https://github.com/elizaos/jeju/issues
+- Discussions: https://github.com/elizaos/jeju/discussions
 
 ### Contributing
 

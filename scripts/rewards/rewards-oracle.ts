@@ -17,7 +17,7 @@ import { ethers } from 'ethers';
 const CONFIG = {
   REWARDS_CONTRACT: process.env.REWARDS_CONTRACT || '',
   ORACLE_PRIVATE_KEY: process.env.ORACLE_PRIVATE_KEY || '',
-  NODE_EXPLORER_API: process.env.NODE_EXPLORER_API || 'http://localhost:3002',
+  NODE_EXPLORER_API: process.env.NODE_EXPLORER_API || 'http://localhost:4002',
   RPC_URL: process.env.RPC_URL || 'https://rpc.jeju.network',
   UPDATE_INTERVAL: parseInt(process.env.UPDATE_INTERVAL || '3600000'), // 1 hour
 };

@@ -4,7 +4,7 @@
 
 Your L3 paymaster needs accurate **elizaOS/ETH exchange rates** to calculate how much elizaOS to charge users for gas. The problem:
 
-- **ElizaOS token trades on Base L2** (Uniswap, Aerodrome, etc.)
+- **ElizaOS token trades on Base** (Uniswap, Aerodrome, etc.)
 - **Your paymaster runs on Jeju**
 - **Can't directly access Base state** from Jeju
 - **Prices change constantly** as people trade
@@ -21,7 +21,7 @@ Without accurate prices, you risk:
 **What**: Off-chain bot that fetches prices from Base and updates your L3 oracle.
 
 ```
-Base L2 (Chainlink + Uniswap) 
+Base (Chainlink + Uniswap) 
     → Price Bot (off-chain)
     → ManualPriceOracle on Jeju
     → LiquidityPaymaster uses prices
@@ -44,11 +44,6 @@ Base L2 (Chainlink + Uniswap)
 - ⚠️ Single point of failure (mitigated by running multiple bots)
 - ⚠️ Bot wallet needs ETH for gas
 
-**Costs:**
-- Gas: $0.13/month
-- VPS: $5/month
-- **Total: ~$5/month**
-
 **Setup Time:** 30 minutes
 
 **When to use:**
@@ -62,7 +57,7 @@ Base L2 (Chainlink + Uniswap)
 **What**: Smart contract on Base reads prices and relays via `L2CrossDomainMessenger` to Jeju.
 
 ```
-Base L2 (PriceSource contract reads prices)
+Base (PriceSource contract reads prices)
     → L2CrossDomainMessenger
     → CrossChainPriceRelay on Jeju
     → ManualPriceOracle on Jeju
@@ -83,12 +78,6 @@ Base L2 (PriceSource contract reads prices)
 - ⚠️ Higher gas costs (Base + Jeju + message passing)
 - ⚠️ 1-2 minute latency for message relay
 - ⚠️ Still needs trigger (bot or keeper network)
-
-**Costs:**
-- Base gas per update: ~$0.02
-- Jeju gas per update: ~$0.0001
-- Message passing: ~$0.01
-- **Total: ~$0.03/update** × 288/day = **$8.64/day = $260/month**
 
 **Setup Time:** 2-3 days
 
@@ -115,14 +104,14 @@ Base L2 (PriceSource contract reads prices)
 
 **Cons:**
 - ❌ Not available on Jeju
-- ❌ Very expensive ($2k-10k/month for custom feed)
+- ❌ Very expensive for custom feeds
 - ❌ ElizaOS price feed doesn't exist
 - ❌ Would still need ETH/USD → elizaOS/ETH conversion
 
 **When to use:**
 - ✅ Only if Chainlink deploys to Jeju (unlikely)
-- ✅ If you have $10k+/month budget
 - ✅ For established protocols with high TVL
+- ✅ When budget permits premium oracle service
 
 ### Option 4: Superchain Oracle Aggregation
 
@@ -176,7 +165,7 @@ Phase 2 (6+ months): Cross-Chain Oracle
 
 | Feature | Price Bot | Cross-Chain | Chainlink | Superchain |
 |---------|-----------|-------------|-----------|------------|
-| **Cost/month** | $5 | $260 | $2k-10k | TBD |
+| **Cost** | Very Low | Medium | Very High | TBD |
 | **Setup time** | 30 min | 2-3 days | N/A | N/A |
 | **Latency** | 5 min | 1-2 min | <1 min | TBD |
 | **Decentralization** | ⚠️ Medium | ✅ High | ✅ Very High | ✅ High |
@@ -331,7 +320,7 @@ All our oracle implementations include:
 
 **A:** Three reasons:
 1. Chainlink not available on L3s (yet)
-2. Very expensive ($2k-10k/month)
+2. Very expensive for custom feeds
 3. ElizaOS price feed doesn't exist
 
 For ETH/USD we DO use Chainlink (on Base), just read it via our bot.

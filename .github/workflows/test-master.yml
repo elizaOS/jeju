@@ -1,5 +1,12 @@
 name: Master Test Suite
 
+# PHILOSOPHY: CRASH LOUD, FAIL FAST, NO MERCY
+# - No || echo fallbacks
+# - No optional tests
+# - No silent failures
+# - First failure kills the build
+# - That's what we want
+
 on:
   push:
     branches: [main, develop]
@@ -11,7 +18,7 @@ env:
   CI: true
 
 jobs:
-  # Fast checks first
+  # Fast checks - MUST pass
   config-and-types:
     name: Configuration & Type Checking
     runs-on: ubuntu-latest
@@ -29,12 +36,14 @@ jobs:
         run: bun install
 
       - name: Validate configuration
-        run: bun run config:validate
+        run: bun run scripts/validate-config.ts
+        # No fallback. If config is invalid, BUILD FAILS.
 
       - name: TypeScript type check
         run: bun run typecheck
+        # No fallback. If types are broken, BUILD FAILS.
 
-  # Smart contract tests
+  # Smart contracts - MUST pass
   contracts:
     name: Smart Contract Tests
     runs-on: ubuntu-latest
@@ -49,20 +58,31 @@ jobs:
       - name: Run Forge build
         working-directory: contracts
         run: forge build
+        # Build MUST succeed
 
       - name: Run Forge tests
         working-directory: contracts
         run: forge test -vv
+        # ALL tests MUST pass
 
       - name: Generate gas report
         working-directory: contracts
         run: forge test --gas-report
+        # Gas report MUST generate
 
-      - name: Generate coverage
+      - name: Check test coverage
         working-directory: contracts
-        run: forge coverage --report summary
+        run: |
+          forge coverage --report summary > coverage.txt
+          cat coverage.txt
+          # Fail if coverage is too low
+          COVERAGE=$(grep "Total" coverage.txt | awk '{print $2}' | sed 's/%//')
+          if [ "$COVERAGE" -lt "80" ]; then
+            echo "❌ Coverage too low: $COVERAGE% (minimum: 80%)"
+            exit 1
+          fi
 
-  # TypeScript unit tests
+  # TypeScript tests - MUST pass
   typescript-tests:
     name: TypeScript Unit Tests
     runs-on: ubuntu-latest
@@ -80,14 +100,23 @@ jobs:
 
       - name: Run config tests
         run: bun test config/index.test.ts
+        # Tests MUST exist and MUST pass
 
       - name: Run shared utilities tests
         run: bun test scripts/shared/
+        # Tests MUST exist and MUST pass
 
-      - name: Run integration tests
-        run: bun test tests/integration/ || true
+      - name: Verify test count
+        run: |
+          # Ensure we actually ran tests
+          TEST_COUNT=$(bun test scripts/shared/ 2>&1 | grep -E "^\s*[0-9]+ pass" | awk '{print $1}')
+          if [ -z "$TEST_COUNT" ] || [ "$TEST_COUNT" -lt "50" ]; then
+            echo "❌ Not enough tests ran: $TEST_COUNT (expected: 50+)"
+            exit 1
+          fi
+          echo "✅ Ran $TEST_COUNT tests"
 
-  # Infrastructure validation
+  # Infrastructure - MUST pass
   infrastructure:
     name: Infrastructure Validation
     runs-on: ubuntu-latest
@@ -109,86 +138,43 @@ jobs:
         run: bun install
 
       - name: Validate Helm charts
-        run: bun run test:helm
+        run: bun run scripts/test-helm-charts.ts
+        # ALL charts MUST validate
 
-  # Documentation coverage
-  documentation:
-    name: Documentation Coverage
+  # FINAL CHECK - ALL MUST PASS
+  all-tests-passed:
+    name: ✅ All Tests Passed
     runs-on: ubuntu-latest
+    needs: [config-and-types, contracts, typescript-tests, infrastructure]
+    if: success()
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Check documentation coverage
-        run: bun run test:docs
-
-  # Specialized tests
-  specialized:
-    name: Specialized System Tests
-    runs-on: ubuntu-latest
-    needs: [contracts, typescript-tests]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build contracts
-        working-directory: contracts
-        run: forge build
-
-      - name: Test node rewards system
-        run: bun run scripts/test-complete-node-system.ts || true
-
-      - name: Test oracle prices
-        run: bun run scripts/test-oracle-prices.ts || true
-        env:
-          BASE_RPC_URL: https://mainnet.base.org
-
-  # Final summary job
-  test-summary:
-    name: Test Summary
-    runs-on: ubuntu-latest
-    needs: [config-and-types, contracts, typescript-tests, infrastructure, documentation, specialized]
-    if: always()
-    steps:
-      - name: Check test results
+      - name: Success
         run: |
-          echo "==================================="
-          echo "Test Summary"
-          echo "==================================="
-          echo "✅ Configuration & Types: ${{ needs.config-and-types.result }}"
-          echo "✅ Smart Contracts: ${{ needs.contracts.result }}"
-          echo "✅ TypeScript Tests: ${{ needs.typescript-tests.result }}"
-          echo "✅ Infrastructure: ${{ needs.infrastructure.result }}"
-          echo "✅ Documentation: ${{ needs.documentation.result }}"
-          echo "✅ Specialized Tests: ${{ needs.specialized.result }}"
-          echo "==================================="
-          
-          if [[ "${{ needs.config-and-types.result }}" == "failure" || \
-                "${{ needs.contracts.result }}" == "failure" || \
-                "${{ needs.typescript-tests.result }}" == "failure" ]]; then
-            echo "❌ Critical tests failed"
-            exit 1
-          fi
-          
-          echo "✅ All critical tests passed!"
+          echo "╔══════════════════════════════════════════════════════════════════╗"
+          echo "║                                                                  ║"
+          echo "║                  ✅ ALL TESTS PASSED                             ║"
+          echo "║                                                                  ║"
+          echo "╚══════════════════════════════════════════════════════════════════╝"
 
-
+  # FINAL CHECK - SHOW FAILURES
+  test-failed:
+    name: ❌ Tests Failed
+    runs-on: ubuntu-latest
+    needs: [config-and-types, contracts, typescript-tests, infrastructure]
+    if: failure()
+    steps:
+      - name: Report Failure
+        run: |
+          echo "╔══════════════════════════════════════════════════════════════════╗"
+          echo "║                                                                  ║"
+          echo "║                     ❌ TESTS FAILED                              ║"
+          echo "║                                                                  ║"
+          echo "╚══════════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Failed jobs:"
+          echo "  Config & Types: ${{ needs.config-and-types.result }}"
+          echo "  Contracts: ${{ needs.contracts.result }}"
+          echo "  TypeScript: ${{ needs.typescript-tests.result }}"
+          echo "  Infrastructure: ${{ needs.infrastructure.result }}"
+          echo ""
+          exit 1

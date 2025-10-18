@@ -5,7 +5,7 @@ Configuration files for Jeju OP Stack rollup.
 ## Files
 
 ### `mainnet.json`
-Rollup configuration for Jeju mainnet (Chain ID: 8888)
+Rollup configuration for Jeju mainnet (Chain ID: 420691)
 - Settlement layer: Base Mainnet (Chain ID: 8453)
 - Block time: 2 seconds
 - Channel timeout: 5 minutes

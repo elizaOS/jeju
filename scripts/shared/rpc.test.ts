@@ -3,7 +3,7 @@
  * @module scripts/shared/rpc.test
  */
 
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
 import { FailoverProvider, checkRPC, getNetworkInfo } from './rpc';
 import { ethers } from 'ethers';
 
@@ -111,7 +111,7 @@ describe('RPC Utilities', () => {
     it('should demonstrate deployment script usage', async () => {
       console.log('\n   Example: Deployment with failover\n');
       
-      const provider = new FailoverProvider([
+      new FailoverProvider([
         'https://rpc.jeju.network',
         'https://rpc-backup.jeju.network',
         LOCALNET_RPC,

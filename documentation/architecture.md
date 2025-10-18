@@ -14,7 +14,7 @@ Deep dive into Jeju's technical architecture, design decisions, and how all the 
                │ (Validation)
                │
 ┌──────────────▼──────────────────────────────────────────┐
-│ Base L2 (Settlement Layer for Jeju)                      │
+│ Base (Settlement Layer for Jeju)                      │
 │ • Receives Jeju's batches & state roots                  │
 │ • Posts its own state to Ethereum                        │
 │ • Operated by Coinbase                                   │
@@ -41,19 +41,46 @@ Deep dive into Jeju's technical architecture, design decisions, and how all the 
 
 ## Core Components
 
-### 1. Execution Layer (Reth)
+### 1. Execution Layer (Reth for Production, Geth for Development)
 
 **Purpose**: Execute transactions and manage state
 
-**Technology**: [Reth](https://github.com/paradigmxyz/reth) (Rust Ethereum)
+**Technology**: 
+- **Production/Testnet**: [Reth](https://github.com/paradigmxyz/reth) (Rust Ethereum) - `op-reth`
+- **Localnet**: [Geth](https://github.com/ethereum/go-ethereum) (Go Ethereum) - `geth` and `op-geth`
 
-**Why Reth?**
+**Why Different Implementations?**
+
+**Production (Reth)**:
 - 3-5x faster than Geth
-- Lower memory footprint
-- Better performance
-- Modern codebase
+- Lower memory footprint (8-16GB vs 32GB+)
+- Better performance under load
+- Modern Rust codebase
+- Cost-effective for cloud deployment
 
-**Responsibilities**:
+**Development (Geth)**:
+- Fast startup time (seconds vs minutes)
+- Dev mode with instant mining
+- Lower resource requirements
+- Simple Kurtosis orchestration
+- Perfect for local testing
+
+**Deployment Strategy**:
+```
+Localnet:     Kurtosis → geth (L1) + op-geth (L2)
+              Start: bun run dev
+              Purpose: Fast local development
+
+Testnet:      Kubernetes → op-reth (sequencer + RPC)
+              Deploy: helmfile -e testnet sync
+              Purpose: Public testing environment
+
+Mainnet:      Kubernetes → op-reth (sequencer + RPC + archive)
+              Deploy: helmfile -e mainnet sync  
+              Purpose: Production network
+```
+
+**Responsibilities** (same for both):
 - Execute EVM transactions
 - Manage world state database
 - Validate blocks
@@ -285,7 +312,7 @@ async function postBatch(batch: Batch) {
 
 **You trust**:
 - Ethereum L1 security
-- Base L2 security (backed by Ethereum)
+- Base security (backed by Ethereum)
 - At least 1 honest Jeju challenger
 
 **You don't trust**:
@@ -320,15 +347,14 @@ async function postBatch(batch: Batch) {
 
 ### Costs
 
-| Component | Cost/Month |
-|-----------|------------|
-| **AWS Infrastructure** | $5,000 |
-| **Base Settlement** | $750 |
-| **EigenDA** | $300 |
-| **Monitoring** | $200 |
-| **Total** | ~$6,250 |
+| Component | Notes |
+|-----------|-------|
+| **AWS Infrastructure** | Primary infrastructure costs |
+| **Base Settlement** | L1 settlement fees |
+| **EigenDA** | Data availability costs |
+| **Monitoring** | Observability and alerting |
 
-Compare to L2 on Ethereum: **$455,000/month**
+Significantly lower costs compared to L2 on Ethereum.
 
 ## Economic Design
 
@@ -340,14 +366,12 @@ Total Fee = Execution Fee + L1 Data Fee
 Execution Fee:
   = Gas Used × Gas Price
   = Covers sequencer costs
-  = ~$0.0001 per transfer
 
 L1 Data Fee:
   = Bytes × Base Gas Price × Scalar
   = Covers Base + EigenDA costs
-  = ~$0.0001 per transfer
 
-Total: ~$0.0002 per transfer
+Total: Very low per transaction
 ```
 
 ### Fee Collection
@@ -364,19 +388,7 @@ Operators withdraw periodically.
 
 ### Revenue Model
 
-```
-At 1M transactions/day:
-
-Revenue:  1M tx × $0.0002 = $200/day = $6,000/month
-Costs:    $6,250/month
-Profit:   Break-even (need ~1.05M tx/day)
-
-At 10M transactions/day:
-
-Revenue:  10M tx × $0.0002 = $2,000/day = $60,000/month
-Costs:    $6,250/month
-Profit:   $53,750/month = $645,000/year
-```
+Transaction fees accumulate in fee vaults and can be withdrawn by operators. The economic model is designed to be sustainable at scale with L3 efficiency advantages.
 
 ## Decentralization Roadmap
 
@@ -413,7 +425,7 @@ Profit:   $53,750/month = $645,000/year
 | Feature | Jeju | L2 on ETH | Alt L1 | Sidechain |
 |---------|---------|-----------|--------|-----------|
 | **Security** | Ethereum | Ethereum | Own validators | Own validators |
-| **Costs** | $750/mo | $450k/mo | Varies | Low |
+| **Costs** | Very Low | High | Varies | Low |
 | **Finality** | 2s* | 12s | Varies | Instant* |
 | **EVM** | ✅ | ✅ | Sometimes | ✅ |
 | **Decentralized** | Future | Yes | Yes | No |

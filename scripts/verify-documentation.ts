@@ -18,7 +18,7 @@
  */
 
 import { readdirSync, readFileSync, statSync } from 'fs';
-import { join, extname } from 'path';
+import { join } from 'path';
 
 interface VerificationResult {
   category: string;
@@ -48,7 +48,6 @@ function hasNatSpec(filePath: string): boolean {
   const hasTitle = content.includes('@title');
   const hasNotice = content.includes('@notice');
   const hasAuthor = content.includes('@author');
-  const hasParams = content.includes('@param') || !content.includes('function ') || content.split('function ').length < 3;
   
   return hasTitle && hasNotice && (hasAuthor || content.includes('// SPDX'));
 }
@@ -74,7 +73,7 @@ function hasJSDoc(filePath: string): boolean {
 /**
  * Check if a source file has corresponding tests
  */
-function hasTestFile(sourceFile: string, category: string): boolean {
+function hasTestFile(sourceFile: string, _category: string): boolean {
   // Contract tests
   if (sourceFile.endsWith('.sol') && !sourceFile.includes('/test/')) {
     const contractName = sourceFile.split('/').pop()!.replace('.sol', '');

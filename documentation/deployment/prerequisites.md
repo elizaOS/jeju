@@ -24,24 +24,26 @@ Requirements before deploying your own Jeju instance.
 
 ## Financial Requirements
 
-### Testnet (~$500/month)
-- AWS infrastructure: $300
-- Base Sepolia gas: ~$50
-- Monitoring: $50
-- Contingency: $100
+### Testnet
+- AWS infrastructure costs
+- Base Sepolia gas for settlement
+- Monitoring and observability
+- Contingency buffer
 
-### Mainnet (~$6,000/month + $60k initial)
-- AWS infrastructure: $3,000
-- Base settlement costs: $750
-- EigenDA: $300
-- Monitoring: $200
-- Other services: $750
+### Mainnet
+- Production-grade AWS infrastructure
+- Base settlement costs (L1 gas fees)
+- EigenDA data availability
+- Monitoring and alerting
+- Additional operational services
 
-**Initial Capital**:
-- Deployer ETH: $10,000
-- Batcher ETH: $30,000
-- Proposer ETH: $10,000
-- Emergency fund: $10,000
+**Initial Capital Requirements**:
+- ETH for contract deployment
+- ETH for batcher operations (significant)
+- ETH for proposer operations
+- Emergency reserve fund
+
+Mainnet deployment requires substantial infrastructure budget and ongoing operational costs.
 
 ## Technical Skills
 
@@ -73,4 +75,5 @@ Requirements before deploying your own Jeju instance.
 - [Deployment Overview](./overview.md)
 - [Testnet Deployment](./testnet.md)
 - [Mainnet Deployment](./mainnet.md)
+
 

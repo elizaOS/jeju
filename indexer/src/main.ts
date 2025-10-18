@@ -36,6 +36,37 @@ import {
 } from './model'
 import {processor} from './processor'
 
+// Extended types for block header and transaction with all requested fields
+interface ExtendedBlockHeader {
+    hash: string
+    height: number
+    parentHash: string
+    timestamp: number
+    gasUsed?: bigint
+    gasLimit?: bigint
+    baseFeePerGas?: bigint
+    difficulty?: bigint
+    size?: number | bigint
+}
+
+interface ExtendedTransaction {
+    hash: string
+    from: string
+    to?: string
+    transactionIndex: number
+    value?: bigint
+    gasPrice?: bigint
+    gas?: bigint
+    gasUsed?: bigint
+    input?: string
+    nonce?: number
+    status?: number
+    contractAddress?: string
+    type?: number
+    maxFeePerGas?: bigint
+    maxPriorityFeePerGas?: bigint
+}
+
 /**
  * Event signature constants
  * 
@@ -128,57 +159,59 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
 
     // Process each block
     for (let block of ctx.blocks) {
+        const header = block.header as ExtendedBlockHeader
         const blockEntity = new Block({
-            id: block.header.hash,
-            number: block.header.height,
-            hash: block.header.hash,
-            parentHash: block.header.parentHash,
-            timestamp: new Date(block.header.timestamp),
+            id: header.hash,
+            number: header.height,
+            hash: header.hash,
+            parentHash: header.parentHash,
+            timestamp: new Date(header.timestamp),
             miner: '0x0000000000000000000000000000000000000000',
-            gasUsed: block.header.gasUsed,
-            gasLimit: block.header.gasLimit,
-            baseFeePerGas: block.header.baseFeePerGas,
-            difficulty: block.header.difficulty,
-            size: typeof block.header.size === 'bigint' ? Number(block.header.size) : block.header.size || 0,
+            gasUsed: header.gasUsed || 0n,
+            gasLimit: header.gasLimit || 0n,
+            baseFeePerGas: header.baseFeePerGas || null,
+            difficulty: header.difficulty || 0n,
+            size: typeof header.size === 'bigint' ? Number(header.size) : header.size || 0,
             transactionCount: block.transactions.length
         })
         blocks.push(blockEntity)
 
         // Process transactions
         for (let tx of block.transactions) {
-            const fromAccount = getOrCreateAccount(tx.from, block.header.height)
+            const rawTx = tx as ExtendedTransaction
+            const fromAccount = getOrCreateAccount(rawTx.from, header.height)
             fromAccount.transactionCount++
-            fromAccount.totalValueSent += tx.value
+            fromAccount.totalValueSent += rawTx.value || 0n
             
             let toAccount: Account | undefined
-            if (tx.to) {
-                toAccount = getOrCreateAccount(tx.to, block.header.height)
-                toAccount.totalValueReceived += tx.value
+            if (rawTx.to) {
+                toAccount = getOrCreateAccount(rawTx.to, header.height)
+                toAccount.totalValueReceived += rawTx.value || 0n
             }
 
             const txEntity = new Transaction({
-                id: tx.hash,
-                hash: tx.hash,
+                id: rawTx.hash,
+                hash: rawTx.hash,
                 block: blockEntity,
-                transactionIndex: tx.transactionIndex,
+                transactionIndex: rawTx.transactionIndex,
                 from: fromAccount,
                 to: toAccount,
-                value: tx.value,
-                gasPrice: tx.gasPrice,
-                gasLimit: BigInt(tx.gas),
-                gasUsed: tx.gasUsed ? BigInt(tx.gasUsed) : null,
-                input: tx.input,
-                nonce: tx.nonce,
-                status: tx.status === 1 ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
+                value: rawTx.value || 0n,
+                gasPrice: rawTx.gasPrice || null,
+                gasLimit: BigInt(rawTx.gas || 0),
+                gasUsed: rawTx.gasUsed ? BigInt(rawTx.gasUsed) : null,
+                input: rawTx.input || '0x',
+                nonce: rawTx.nonce || 0,
+                status: rawTx.status === 1 ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
                 contractAddress: null,  // Will be updated after contracts are created
-                type: tx.type || null,
-                maxFeePerGas: tx.maxFeePerGas,
-                maxPriorityFeePerGas: tx.maxPriorityFeePerGas
+                type: rawTx.type || null,
+                maxFeePerGas: rawTx.maxFeePerGas || null,
+                maxPriorityFeePerGas: rawTx.maxPriorityFeePerGas || null
             })
             
             // Track contract creation for later processing
-            if (tx.contractAddress) {
-                const createdContract = getOrCreateContract(tx.contractAddress, blockEntity, fromAccount)
+            if (rawTx.contractAddress) {
+                const createdContract = getOrCreateContract(rawTx.contractAddress, blockEntity, fromAccount)
                 createdContract.creationTransaction = txEntity
             }
             transactions.push(txEntity)
@@ -187,7 +220,7 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
         // Process logs - THE CRITICAL MISSING PIECE!
         for (let log of block.logs) {
             // Get or create contract that emitted this event
-            const fromAccount = accounts.get(log.address.toLowerCase()) || getOrCreateAccount(log.address, block.header.height)
+            const fromAccount = accounts.get(log.address.toLowerCase()) || getOrCreateAccount(log.address, header.height)
             const contractEntity = getOrCreateContract(log.address, blockEntity, fromAccount)
 
             // Find transaction for this log by matching transactionIndex
@@ -226,8 +259,8 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                     const toAddr = '0x' + log.topics[2].slice(26)
                     const value = BigInt(log.data)
 
-                    const fromAcc = getOrCreateAccount(fromAddr, block.header.height)
-                    const toAcc = getOrCreateAccount(toAddr, block.header.height)
+                    const fromAcc = getOrCreateAccount(fromAddr, header.height)
+                    const toAcc = getOrCreateAccount(toAddr, header.height)
 
                     tokenTransfers.push(new TokenTransfer({
                         id: logEntity.id,
@@ -262,8 +295,8 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                     const toAddr = '0x' + log.topics[2].slice(26)
                     const tokenId = BigInt(log.topics[3])
 
-                    const fromAcc = getOrCreateAccount(fromAddr, block.header.height)
-                    const toAcc = getOrCreateAccount(toAddr, block.header.height)
+                    const fromAcc = getOrCreateAccount(fromAddr, header.height)
+                    const toAcc = getOrCreateAccount(toAddr, header.height)
 
                     tokenTransfers.push(new TokenTransfer({
                         id: logEntity.id,
@@ -303,9 +336,9 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                 const tokenId = BigInt('0x' + log.data.slice(2, 66))
                 const value = BigInt('0x' + log.data.slice(66, 130))
 
-                const operatorAcc = getOrCreateAccount(operator, block.header.height)
-                const fromAcc = getOrCreateAccount(fromAddr, block.header.height)
-                const toAcc = getOrCreateAccount(toAddr, block.header.height)
+                const operatorAcc = getOrCreateAccount(operator, header.height)
+                const fromAcc = getOrCreateAccount(fromAddr, header.height)
+                const toAcc = getOrCreateAccount(toAddr, header.height)
 
                 tokenTransfers.push(new TokenTransfer({
                     id: logEntity.id,

@@ -532,18 +532,18 @@ function getSummary(
 
 ## Gas Costs
 
-Approximate costs on Jeju Network:
+Approximate gas usage on Jeju Network:
 
-| Operation | Gas Cost | USD (@ $3000 ETH, 1 gwei) |
-|-----------|----------|---------------------------|
-| Register Agent | ~75,000 | ~$0.000225 |
-| Register w/ Metadata | ~300,000 | ~$0.0009 |
-| Set Metadata | ~50,000 | ~$0.00015 |
-| Give Feedback | ~150,000 | ~$0.00045 |
-| Request Validation | ~120,000 | ~$0.00036 |
-| Validation Response | ~80,000 | ~$0.00024 |
+| Operation | Gas Cost |
+|-----------|----------|
+| Register Agent | ~75,000 |
+| Register w/ Metadata | ~300,000 |
+| Set Metadata | ~50,000 |
+| Give Feedback | ~150,000 |
+| Request Validation | ~120,000 |
+| Validation Response | ~80,000 |
 
-*Actual costs may vary based on network congestion and complexity*
+Gas prices on Jeju are extremely low due to L3 architecture. Actual costs will vary based on network congestion and operation complexity.
 
 ## Testing
 
@@ -690,7 +690,7 @@ contract AgentMarketplace {
 
 - 📚 **Docs**: https://docs.jeju.network/registry
 - 💬 **Discord**: https://discord.gg/jeju
-- 🐛 **Issues**: https://github.com/jeju-network/issues
+- 🐛 **Issues**: https://github.com/elizaos/jeju/issues
 - 🔒 **Security**: security@jeju.network
 
 ## License

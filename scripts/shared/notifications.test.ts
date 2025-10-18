@@ -1,9 +1,12 @@
 /**
- * @fileoverview Tests for notification utilities
+ * @fileoverview AGGRESSIVE tests for notification utilities
  * @module scripts/shared/notifications.test
+ * 
+ * These tests CRASH and THROW to find bugs.
+ * No defensive programming. No silent failures.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, mock } from 'bun:test';
 import {
   sendNotification,
   sendAlert,
@@ -13,189 +16,292 @@ import {
   type NotificationLevel,
 } from './notifications';
 
-describe('Notification Utilities', () => {
-  const originalEnv = { ...process.env };
+describe('Notification Utilities - AGGRESSIVE TESTS', () => {
+  
+  describe('sendNotification - Core Logic', () => {
+    it('should construct message with correct emoji for each level', async () => {
+      const levels: { level: NotificationLevel; expectedEmoji: string }[] = [
+        { level: 'info', expectedEmoji: 'ℹ️' },
+        { level: 'success', expectedEmoji: '✅' },
+        { level: 'warning', expectedEmoji: '⚠️' },
+        { level: 'error', expectedEmoji: '❌' },
+        { level: 'critical', expectedEmoji: '🚨' },
+      ];
 
-  afterEach(() => {
-    // Restore environment
-    process.env = { ...originalEnv };
-  });
+      // Mock console.log to capture output
+      const originalLog = console.log;
+      const loggedMessages: string[] = [];
+      console.log = mock((msg: string) => {
+        loggedMessages.push(msg);
+      });
 
-  describe('sendNotification', () => {
-    it('should accept all notification levels', async () => {
-      const levels: NotificationLevel[] = ['info', 'success', 'warning', 'error', 'critical'];
-
-      for (const level of levels) {
-        // Should not throw
+      for (const { level, expectedEmoji } of levels) {
+        loggedMessages.length = 0; // Clear
         await sendNotification('Test message', level);
+        
+        // ASSERT: Message was actually logged
+        expect(loggedMessages.length).toBeGreaterThan(0);
+        
+        // ASSERT: Correct emoji used
+        const message = loggedMessages[0];
+        expect(message).toContain(expectedEmoji);
+        expect(message).toContain('Test message');
+        expect(message).toContain('**Jeju Notification**');
       }
 
-      expect(true).toBe(true);
+      console.log = originalLog;
     });
 
-    it('should use info level by default', async () => {
-      // Should not throw
-      await sendNotification('Test message');
-      expect(true).toBe(true);
+    it('should default to info level when not specified', async () => {
+      const originalLog = console.log;
+      const loggedMessages: string[] = [];
+      console.log = mock((msg: string) => { loggedMessages.push(msg); });
+
+      await sendNotification('Test');
+      
+      // ASSERT: Info emoji used
+      expect(loggedMessages[0]).toContain('ℹ️');
+      
+      console.log = originalLog;
     });
 
-    it('should work without config', async () => {
-      // Should not throw even without webhook URLs
+    it('should read config from environment variables', async () => {
+      const originalEnv = { ...process.env };
+      const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
+      global.fetch = mockFetch as any;
+
+      process.env.DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/test/token';
+      process.env.TELEGRAM_BOT_TOKEN = 'bot-token';
+      process.env.TELEGRAM_CHAT_ID = 'chat-id';
+
       await sendNotification('Test message', 'info');
-      expect(true).toBe(true);
+
+      // ASSERT: fetch was called for Discord
+      const discordCalls = mockFetch.mock.calls.filter((call: any) => 
+        call[0]?.includes('discord.com')
+      );
+      expect(discordCalls.length).toBeGreaterThan(0);
+
+      // ASSERT: fetch was called for Telegram
+      const telegramCalls = mockFetch.mock.calls.filter((call: any) => 
+        call[0]?.includes('api.telegram.org')
+      );
+      expect(telegramCalls.length).toBeGreaterThan(0);
+
+      process.env = originalEnv;
     });
+  });
 
-    it('should accept custom config', async () => {
-      const config: NotificationConfig = {
-        discordWebhook: 'https://discord.com/api/webhooks/test',
-        telegramBotToken: 'test-token',
-        telegramChatId: 'test-chat-id',
-      };
+  describe('sendAlert - MUST send critical level', () => {
+    it('should use critical level, not error', async () => {
+      const originalLog = console.log;
+      const loggedMessages: string[] = [];
+      console.log = mock((msg: string) => { loggedMessages.push(msg); });
 
-      // Should not throw (will fail to send but won't crash)
-      await sendNotification('Test message', 'info', config);
-      expect(true).toBe(true);
-    });
-
-    it('should read from environment variables', async () => {
-      process.env.DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/test';
-      process.env.TELEGRAM_BOT_TOKEN = 'test-token';
-      process.env.TELEGRAM_CHAT_ID = 'test-chat';
-
-      // Should attempt to send (will fail gracefully)
-      await sendNotification('Test message');
+      await sendAlert('Alert message');
       
-      expect(true).toBe(true);
+      // ASSERT: Uses critical emoji, NOT error emoji
+      expect(loggedMessages[0]).toContain('🚨');
+      expect(loggedMessages[0]).not.toContain('❌');
+      
+      console.log = originalLog;
     });
   });
 
-  describe('sendAlert', () => {
-    it('should send critical level notification', async () => {
-      await sendAlert('Critical alert message');
-      expect(true).toBe(true);
-    });
+  describe('sendSuccess - MUST send success level', () => {
+    it('should use success emoji', async () => {
+      const originalLog = console.log;
+      const loggedMessages: string[] = [];
+      console.log = mock((msg: string) => { loggedMessages.push(msg); });
 
-    it('should accept custom config', async () => {
-      const config: NotificationConfig = {
-        discordWebhook: 'https://test.webhook',
-      };
-
-      await sendAlert('Alert with config', config);
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('sendSuccess', () => {
-    it('should send success level notification', async () => {
       await sendSuccess('Success message');
-      expect(true).toBe(true);
+      
+      // ASSERT: Uses success emoji
+      expect(loggedMessages[0]).toContain('✅');
+      
+      console.log = originalLog;
     });
   });
 
-  describe('sendWarning', () => {
-    it('should send warning level notification', async () => {
+  describe('sendWarning - MUST send warning level', () => {
+    it('should use warning emoji', async () => {
+      const originalLog = console.log;
+      const loggedMessages: string[] = [];
+      console.log = mock((msg: string) => { loggedMessages.push(msg); });
+
       await sendWarning('Warning message');
-      expect(true).toBe(true);
+      
+      // ASSERT: Uses warning emoji
+      expect(loggedMessages[0]).toContain('⚠️');
+      
+      console.log = originalLog;
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle Discord webhook failures gracefully', async () => {
+  describe('Discord Integration - VERIFY ACTUAL CALLS', () => {
+    it('should call Discord webhook with correct payload', async () => {
+      const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
+      global.fetch = mockFetch as any;
+
       const config: NotificationConfig = {
-        discordWebhook: 'https://invalid.webhook.url/that/does/not/exist',
+        discordWebhook: 'https://discord.com/api/webhooks/123/abc',
       };
 
-      // Should not throw even if webhook fails
+      await sendNotification('Test message', 'info', config);
+
+      // ASSERT: fetch was called
+      expect(mockFetch).toHaveBeenCalled();
+      
+      // ASSERT: Called correct URL
+      const calls = mockFetch.mock.calls;
+      expect(calls[0][0]).toContain('discord.com/api/webhooks');
+      
+      // ASSERT: Sent POST request
+      expect(calls[0][1]?.method).toBe('POST');
+      
+      // ASSERT: Sent JSON body
+      const body = JSON.parse(calls[0][1]?.body || '{}');
+      expect(body.content).toContain('Test message');
+      expect(body.content).toContain('ℹ️');
+    });
+
+    it('should NOT call Discord if webhook not configured', async () => {
+      const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
+      global.fetch = mockFetch as any;
+
+      await sendNotification('Test', 'info', {});
+
+      // ASSERT: fetch NOT called
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Telegram Integration - VERIFY ACTUAL CALLS', () => {
+    it('should call Telegram API with correct payload', async () => {
+      const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
+      global.fetch = mockFetch as any;
+
+      const config: NotificationConfig = {
+        telegramBotToken: 'bot-token-123',
+        telegramChatId: 'chat-456',
+      };
+
+      await sendNotification('Test message', 'info', config);
+
+      // ASSERT: fetch was called
+      expect(mockFetch).toHaveBeenCalled();
+      
+      // ASSERT: Called Telegram API
+      const calls = mockFetch.mock.calls;
+      const telegramCall = calls.find((c: any) => c[0]?.includes('api.telegram.org'));
+      expect(telegramCall).toBeTruthy();
+      
+      // ASSERT: Correct endpoint
+      expect(telegramCall[0]).toContain('/sendMessage');
+      expect(telegramCall[0]).toContain('bot-token-123');
+      
+      // ASSERT: Correct payload
+      const body = JSON.parse(telegramCall[1]?.body || '{}');
+      expect(body.chat_id).toBe('chat-456');
+      expect(body.text).toContain('Test message');
+      expect(body.parse_mode).toBe('Markdown');
+    });
+
+    it('should NOT call Telegram if not fully configured', async () => {
+      const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
+      global.fetch = mockFetch as any;
+
+      // Missing chatId
+      await sendNotification('Test', 'info', {
+        telegramBotToken: 'token',
+      });
+
+      // ASSERT: No Telegram calls
+      const telegramCalls = mockFetch.mock.calls.filter((c: any) => 
+        c[0]?.includes('telegram.org')
+      );
+      expect(telegramCalls.length).toBe(0);
+    });
+  });
+
+  describe('Error Handling - MUST NOT THROW', () => {
+    it('should log error but not throw when Discord fails', async () => {
+      const mockFetch = mock(() => Promise.reject(new Error('Network error')));
+      global.fetch = mockFetch as any;
+
+      const originalError = console.error;
+      let errorLogged = false;
+      console.error = mock((...args: any[]) => {
+        errorLogged = true;
+        originalError(...args);
+      });
+
+      const config: NotificationConfig = {
+        discordWebhook: 'https://discord.com/webhook',
+      };
+
+      // ASSERT: Should not throw
       await expect(sendNotification('Test', 'info', config)).resolves.toBeUndefined();
+      
+      // ASSERT: Error was logged
+      expect(errorLogged).toBe(true);
+      
+      console.error = originalError;
     });
 
-    it('should handle Telegram API failures gracefully', async () => {
+    it('should log error but not throw when Telegram fails', async () => {
+      const mockFetch = mock(() => Promise.reject(new Error('API error')));
+      global.fetch = mockFetch as any;
+
+      const originalError = console.error;
+      let errorLogged = false;
+      console.error = mock((...args: any[]) => {
+        errorLogged = true;
+        originalError(...args);
+      });
+
       const config: NotificationConfig = {
-        telegramBotToken: 'invalid-token',
-        telegramChatId: 'invalid-chat',
+        telegramBotToken: 'token',
+        telegramChatId: 'chat',
       };
 
-      // Should not throw even if API fails
+      // ASSERT: Should not throw
       await expect(sendNotification('Test', 'info', config)).resolves.toBeUndefined();
+      
+      // ASSERT: Error was logged
+      expect(errorLogged).toBe(true);
+      
+      console.error = originalError;
     });
+  });
 
-    it('should handle network errors gracefully', async () => {
+  describe('Integration - VERIFY ALL CHANNELS', () => {
+    it('should call ALL configured channels', async () => {
+      const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
+      global.fetch = mockFetch as any;
+
       const config: NotificationConfig = {
-        discordWebhook: 'http://localhost:99999/webhook',
+        discordWebhook: 'https://discord.com/webhook',
+        telegramBotToken: 'token',
+        telegramChatId: 'chat',
       };
 
-      // Should not throw on network error
-      await expect(sendNotification('Test', 'info', config)).resolves.toBeUndefined();
-    });
-  });
+      await sendNotification('Test', 'info', config);
 
-  describe('Message Formatting', () => {
-    it('should include emoji for each level', async () => {
-      // These should format messages with emojis
-      // Actual emoji checked via console output
-      await sendNotification('Info', 'info');
-      await sendNotification('Success', 'success');
-      await sendNotification('Warning', 'warning');
-      await sendNotification('Error', 'error');
-      await sendNotification('Critical', 'critical');
-
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Integration Examples', () => {
-    it('should demonstrate deployment success notification', async () => {
-      console.log('\n   Example: Deployment success notification\n');
+      // ASSERT: Both services called
+      expect(mockFetch.mock.calls.length).toBe(2);
       
-      await sendSuccess('Contract deployed successfully at 0x123...');
+      // ASSERT: Discord called
+      const discordCalls = mockFetch.mock.calls.filter((c: any) => 
+        c[0]?.includes('discord.com')
+      );
+      expect(discordCalls.length).toBe(1);
       
-      console.log('   ✅ Notification sent (would go to Discord/Telegram if configured)\n');
-    });
-
-    it('should demonstrate oracle alert', async () => {
-      console.log('\n   Example: Oracle price alert\n');
-      
-      await sendAlert('Oracle price stale - immediate action required!');
-      
-      console.log('   ✅ Alert sent (would go to Discord/Telegram if configured)\n');
-    });
-
-    it('should demonstrate monitoring warning', async () => {
-      console.log('\n   Example: Monitoring warning\n');
-      
-      await sendWarning('Node uptime below 99% threshold');
-      
-      console.log('   ✅ Warning sent (would go to Discord/Telegram if configured)\n');
-    });
-  });
-
-  describe('Real-world Usage Patterns', () => {
-    it('should demonstrate oracle bot integration', async () => {
-      // Simulated oracle bot notification flow
-      const config: NotificationConfig = {
-        discordWebhook: process.env.DISCORD_WEBHOOK,
-      };
-
-      // Oracle successfully updated
-      await sendSuccess('Oracle prices updated: ETH=$3,245 elizaOS=$0.08', config);
-
-      // Oracle detected issue
-      await sendWarning('Price deviation >20% detected', config);
-
-      // Oracle critical failure
-      await sendAlert('Oracle failed to update for 1 hour!', config);
-
-      expect(true).toBe(true);
-    });
-
-    it('should demonstrate deployment script notifications', async () => {
-      // Deployment progress notifications
-      await sendNotification('Starting contract deployment...', 'info');
-      await sendSuccess('Contracts deployed successfully');
-      await sendNotification('Deployment complete. Addresses saved to deployments/', 'success');
-
-      expect(true).toBe(true);
+      // ASSERT: Telegram called
+      const telegramCalls = mockFetch.mock.calls.filter((c: any) => 
+        c[0]?.includes('telegram.org')
+      );
+      expect(telegramCalls.length).toBe(1);
     });
   });
 });
-

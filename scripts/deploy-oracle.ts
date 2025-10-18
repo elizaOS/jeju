@@ -10,12 +10,12 @@ const NETWORKS = {
   testnet: {
     jejuRpc: 'https://testnet-rpc.jeju.network',
     baseRpc: 'https://sepolia.base.org',
-    chainId: 888888,
+    chainId: 420690,
   },
   mainnet: {
     jejuRpc: 'https://rpc.jeju.network',
     baseRpc: 'https://mainnet.base.org',
-    chainId: 8888,
+    chainId: 420691,
   },
 } as const;
 
@@ -66,9 +66,9 @@ BASE_RPC_URL=${NETWORKS[network as keyof typeof NETWORKS].baseRpc}
 JEJU_RPC_URL=${NETWORKS[network as keyof typeof NETWORKS].jejuRpc}
 
 ORACLE_ADDRESS=${deployment.priceOracle}
-ELIZAOS_TOKEN_BASE=${process.env.ELIZAOS_TOKEN_BASE || '# TODO: Add elizaOS token address on Base'}
+ELIZAOS_TOKEN_BASE=${process.env.ELIZAOS_TOKEN_BASE || ''}
 
-# TODO: Add your price updater private key
+# Add your price updater private key here (required)
 PRICE_UPDATER_PRIVATE_KEY=
 
 UPDATE_INTERVAL_MS=300000

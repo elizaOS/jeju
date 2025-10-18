@@ -78,3 +78,4 @@ kubectl exec deployment/subsquid-postgres -n indexer -- \
 - [Deployment Overview](./overview.md)
 - [Monitoring](./monitoring.md)
 
+

@@ -6,7 +6,7 @@ Genesis state for Jeju blockchain.
 
 ### `mainnet.json`
 Genesis configuration for Jeju mainnet
-- Chain ID: 8888
+- Chain ID: 420691
 - Pre-deployed contracts (WETH, Bridge, etc.)
 - Initial state and allocations
 

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Jeju
   text: Fast, Cheap Ethereum L3 Appchain
-  tagline: Built by Eliza Labs, maintainers of ElizaOS. OP-Stack L3 settling on Base with sub-second blocks.
+  tagline: Built by Eliza Labs, maintainers of ElizaOS. OP-Stack settling on Base with sub-second blocks.
   image:
     src: /logo.svg
     alt: Jeju
@@ -14,7 +14,7 @@ hero:
       link: /getting-started/introduction
     - theme: alt
       text: View on GitHub
-      link: https://github.com/your-org/jeju
+      link: https://github.com/elizaos/jeju
 
 features:
   - icon: ⚡
@@ -27,7 +27,7 @@ features:
   
   - icon: 🔒
     title: Ethereum Security
-    details: Inherits security through Base L2 with permissionless fault proofs and challenge windows.
+    details: Inherits security through Base with permissionless fault proofs and challenge windows.
   
   - icon: 📦
     title: EigenDA Integration
@@ -39,7 +39,7 @@ features:
   
   - icon: 🚀
     title: EVM Compatible
-    details: Full EVM compatibility. Works with Foundry, Hardhat, and Remix.
+    details: Full EVM compatibility. Works with Foundry, Remix, and all EVM tooling.
 ---
 
 ## About Jeju
@@ -48,7 +48,7 @@ Jeju is a Layer 3 blockchain built by **Eliza Labs**, the maintainers of ElizaOS
 
 ### Architecture
 ```
-Ethereum L1 ← Base L2 ← Jeju
+Ethereum L1 ← Base ← Jeju
 ```
 
 ### Technical Highlights
@@ -71,7 +71,7 @@ Ethereum L1 ← Base L2 ← Jeju
 
   <div class="info-card">
     <h3>🚀 Mainnet</h3>
-    <p><strong>Chain ID:</strong> 8888</p>
+    <p><strong>Chain ID:</strong> 420691</p>
     <p><strong>RPC:</strong> <code>https://rpc.jeju.network</code></p>
     <p><strong>Explorer:</strong> <a href="https://explorer.jeju.network" target="_blank">View →</a></p>
     <p><a href="/network/mainnet">Setup Guide →</a></p>
@@ -82,7 +82,7 @@ Ethereum L1 ← Base L2 ← Jeju
 
 - **Discord**: [Join our community](https://discord.gg/jeju)
 - **Twitter**: [@jejunetwork](https://twitter.com/jejunetwork)
-- **GitHub**: [github.com/your-org/jeju](https://github.com/your-org/jeju)
+- **GitHub**: [github.com/elizaos/jeju](https://github.com/elizaos/jeju)
 - **Telegram**: [t.me/jejunetwork](https://t.me/jejunetwork)
 
 ## Next Steps

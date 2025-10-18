@@ -5,9 +5,9 @@ Deploy Jeju mainnet on Base.
 ## Overview
 
 - **Settlement**: Base Mainnet (Chain ID: 8453)
-- **Jeju Mainnet**: Chain ID 8888
-- **Cost**: ~$6,000/month + $60k initial capital
+- **Jeju Mainnet**: Chain ID 420691
 - **Time**: 1-2 days
+- **Requirements**: Significant infrastructure budget
 
 ## Prerequisites
 

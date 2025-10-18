@@ -274,7 +274,7 @@ Testnet is for TESTING ONLY. Never send real assets or use production keys.
 ### Getting Help
 
 - **Discord**: [#testnet-support](https://discord.gg/jeju)
-- **GitHub**: [Report issues](https://github.com/your-org/jeju/issues)
+- **GitHub**: [Report issues](https://github.com/elizaos/jeju/issues)
 - **Docs**: [Developer Guide](/developers/quick-start)
 - **Status**: https://status.jeju.network
 

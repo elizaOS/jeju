@@ -78,10 +78,10 @@ async function main() {
   console.log(`   cast block latest --rpc-url http://127.0.0.1:${l2Port}`);
   console.log(`   cast send 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 --value 0.1ether --rpc-url http://127.0.0.1:${l2Port} --private-key 0xb71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291`);
   console.log("\n💡 Useful Commands:");
-  console.log("   kurtosis enclave inspect jeju-localnet   - View all services");
+  console.log("   kurtosis enclave inspect jeju-localnet      - View all services");
   console.log("   kurtosis service logs jeju-localnet op-geth - View L2 logs");
-  console.log("   bun run localnet:stop                    - Stop localnet");
-  console.log("   bun run localnet:reset                   - Reset and restart");
+  console.log("   bun run dev                                 - Full dev environment (manages lifecycle)");
+  console.log("   kurtosis enclave rm jeju-localnet           - Reset localnet");
   console.log("\n📚 Documentation: README.md");
   
   // Save deployment info

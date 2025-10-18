@@ -6,7 +6,6 @@ Deploy Jeju testnet on Base Sepolia.
 
 - **Settlement**: Base Sepolia (Chain ID: 84532)
 - **Jeju Testnet**: Chain ID 420690
-- **Cost**: ~$500/month
 - **Time**: 2-4 hours
 
 ## Prerequisites
@@ -63,4 +62,5 @@ cast block latest --rpc-url https://sepolia.base.org
 - [Deployment Overview](./overview.md)
 - [Prerequisites](./prerequisites.md)
 - [Monitoring](./monitoring.md)
+
 

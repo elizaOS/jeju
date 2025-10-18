@@ -5,18 +5,21 @@ Complete guide to developing on Jeju locally.
 ## Quick Start
 
 ```bash
-# 1. Start localnet
-bun run localnet:start
+# One command starts everything (localnet, indexer, services)
+bun run dev
 
-# 2. Deploy contracts
-cd contracts
-forge script script/Deploy.s.sol --broadcast --rpc-url http://localhost:9545
+# Or start minimal environment (just localnet)
+bun run dev -- --minimal
 
-# 3. Start indexer (optional)
-cd indexer && npm run dev
-
-# 4. Start developing!
+# Everything is automatically managed - press Ctrl+C to stop all services
 ```
+
+**What `bun run dev` starts:**
+- ✅ Kurtosis Localnet (L1 + L2)
+- ✅ Subsquid Indexer + GraphQL
+- ✅ Node Explorer (UI + API)
+- ✅ Documentation site
+- ✅ All services with automatic lifecycle management
 
 ## Development Environment
 
@@ -81,14 +84,14 @@ const wallet = new ethers.Wallet(
 ### 3. Testing Your Changes
 
 ```bash
-# Run contract tests
+# Run all tests (automatically manages localnet lifecycle)
+bun run test
+
+# Or run specific contract tests
 cd contracts && forge test
 
-# Run integration tests
-bun test tests/integration/
-
-# Start indexer and verify
-cd indexer && npm run dev
+# Dev environment already has indexer running
+# Access GraphQL at http://localhost:4350/graphql
 ```
 
 ## Hot Reload Development
@@ -96,12 +99,12 @@ cd indexer && npm run dev
 ### Smart Contracts
 
 ```bash
-# Terminal 1: Watch tests
+# Terminal 1: Full dev environment (runs everything)
+bun run dev
+
+# Terminal 2: Watch tests
 cd contracts
 forge test --watch --match-contract YourContract
-
-# Terminal 2: Localnet
-bun run localnet:start
 ```
 
 ### Scripts
@@ -150,7 +153,11 @@ forge script script/DeployLiquiditySystem.s.sol --broadcast --rpc-url http://loc
 ### Reset Localnet
 
 ```bash
-bun run localnet:reset
+# Stop dev environment (Ctrl+C) then:
+bun run scripts/localnet/reset.ts
+
+# Or directly with Kurtosis:
+kurtosis enclave rm -f jeju-localnet
 ```
 
 ### Check Indexer
@@ -167,8 +174,8 @@ curl http://localhost:4350/graphql \
 
 ## Resources
 
-- [Quick Start Guide](./quick-start.md)
-- [Deploy Contracts](./deploy-contracts.md)
-- [Testing Guide](../../TESTING.md)
-- [Kurtosis Documentation](../../kurtosis/README.md)
+- [Quick Start Guide](./quick-start)
+- [Deploy Contracts](./deploy-contracts)
+- [Getting Started](/getting-started/quick-start)
+- [Network Information](/network/testnet)
 

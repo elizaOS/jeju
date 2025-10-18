@@ -14,7 +14,7 @@ import { ethers } from 'ethers';
 
 // ============ Configuration ============
 
-const API_URL = process.env.API_URL || 'http://localhost:3002';
+const API_URL = process.env.API_URL || 'http://localhost:4002';
 const COLLECTOR_PRIVATE_KEY = process.env.COLLECTOR_PRIVATE_KEY || '';
 const SCAN_INTERVAL = parseInt(process.env.SCAN_INTERVAL || '300000'); // 5 minutes
 const RPC_TIMEOUT = 5000;

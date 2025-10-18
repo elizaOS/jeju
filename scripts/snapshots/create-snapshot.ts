@@ -157,7 +157,7 @@ async function getLatestBlockNumber(): Promise<number> {
       }),
     });
     
-    const data = await response.json();
+    const data = await response.json() as { result: string };
     return parseInt(data.result, 16);
   } catch (error) {
     console.warn('⚠️  Could not fetch block number:', error);
@@ -272,7 +272,6 @@ async function createSnapshot() {
   const metadataKeyLatest = `${CONFIG.network}-${CONFIG.nodeType}-latest.json`;
   
   let blockNumber = 0;
-  let success = false;
   
   try {
     // Get current block before stopping
@@ -321,8 +320,6 @@ async function createSnapshot() {
     // Cleanup local file
     console.log('🧹 Cleaning up...');
     unlinkSync(outputFile);
-    
-    success = true;
     
     // Send success notification
     await sendNotification(

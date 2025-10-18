@@ -8,9 +8,9 @@ services:
     container_name: jeju-explorer-api
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "4002:4002"
     environment:
-      - PORT=3002
+      - PORT=4002
     volumes:
       - ./node-explorer.db:/app/node-explorer.db
     networks:
@@ -23,7 +23,7 @@ services:
     container_name: jeju-explorer-collector
     restart: unless-stopped
     environment:
-      - API_URL=http://api:3002
+      - API_URL=http://api:4002
       - COLLECTOR_PRIVATE_KEY=${COLLECTOR_PRIVATE_KEY}
       - SCAN_INTERVAL=300000
     depends_on:
@@ -38,9 +38,9 @@ services:
     container_name: jeju-explorer-frontend
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "3011:3011"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3002
+      - NEXT_PUBLIC_API_URL=http://localhost:4002
     depends_on:
       - api
     networks:

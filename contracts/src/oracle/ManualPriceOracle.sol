@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -8,7 +8,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * @author Jeju Network
  * @notice Provides elizaOS/ETH exchange rates through authorized manual price updates
  * @dev Simple oracle implementation for launch phase where prices are updated by an
- *      authorized bot/keeper reading from Base L2 DEX data (Uniswap/Aerodrome).
+ *      authorized bot/keeper reading from Base DEX data (Uniswap/Aerodrome).
  *      Designed for easy migration to automated oracles (Chainlink, Pyth, etc.) later.
  * 
  * Architecture:
@@ -19,7 +19,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * - Safety limits prevent extreme price manipulation
  * 
  * Price Update Flow:
- * 1. Bot reads prices from Base L2 (Uniswap TWAP, Chainlink feeds)
+ * 1. Bot reads prices from Base (Uniswap TWAP, Chainlink feeds)
  * 2. Bot calls updatePrices() on Jeju with new values
  * 3. Contract validates prices are within bounds and not too different
  * 4. Updates stored prices and timestamp
@@ -133,7 +133,9 @@ contract ManualPriceOracle is Ownable {
      */
     function getElizaOSPerETH() external view returns (uint256) {
         // Calculate: (ETH/USD) / (elizaOS/USD) = elizaOS per ETH
-        // Both have 8 decimals, scale to 18 for token math
+        // Both prices have 8 decimals. To get the result in 18 decimals (for ERC20):
+        // (ethPrice_8decimals / elizaPrice_8decimals) * 1e18
+        // = (ethPrice * 1e18) / elizaPrice
         uint256 elizaPerEth = (ethUsdPrice * 1e18) / elizaUsdPrice;
         return elizaPerEth;
     }
@@ -146,7 +148,7 @@ contract ManualPriceOracle is Ownable {
      *      Validates prices are within bounds and deviation limits.
      * 
      * Called by bot that:
-     * 1. Reads prices from Base L2 (Uniswap TWAP, Chainlink feeds)
+     * 1. Reads prices from Base (Uniswap TWAP, Chainlink feeds)
      * 2. Pushes updates to Jeju every few minutes
      * 3. Ensures paymaster always has fresh prices
      * 

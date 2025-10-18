@@ -1,18 +1,16 @@
+'use client';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './globals.css';
-
-const queryClient = new QueryClient();
-
-export const metadata = {
-  title: 'Jeju Network Explorer',
-  description: 'Decentralized node operator dashboard for Jeju',
-};
+import { useState } from 'react';
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <html lang="en">
       <head>
@@ -22,6 +20,8 @@ export default function RootLayout({
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin=""
         />
+        <title>Jeju Network Explorer</title>
+        <meta name="description" content="Decentralized node operator dashboard for Jeju" />
       </head>
       <body>
         <QueryClientProvider client={queryClient}>

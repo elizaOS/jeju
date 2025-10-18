@@ -19,7 +19,7 @@ const testnetConfig = {
 };
 
 const mainnetConfig = {
-  chainId: 8888,
+  chainId: 420691,
   name: 'Jeju Mainnet',
   rpcUrl: 'https://rpc.jeju.network',
   wsUrl: 'wss://ws.jeju.network',

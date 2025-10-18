@@ -7,7 +7,7 @@ Production network for Jeju, settling on Base mainnet. Use this for production d
 | Parameter | Value |
 |-----------|-------|
 | **Network Name** | Jeju |
-| **Chain ID** | 8888 |
+| **Chain ID** | 420691 |
 | **RPC URL** | https://rpc.jeju.network |
 | **WebSocket** | wss://ws.jeju.network |
 | **Explorer** | https://explorer.jeju.network |
@@ -23,13 +23,13 @@ Click "Add Network" in MetaMask and enter:
 ```
 Network Name: Jeju
 RPC URL: https://rpc.jeju.network
-Chain ID: 8888
+Chain ID: 420691
 Currency Symbol: ETH
 Block Explorer: https://explorer.jeju.network
 ```
 
 Or use this one-click link:
-[Add Jeju to MetaMask](https://chainlist.org/chain/8888)
+[Add Jeju to MetaMask](https://chainlist.org/chain/420691)
 
 ### Manual Configuration
 
@@ -38,7 +38,7 @@ Or use this one-click link:
 import { defineChain } from 'viem';
 
 export const jeju = defineChain({
-  id: 8888,
+  id: 420691,
   name: 'Jeju',
   network: 'jeju',
   nativeCurrency: {
@@ -160,17 +160,17 @@ Our public RPC is completely free and suitable for most applications. Only high-
 
 ### Gas Fees
 
-Typical transaction costs:
+Typical transaction gas usage:
 
-| Transaction Type | Gas Used | Cost @ 0.001 gwei | Cost @ 0.01 gwei |
-|-----------------|----------|-------------------|------------------|
-| ETH Transfer | 21,000 | $0.00001 | $0.0001 |
-| ERC-20 Transfer | 65,000 | $0.00003 | $0.0003 |
-| Uniswap Swap | 150,000 | $0.00008 | $0.0008 |
-| NFT Mint | 80,000 | $0.00004 | $0.0004 |
-| Contract Deploy | 500,000 | $0.00025 | $0.0025 |
+| Transaction Type | Gas Used |
+|-----------------|----------|
+| ETH Transfer | ~21,000 |
+| ERC-20 Transfer | ~65,000 |
+| Uniswap Swap | ~150,000 |
+| NFT Mint | ~80,000 |
+| Contract Deploy | ~500,000 |
 
-*Costs are approximate and based on ETH at $3,000*
+Gas prices on Jeju are extremely low due to L3 architecture.
 
 ::: tip Ultra-Low Fees
 Jeju's L3 architecture means fees are typically 10-100x cheaper than Base, and 100-1000x cheaper than Ethereum.
@@ -213,19 +213,18 @@ Real-time metrics:
 
 ### Audit Reports
 
-- **Trail of Bits** (2024): [View Report](/audits/trail-of-bits-2024.pdf)
-- **Spearbit** (2024): [View Report](/audits/spearbit-2024.pdf)
-- **OpenZeppelin** (2024): [View Report](/audits/openzeppelin-2024.pdf)
+All smart contracts undergo comprehensive security audits before mainnet deployment. Audit reports are published for transparency.
 
 ### Bug Bounty
 
 **Program**: Immunefi  
-**Max Bounty**: $1,000,000  
 **Details**: https://immunefi.com/bounty/jeju
+
+Active bug bounty program with significant rewards for valid security findings.
 
 Report security issues:
 - **Email**: security@jeju.network
-- **PGP Key**: [Download](/security/pgp-key.txt)
+- **Responsible Disclosure**: security@jeju.network
 
 ### Multisig Addresses
 
@@ -288,7 +287,7 @@ forge create YourContract \
 
 # Verify on explorer
 forge verify-contract $CONTRACT_ADDRESS YourContract \
-  --chain-id 8888 \
+  --chain-id 420691 \
   --etherscan-api-key $EXPLORER_API_KEY
 ```
 

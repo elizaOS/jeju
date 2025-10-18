@@ -115,3 +115,7 @@ registry/broadcast/
 
 # Root lib directory (duplicate - use contracts/lib or registry/lib instead)
 /lib/
+contracts/lib
+cache/
+
+contracts/src/**/deploys/**

@@ -6,6 +6,13 @@
 
 ## 🚀 Quick Start
 
+### Option 1: Start with entire Jeju stack (Recommended)
+```bash
+# From project root - starts localnet + indexer + all services
+bun run dev
+```
+
+### Option 2: Start indexer standalone
 ```bash
 cd indexer
 
@@ -18,7 +25,11 @@ npm run dev
 
 **Access**: http://localhost:4350/graphql
 
-> **Note**: The `dev` command automatically cleans up any stale Docker containers before starting, so you never get container name conflicts.
+> **Note**: When using `bun run dev` from the project root, the indexer automatically:
+> - Builds TypeScript to JavaScript
+> - Connects to the local L2 RPC endpoint
+> - Sets up the database with proper configuration
+> - Indexes from block 0 with correct chain ID (8004)
 
 ---
 

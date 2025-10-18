@@ -14,7 +14,7 @@
  * import { data as chainConfigs } from '../../data/chainConfig.data';
  * 
  * const mainnetConfig = chainConfigs.mainnet;
- * console.log(mainnetConfig.chainId); // 8888
+ * console.log(mainnetConfig.chainId); // 420691
  * </script>
  * ```
  */
@@ -33,7 +33,7 @@ import { resolve } from 'path';
  * @property {string} wsUrl - WebSocket RPC endpoint URL
  * @property {string} explorerUrl - Block explorer URL
  * @property {number} l1ChainId - Settlement layer (Base) chain ID
- * @property {string} l1RpcUrl - Base L2 RPC endpoint URL
+ * @property {string} l1RpcUrl - Base RPC endpoint URL
  * @property {string} l1Name - Settlement layer network name
  * @property {boolean} flashblocksEnabled - Whether Flashblocks are enabled
  * @property {number} flashblocksSubBlockTime - Sub-block time in milliseconds (200ms)

@@ -22,12 +22,12 @@ bun --version       # Need 1.0.0+
 See the [Installation Guide](./installation) for detailed setup instructions for Linux and Windows.
 :::
 
-## Launch Localnet (5 Steps)
+## Launch Development Environment (3 Steps)
 
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-org/jeju.git
+git clone https://github.com/elizaos/jeju.git
 cd jeju
 ```
 
@@ -37,27 +37,30 @@ cd jeju
 bun install
 ```
 
-### 3. Start Kurtosis Engine
+### 3. Start Everything
 
 ```bash
-kurtosis engine start
+# Start complete development environment
+bun run dev
+
+# Or start just the localnet
+bun run dev -- --minimal
 ```
 
-### 4. Deploy Localnet
-
-```bash
-bun run localnet:start
-```
-
-This deploys:
+**This automatically deploys:**
+- ✅ Kurtosis Engine
 - ✅ L1 Ethereum (Geth + Lighthouse)
 - ✅ L3 Jeju (op-reth + op-node)
 - ✅ All OP-Stack services (batcher, proposer, challenger)
+- ✅ Subsquid Indexer + GraphQL API
+- ✅ Node Explorer (UI + API)
 - ✅ Pre-funded test accounts
 
 **Time**: 2-3 minutes (cached) or 8-10 minutes (first run)
 
-### 5. Verify It Works
+Press `Ctrl+C` to stop all services automatically.
+
+### 4. Verify It Works
 
 ```bash
 # Check latest block
@@ -180,30 +183,26 @@ kurtosis service logs jeju-localnet el-1-op-reth-op-node --follow
 ### Run Tests
 
 ```bash
-# Integration tests
-bun run test:integration
-
-# E2E tests
-bun run test:e2e
+# Run all tests (automatically manages localnet)
+bun run test
 ```
 
 ## Common Commands
 
 ```bash
-# Check running enclaves
-kurtosis enclave ls
+# Start development environment
+bun run dev                    # Everything
+bun run dev -- --minimal       # Just localnet
+bun run dev -- --no-apps       # Core services only
+# Press Ctrl+C to stop
 
-# Inspect services
-kurtosis enclave inspect jeju-localnet
+# Run tests
+bun run test                   # All tests (auto lifecycle)
 
-# Stop localnet (keeps data)
-bun run localnet:stop
-
-# Reset localnet (fresh start)
-bun run localnet:reset
-
-# View all service ports
-kurtosis enclave inspect jeju-localnet
+# Manual localnet control (if needed)
+kurtosis enclave ls            # List enclaves
+kurtosis enclave inspect jeju-localnet  # Inspect services
+kurtosis enclave rm jeju-localnet       # Reset localnet
 ```
 
 ## Troubleshooting
@@ -227,8 +226,8 @@ lsof -i :9545
 # Kill the process
 kill -9 <PID>
 
-# Or stop existing localnet
-bun run localnet:stop
+# Or stop dev environment
+# Press Ctrl+C in the terminal running dev
 ```
 
 ### "Out of disk space"
@@ -248,9 +247,9 @@ kurtosis clean -a
 kurtosis enclave inspect jeju-localnet
 
 # Force clean and retry
-bun run localnet:reset
+kurtosis enclave rm -f jeju-localnet
 kurtosis clean -a
-bun run localnet:start
+bun run dev -- --minimal
 ```
 
 ## Performance
@@ -305,11 +304,11 @@ Now that you have Jeju running locally:
 When you're done:
 
 ```bash
-# Stop localnet (keeps state for next time)
-bun run localnet:stop
+# Stop dev environment
+# Press Ctrl+C in the terminal
 
 # Or completely remove everything
-bun run localnet:reset
+kurtosis enclave rm -f jeju-localnet
 kurtosis clean -a
 ```
 

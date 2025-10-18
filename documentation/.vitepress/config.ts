@@ -2,9 +2,15 @@ import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'Jeju',
-  description: 'High-performance OP-Stack L3 settling on Base with Flashblocks, EigenDA, and full DeFi stack',
+  description: 'High-performance OP-Stack settling on Base with Flashblocks, EigenDA, and full DeFi stack',
   base: '/jeju/',
   ignoreDeadLinks: false, // ✅ Fixed: All missing pages created
+  
+  vite: {
+    server: {
+      port: 5174
+    }
+  },
   
   head: [
     ['link', { rel: 'icon', href: '/jeju/favicon.ico' }],
@@ -93,7 +99,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/your-org/jeju' },
+      { icon: 'github', link: 'https://github.com/elizaos/jeju' },
       { icon: 'discord', link: 'https://discord.gg/jeju' },
       { icon: 'twitter', link: 'https://twitter.com/jejunetwork' },
     ],
@@ -108,7 +114,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/your-org/jeju/edit/main/documentation/:path',
+      pattern: 'https://github.com/elizaos/jeju/edit/main/documentation/:path',
       text: 'Edit this page on GitHub',
     },
   },
