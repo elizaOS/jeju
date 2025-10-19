@@ -1,2 +1,0 @@
-# Vendor directory for third-party applications
-# Each vendor app should be a git submodule with a vendor-manifest.json file
