@@ -99,7 +99,7 @@ describe('Node Staking System E2E (Multi-Token)', () => {
     );
     
     // For now, use existing deployment
-    const deploymentFile = await Bun.file('contracts/deployments/rewards-localnet.json').json();
+    const deploymentFile = await Bun.file('packages/contracts/deployments/rewards-localnet.json').json();
     
     rewardToken = new ethers.Contract(
       deploymentFile.rewardToken,

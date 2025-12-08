@@ -19,8 +19,7 @@ import {
   type WalletClient,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { rawDeployments } from '@jeju/contracts'
 
 // =============================================================================
 // CONFIGURATION
@@ -100,11 +99,13 @@ let skipTests = false
 let prediMarketAddress: Address | null = null
 
 function loadDeployment(filename: string): Record<string, string> {
-  const path = join(process.cwd(), '../../contracts/deployments', filename)
-  if (existsSync(path)) {
-    return JSON.parse(readFileSync(path, 'utf-8'))
+  const deploymentMap: Record<string, Record<string, string>> = {
+    'uniswap-v4-1337.json': rawDeployments.uniswapV4_1337 as Record<string, string>,
+    'bazaar-marketplace-1337.json': rawDeployments.bazaarMarketplace1337 as Record<string, string>,
+    'predimarket-1337.json': rawDeployments.predimarket1337 as Record<string, string>,
+    'multi-token-system-1337.json': rawDeployments.multiTokenSystem1337 as Record<string, string>,
   }
-  return {}
+  return deploymentMap[filename] || {}
 }
 
 beforeAll(async () => {

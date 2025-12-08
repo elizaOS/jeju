@@ -1,0 +1,49 @@
+{
+  "name": "@jeju/contracts",
+  "version": "0.1.0",
+  "description": "Jeju smart contract ABIs, types, and deployment addresses",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./abis": {
+      "import": "./dist/abis/index.js",
+      "types": "./dist/abis/index.d.ts"
+    },
+    "./abis/*": {
+      "import": "./abis/*.json"
+    },
+    "./deployments": {
+      "import": "./dist/deployments.js",
+      "types": "./dist/deployments.d.ts"
+    },
+    "./deployments/*": {
+      "import": "./deployments/*.json"
+    }
+  },
+  "files": [
+    "dist",
+    "abis",
+    "deployments"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:contracts": "forge build",
+    "test": "forge test",
+    "clean": "rm -rf dist out cache"
+  },
+  "dependencies": {
+    "viem": "^2.7.15"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "viem": ">=2.0.0"
+  }
+}
+

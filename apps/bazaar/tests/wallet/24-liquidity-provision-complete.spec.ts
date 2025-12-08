@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Liquidity Provision - Complete Real Flow
  * Tests ACTUAL liquidity addition/removal with approvals and position tracking
  */

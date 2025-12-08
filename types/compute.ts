@@ -228,7 +228,234 @@ export interface ComputeDeployment {
     inference: string;
     staking: string;
     banManager: string;
+    rental?: string;
   };
   timestamp: string;
+}
+
+// ============================================================================
+// Compute Resource Types (vast.ai-style)
+// ============================================================================
+
+export enum ResourceType {
+  GPU = 0,
+  CPU = 1,
+  MEMORY = 2,
+  STORAGE = 3,
+}
+
+export enum GPUType {
+  NONE = 0,
+  NVIDIA_RTX_4090 = 1,
+  NVIDIA_A100_40GB = 2,
+  NVIDIA_A100_80GB = 3,
+  NVIDIA_H100 = 4,
+  NVIDIA_H200 = 5,
+  AMD_MI300X = 6,
+  APPLE_M1_MAX = 7,
+  APPLE_M2_ULTRA = 8,
+  APPLE_M3_MAX = 9,
+}
+
+export interface ComputeResources {
+  gpuType: GPUType;
+  gpuCount: number;
+  gpuVram: number; // GB
+  cpuCores: number;
+  memory: number; // GB
+  storage: number; // GB
+  bandwidth: number; // Mbps
+  teeCapable: boolean;
+}
+
+export interface ResourcePricing {
+  pricePerHour: bigint; // wei per hour
+  pricePerGpuHour: bigint; // additional per GPU
+  minimumRentalHours: number;
+  maximumRentalHours: number;
+}
+
+// ============================================================================
+// Rental/Session Types
+// ============================================================================
+
+export enum RentalStatus {
+  PENDING = 0,
+  ACTIVE = 1,
+  PAUSED = 2,
+  COMPLETED = 3,
+  CANCELLED = 4,
+  EXPIRED = 5,
+}
+
+export interface ComputeRental {
+  rentalId: string;
+  user: string;
+  provider: string;
+  resources: ComputeResources;
+  status: RentalStatus;
+  startTime: number;
+  endTime: number;
+  totalCost: bigint;
+  paidAmount: bigint;
+  sshPublicKey: string;
+  containerImage?: string;
+  startupScript?: string;
+  sshHost?: string;
+  sshPort?: number;
+}
+
+export interface CreateRentalRequest {
+  provider: string;
+  durationHours: number;
+  sshPublicKey: string;
+  containerImage?: string;
+  startupScript?: string;
+  environmentVars?: Record<string, string>;
+}
+
+export interface RentalSession {
+  rentalId: string;
+  sshHost: string;
+  sshPort: number;
+  sshUser: string;
+  containerState: ContainerState;
+  metrics: SessionMetrics;
+}
+
+export interface ContainerState {
+  containerId: string;
+  image: string;
+  status: 'creating' | 'running' | 'paused' | 'stopped' | 'error';
+  ports: PortMapping[];
+  healthCheck?: HealthCheckResult;
+}
+
+export interface PortMapping {
+  containerPort: number;
+  hostPort: number;
+  protocol: 'tcp' | 'udp';
+}
+
+export interface HealthCheckResult {
+  healthy: boolean;
+  lastCheck: number;
+  message?: string;
+}
+
+export interface SessionMetrics {
+  cpuUsage: number; // percentage
+  memoryUsage: number; // bytes
+  gpuUsage: number; // percentage
+  gpuMemoryUsage: number; // bytes
+  networkRx: number; // bytes
+  networkTx: number; // bytes
+  diskUsage: number; // bytes
+  uptime?: number; // seconds
+  lastUpdated?: number; // timestamp
+}
+
+// ============================================================================
+// SSH Access Types
+// ============================================================================
+
+export interface SSHCredentials {
+  host: string;
+  port: number;
+  username: string;
+  publicKey: string;
+}
+
+export interface SSHSession {
+  sessionId: string;
+  rentalId: string;
+  user: string;
+  connectedAt: number;
+  lastActivity: number;
+  clientIp: string;
+}
+
+export interface SSHProxyConfig {
+  listenPort: number;
+  targetHost: string;
+  targetPort: number;
+  authMethod: 'publickey' | 'signature';
+}
+
+// ============================================================================
+// Compute Node Extended Types
+// ============================================================================
+
+export interface ComputeNodeCapabilities {
+  inference: boolean;
+  ssh: boolean;
+  docker: boolean;
+  kubernetes: boolean;
+  tee: boolean;
+  resources: ComputeResources;
+  pricing: ResourcePricing;
+  supportedImages: string[];
+}
+
+export interface ExtendedProviderInfo extends ComputeProvider {
+  capabilities: ComputeNodeCapabilities;
+  activeRentals: number;
+  maxRentals: number;
+  uptime: number;
+  reputation: number;
+}
+
+// ============================================================================
+// Gateway Proxy Types
+// ============================================================================
+
+export interface GatewayRoute {
+  routeId: string;
+  rentalId: string;
+  type: 'ssh' | 'http' | 'tcp';
+  sourcePort: number;
+  targetHost: string;
+  targetPort: number;
+  user: string;
+  provider: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+export interface ProxySession {
+  sessionId: string;
+  route: GatewayRoute;
+  bytesIn: number;
+  bytesOut: number;
+  connectedAt: number;
+  lastActivity: number;
+}
+
+// ============================================================================
+// Events
+// ============================================================================
+
+export interface RentalCreatedEvent {
+  rentalId: string;
+  user: string;
+  provider: string;
+  durationHours: number;
+  totalCost: bigint;
+  timestamp: number;
+}
+
+export interface RentalStartedEvent {
+  rentalId: string;
+  sshHost: string;
+  sshPort: number;
+  containerId: string;
+  timestamp: number;
+}
+
+export interface RentalCompletedEvent {
+  rentalId: string;
+  actualDuration: number;
+  refundAmount: bigint;
+  timestamp: number;
 }
 

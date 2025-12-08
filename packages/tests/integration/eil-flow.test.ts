@@ -18,8 +18,10 @@ import Bun from 'bun';
 const L1_RPC = process.env.L1_RPC_URL || 'http://127.0.0.1:8545';
 const L2_RPC = process.env.L2_RPC_URL || 'http://127.0.0.1:9545';
 
+import { rawDeployments } from '@jeju/contracts';
+
 // Load deployment config
-const CONFIG_PATH = './contracts/deployments/eil-localnet.json';
+const CONFIG_PATH = './packages/config/eil.json';
 
 interface EILDeployment {
   l1StakeManager: string;
@@ -85,15 +87,32 @@ describe('EIL Flow Integration Tests', () => {
       return;
     }
     
-    // Load deployment
-    const configFile = Bun.file(CONFIG_PATH);
-    const configExists = await configFile.exists();
-    if (!configExists) {
-      console.warn('EIL deployment not found, skipping tests');
-      return;
-    }
+    // Load deployment - try @jeju/contracts first, then config file
+    const eilDeployment = rawDeployments.eilLocalnet;
     
-    deployment = await configFile.json();
+    if (eilDeployment && Object.keys(eilDeployment).length > 0) {
+      deployment = eilDeployment as EILDeployment;
+    } else {
+      // Fall back to config file
+      const configFile = Bun.file(CONFIG_PATH);
+      const configExists = await configFile.exists();
+      if (!configExists) {
+        console.warn('EIL deployment not found, skipping tests');
+        return;
+      }
+      const config = await configFile.json();
+      // Build deployment object from config
+      deployment = {
+        l1StakeManager: config.l1StakeManager,
+        crossChainPaymaster: config.crossChainPaymasters['420691'] || config.crossChainPaymasters['1337'],
+        entryPoint: config.entryPoint,
+        supportedTokens: config.supportedTokens,
+        network: 'localnet',
+        l1ChainId: 1337,
+        l2ChainId: 420691,
+        deployedAt: 0
+      };
+    }
     
     // Setup wallets
     xlpL1 = new ethers.Wallet(ANVIL_KEY_0, l1Provider);

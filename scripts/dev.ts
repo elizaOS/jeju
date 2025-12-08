@@ -547,7 +547,7 @@ async function main() {
     });
 
     // Bootstrap contracts
-    const bootstrapFile = join(process.cwd(), 'contracts', 'deployments', 'localnet-complete.json');
+    const bootstrapFile = join(process.cwd(), 'packages', 'contracts', 'deployments', 'localnet-complete.json');
     if (!existsSync(bootstrapFile)) {
       console.log(`Bootstrapping contracts...`);
       const result = await $`bun run scripts/bootstrap-localnet-complete.ts`.env({

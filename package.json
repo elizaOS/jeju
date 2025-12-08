@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "A modern EVM chain for for agents and humans",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "docs:generate": "typedoc --options packages/config/typedoc.json",
     "postinstall": "bun run scripts/setup-apps.ts || echo 'Setup completed with warnings'",

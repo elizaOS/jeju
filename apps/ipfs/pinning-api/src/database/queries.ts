@@ -36,15 +36,19 @@ export const database = {
     limit: number;
     offset: number;
   }) {
-    let query = db.select().from(pins);
-
+    const conditions = [];
+    
     if (filters.cid) {
-      query = query.where(eq(pins.cid, filters.cid)) as any;
+      conditions.push(eq(pins.cid, filters.cid));
     }
 
     if (filters.status) {
-      query = query.where(eq(pins.status, filters.status)) as any;
+      conditions.push(eq(pins.status, filters.status));
     }
+
+    const query = conditions.length > 0 
+      ? db.select().from(pins).where(and(...conditions))
+      : db.select().from(pins);
 
     return query.limit(filters.limit).offset(filters.offset);
   },

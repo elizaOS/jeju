@@ -12,7 +12,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { JsonRpcProvider, Wallet } from 'ethers';
 import { ComputeNodeServer } from '../node/server';
 import type { ProviderConfig } from '../node/types';
-import { BabylonComputeSDK } from '../sdk/sdk';
+import { JejuComputeSDK } from '../sdk/sdk';
+import type { InferenceResponse } from '../sdk/types';
 
 // Anvil default accounts
 const ANVIL_ACCOUNTS = {
@@ -35,13 +36,15 @@ describe('Settlement Flow', () => {
   let providerWallet: Wallet;
   let userWallet: Wallet;
   let computeNode: ComputeNodeServer;
-  let userSDK: BabylonComputeSDK;
+  let userSDK: JejuComputeSDK;
+  let networkAvailable = false;
 
   beforeAll(async () => {
     // Check if Anvil is running
     rpcProvider = new JsonRpcProvider(RPC_URL);
     try {
       await rpcProvider.getBlockNumber();
+      networkAvailable = true;
     } catch {
       console.log('⚠️  Anvil not running. Skipping settlement tests.');
       return;
@@ -57,7 +60,7 @@ describe('Settlement Flow', () => {
     console.log(`User: ${userWallet.address}`);
 
     // Initialize user SDK
-    userSDK = new BabylonComputeSDK({
+    userSDK = new JejuComputeSDK({
       rpcUrl: RPC_URL,
       signer: userWallet,
       contracts: CONTRACTS,
@@ -102,10 +105,14 @@ describe('Settlement Flow', () => {
 
   describe('Settlement', () => {
     test('user can get settlement-ready response', async () => {
+      if (!networkAvailable || !userSDK) {
+        console.log('   Skipping: network not available');
+        return;
+      }
       // Generate auth headers with settlement nonce
       const headers = await userSDK.generateAuthHeaders(providerWallet.address);
 
-      expect(headers['x-babylon-settlement-nonce']).toBeDefined();
+      expect(headers['x-jeju-settlement-nonce']).toBeDefined();
 
       // Make inference request
       const response = await fetch(
@@ -125,26 +132,30 @@ describe('Settlement Flow', () => {
 
       expect(response.ok).toBe(true);
 
-      const data = await response.json();
+      const data = await response.json() as InferenceResponse;
 
       // Should have settlement data
       expect(data.settlement).toBeDefined();
-      expect(data.settlement.provider).toBe(providerWallet.address);
-      expect(data.settlement.requestHash).toBeDefined();
-      expect(data.settlement.inputTokens).toBeGreaterThan(0);
-      expect(data.settlement.outputTokens).toBeGreaterThan(0);
-      expect(data.settlement.signature).toBeDefined();
-      expect(data.settlement.nonce).toBeDefined();
+      expect(data.settlement!.provider).toBe(providerWallet.address);
+      expect(data.settlement!.requestHash).toBeDefined();
+      expect(data.settlement!.inputTokens).toBeGreaterThan(0);
+      expect(data.settlement!.outputTokens).toBeGreaterThan(0);
+      expect(data.settlement!.signature).toBeDefined();
+      expect(data.settlement!.nonce).toBeDefined();
 
       console.log('\n📜 Settlement Data:');
-      console.log(`   Provider: ${data.settlement.provider}`);
-      console.log(`   Request Hash: ${data.settlement.requestHash}`);
-      console.log(`   Input Tokens: ${data.settlement.inputTokens}`);
-      console.log(`   Output Tokens: ${data.settlement.outputTokens}`);
-      console.log(`   Nonce: ${data.settlement.nonce}`);
+      console.log(`   Provider: ${data.settlement!.provider}`);
+      console.log(`   Request Hash: ${data.settlement!.requestHash}`);
+      console.log(`   Input Tokens: ${data.settlement!.inputTokens}`);
+      console.log(`   Output Tokens: ${data.settlement!.outputTokens}`);
+      console.log(`   Nonce: ${data.settlement!.nonce}`);
     });
 
     test('settlement signature matches expected format', async () => {
+      if (!networkAvailable || !userSDK) {
+        console.log('   Skipping: network not available');
+        return;
+      }
       const headers = await userSDK.generateAuthHeaders(providerWallet.address);
 
       const response = await fetch(
@@ -162,20 +173,24 @@ describe('Settlement Flow', () => {
         }
       );
 
-      const data = await response.json();
+      const data = await response.json() as InferenceResponse;
 
       // The signature should be a valid hex string (0x + 130 chars for secp256k1)
-      expect(data.settlement.signature).toMatch(/^0x[a-fA-F0-9]{130}$/);
+      expect(data.settlement!.signature).toMatch(/^0x[a-fA-F0-9]{130}$/);
 
       // Nonce should match what we sent
       const expectedNonce = Number.parseInt(
-        headers['x-babylon-settlement-nonce'],
+        headers['x-jeju-settlement-nonce'],
         10
       );
-      expect(data.settlement.nonce).toBe(expectedNonce);
+      expect(data.settlement!.nonce).toBe(expectedNonce);
     });
 
     test('token counts are accurate', async () => {
+      if (!networkAvailable || !userSDK) {
+        console.log('   Skipping: network not available');
+        return;
+      }
       const headers = await userSDK.generateAuthHeaders(providerWallet.address);
 
       const testMessage = 'The quick brown fox jumps over the lazy dog';
@@ -195,7 +210,7 @@ describe('Settlement Flow', () => {
         }
       );
 
-      const data = await response.json();
+      const data = await response.json() as InferenceResponse;
 
       // Real tokenizer should give ~10 tokens for this phrase
       // The old fake tokenizer would give 44/4 = 11

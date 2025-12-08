@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Complete Flows Validation - ALL Features Working
  * This test PROVES every flow works end-to-end with deployed contracts
  */

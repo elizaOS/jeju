@@ -1,0 +1,96 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "createListing",
+      "inputs": [
+        { "name": "nftContract", "type": "address", "internalType": "address" },
+        { "name": "tokenId", "type": "uint256", "internalType": "uint256" },
+        { "name": "price", "type": "uint256", "internalType": "uint256" },
+        { "name": "paymentToken", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [{ "name": "listingId", "type": "uint256", "internalType": "uint256" }],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "buyListing",
+      "inputs": [{ "name": "listingId", "type": "uint256", "internalType": "uint256" }],
+      "outputs": [],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "cancelListing",
+      "inputs": [{ "name": "listingId", "type": "uint256", "internalType": "uint256" }],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "getListing",
+      "inputs": [{ "name": "listingId", "type": "uint256", "internalType": "uint256" }],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct Bazaar.Listing",
+          "components": [
+            { "name": "seller", "type": "address", "internalType": "address" },
+            { "name": "nftContract", "type": "address", "internalType": "address" },
+            { "name": "tokenId", "type": "uint256", "internalType": "uint256" },
+            { "name": "price", "type": "uint256", "internalType": "uint256" },
+            { "name": "paymentToken", "type": "address", "internalType": "address" },
+            { "name": "active", "type": "bool", "internalType": "bool" }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "version",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "string", "internalType": "string" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "listingCount",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "event",
+      "name": "ListingCreated",
+      "inputs": [
+        { "name": "listingId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+        { "name": "seller", "type": "address", "indexed": true, "internalType": "address" },
+        { "name": "nftContract", "type": "address", "indexed": false, "internalType": "address" },
+        { "name": "tokenId", "type": "uint256", "indexed": false, "internalType": "uint256" },
+        { "name": "price", "type": "uint256", "indexed": false, "internalType": "uint256" }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ListingSold",
+      "inputs": [
+        { "name": "listingId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+        { "name": "buyer", "type": "address", "indexed": true, "internalType": "address" },
+        { "name": "price", "type": "uint256", "indexed": false, "internalType": "uint256" }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ListingCancelled",
+      "inputs": [
+        { "name": "listingId", "type": "uint256", "indexed": true, "internalType": "uint256" }
+      ],
+      "anonymous": false
+    }
+  ]
+}
+

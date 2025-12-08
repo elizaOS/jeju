@@ -348,5 +348,58 @@ contract EILTest is Test {
         emit log_named_uint("Fee paid", fee);
         emit log_named_uint("XLP received", expectedAmount);
     }
+    
+    function test_DoubleClaimPrevention() public {
+        // Setup: Complete a full flow first
+        vm.startPrank(xlp);
+        uint256[] memory chains = new uint256[](1);
+        chains[0] = L2_CHAIN_ID;
+        l1StakeManager.register{value: 10 ether}(chains);
+        vm.stopPrank();
+        
+        crossChainPaymaster.updateXLPStake(xlp, 10 ether);
+        
+        vm.prank(xlp);
+        crossChainPaymaster.depositETH{value: 20 ether}();
+        
+        vm.prank(user);
+        bytes32 requestId = crossChainPaymaster.createVoucherRequest{value: 0.6 ether}(
+            address(0),
+            0.5 ether,
+            address(0),
+            L1_CHAIN_ID,
+            user,
+            21000,
+            0.1 ether,
+            0.01 ether
+        );
+        
+        uint256 fee = crossChainPaymaster.getCurrentFee(requestId);
+        bytes32 commitment = keccak256(abi.encodePacked(
+            requestId,
+            xlp,
+            uint256(0.5 ether),
+            fee,
+            uint256(L1_CHAIN_ID)
+        ));
+        bytes32 ethSignedHash = commitment.toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(xlpPrivateKey, ethSignedHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        
+        vm.prank(xlp);
+        bytes32 voucherId = crossChainPaymaster.issueVoucher(requestId, signature);
+        
+        crossChainPaymaster.markVoucherFulfilled(voucherId);
+        vm.roll(block.number + 151);
+        
+        // First claim should succeed
+        vm.prank(xlp);
+        crossChainPaymaster.claimSourceFunds(voucherId);
+        
+        // Second claim should revert
+        vm.prank(xlp);
+        vm.expectRevert(CrossChainPaymaster.VoucherAlreadyClaimed.selector);
+        crossChainPaymaster.claimSourceFunds(voucherId);
+    }
 }
 

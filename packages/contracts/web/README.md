@@ -55,9 +55,9 @@ The viewer supports three networks:
 ## Contract Addresses
 
 Addresses are automatically loaded from deployment files:
-- `contracts/deployments/localnet/liquidity-system.json`
-- `contracts/deployments/testnet/liquidity-system.json`
-- `contracts/deployments/mainnet/liquidity-system.json`
+- `packages/contracts/deployments/localnet/liquidity-system.json`
+- `packages/contracts/deployments/testnet/liquidity-system.json`
+- `packages/contracts/deployments/mainnet/liquidity-system.json`
 
 If files don't exist, you'll be prompted to enter addresses manually.
 

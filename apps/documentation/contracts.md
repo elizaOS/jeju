@@ -27,7 +27,7 @@ Multicall3:             '0xcA11bde05977b3631167028862bE2a173976CA11'
 
 ## L1 Contracts (on Base)
 
-Deployed addresses saved to `contracts/deployments/{network}/l1-contracts.json` after running deployment scripts.
+Deployed addresses saved to `packages/contracts/deployments/{network}/l1-contracts.json` after running deployment scripts.
 
 ## Infrastructure
 

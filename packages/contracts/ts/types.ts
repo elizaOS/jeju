@@ -1,0 +1,205 @@
+/**
+ * @fileoverview Contract types for Jeju smart contracts
+ * @module @jeju/contracts/types
+ */
+
+import type { Abi, Address } from 'viem';
+
+// ============================================================================
+// Network Types
+// ============================================================================
+
+export type NetworkName = 'localnet' | 'testnet' | 'mainnet';
+
+export type ChainId = 1337 | 420691 | 84532 | 8453;
+
+export const CHAIN_IDS = {
+  localnet: 1337,
+  testnetL3: 420691,
+  testnetL1: 84532, // Base Sepolia
+  mainnetL1: 8453,  // Base Mainnet
+} as const;
+
+export const NETWORK_BY_CHAIN_ID: Record<ChainId, NetworkName> = {
+  1337: 'localnet',
+  420691: 'testnet',
+  84532: 'testnet',
+  8453: 'mainnet',
+};
+
+// ============================================================================
+// Deployment Types
+// ============================================================================
+
+export interface UniswapV4Deployment {
+  poolManager?: Address;
+  weth?: Address;
+  swapRouter?: Address;
+  positionManager?: Address;
+  quoterV4?: Address;
+  stateView?: Address;
+  timestamp?: string | number;
+  deployer?: Address;
+  chainId?: number;
+  network?: string;
+  deployedAt?: string;
+  version?: string;
+  features?: {
+    singleton?: boolean;
+    hooks?: boolean;
+    flashAccounting?: boolean;
+    nativeETH?: boolean;
+  };
+  notes?: string;
+}
+
+export interface BazaarMarketplaceDeployment {
+  at?: Address;
+  marketplace?: Address;
+  goldToken?: Address;
+  usdcToken?: Address;
+  Owner?: Address;
+  Recipient?: Address;
+}
+
+export interface ERC20FactoryDeployment {
+  at?: Address;
+  factory?: Address;
+}
+
+export interface IdentitySystemDeployment {
+  Deployer?: Address;
+  IdentityRegistry?: Address;
+  identityRegistry?: Address;
+  reputationRegistry?: Address;
+  validationRegistry?: Address;
+  serviceRegistry?: Address;
+  creditManager?: Address;
+  cloudReputationProvider?: Address;
+  usdc?: Address;
+  elizaOS?: Address;
+}
+
+export interface PaymasterSystemDeployment {
+  tokenRegistry?: Address;
+  priceOracle?: Address;
+  paymasterFactory?: Address;
+  entryPoint?: Address;
+  exampleDeployments?: Array<{
+    token: Address;
+    symbol: string;
+    paymaster: string;
+    vault: string;
+    distributor: string;
+  }>;
+}
+
+export interface MultiTokenSystemDeployment {
+  tokenRegistry?: Address;
+  usdc?: Address;
+  weth?: Address;
+  elizaOS?: Address;
+  [key: string]: Address | undefined;
+}
+
+export interface EILDeployment {
+  identityRegistry?: Address;
+  reputationRegistry?: Address;
+  validationRegistry?: Address;
+  serviceRegistry?: Address;
+  creditManager?: Address;
+  deployer?: Address;
+  timestamp?: string;
+}
+
+export interface LiquiditySystemDeployment {
+  liquidityVault?: Address;
+  poolManager?: Address;
+  token0?: Address;
+  token1?: Address;
+}
+
+export interface L1Deployment {
+  portal?: Address;
+  bridge?: Address;
+  systemConfig?: Address;
+  l1CrossDomainMessenger?: Address;
+  l1StandardBridge?: Address;
+  optimismPortal?: Address;
+  addressManager?: Address;
+}
+
+// ============================================================================
+// Contract Address Types
+// ============================================================================
+
+export interface ContractAddresses {
+  // Identity & Registry
+  identityRegistry?: Address;
+  reputationRegistry?: Address;
+  validationRegistry?: Address;
+  serviceRegistry?: Address;
+  
+  // DeFi
+  poolManager?: Address;
+  swapRouter?: Address;
+  positionManager?: Address;
+  quoterV4?: Address;
+  stateView?: Address;
+  weth?: Address;
+  
+  // Marketplace
+  marketplace?: Address;
+  
+  // Token Factory
+  erc20Factory?: Address;
+  
+  // Paymaster / AA
+  entryPoint?: Address;
+  paymasterFactory?: Address;
+  tokenRegistry?: Address;
+  priceOracle?: Address;
+  
+  // Tokens
+  usdc?: Address;
+  elizaOS?: Address;
+  goldToken?: Address;
+}
+
+// ============================================================================
+// ABI Types
+// ============================================================================
+
+export interface ContractABI {
+  address?: Address;
+  abi: Abi;
+}
+
+// ============================================================================
+// Helper Types
+// ============================================================================
+
+export type DeploymentFile = 
+  | 'uniswap-v4-1337'
+  | 'uniswap-v4-420691'
+  | 'bazaar-marketplace-1337'
+  | 'erc20-factory-1337'
+  | 'identity-system-1337'
+  | 'localnet-addresses'
+  | 'paymaster-system-localnet'
+  | 'multi-token-system-1337'
+  | 'eil-localnet'
+  | 'eil-testnet'
+  | 'eliza-token-1337'
+  | 'predimarket-1337'
+  | 'rpg-tokens-1337';
+
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
+
+/**
+ * Check if an address is valid (not zero address)
+ */
+export function isValidAddress(address: Address | string | undefined): address is Address {
+  return !!address && address !== ZERO_ADDRESS && address.startsWith('0x');
+}
+

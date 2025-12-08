@@ -14,6 +14,7 @@ import { ethers, Wallet } from 'ethers';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { Logger } from './logger';
+import { rawDeployments, getContractAddresses } from '@jeju/contracts';
 
 const logger = new Logger('agent0');
 
@@ -24,6 +25,10 @@ export interface JejuManifest {
   description: string;
   version?: string;
   port?: number;
+  ports?: {
+    main?: number;
+    [key: string]: number | undefined;
+  };
   commands?: {
     dev?: string;
     start?: string;
@@ -40,7 +45,7 @@ export interface JejuManifest {
     mcpEndpoint?: string;
     tags?: string[];
     metadata?: Record<string, string>;
-    trustModels?: ('open' | 'delegated' | 'verified')[];
+    trustModels?: ('open' | 'delegated' | 'verified' | 'staked')[];
     x402Support?: boolean;
   };
 }
@@ -116,41 +121,23 @@ const NETWORK_CONFIG: Record<string, {
 // ============ Core Functions ============
 
 /**
- * Load deployment addresses for localnet from deployment files
+ * Load deployment addresses for localnet from @jeju/contracts
  */
 function loadLocalnetAddresses(): void {
-  const deploymentsDir = resolve(__dirname, '../../packages/contracts/deployments');
+  // Use @jeju/contracts for deployment addresses
+  const addresses = getContractAddresses(1337);
   
-  // Try to load from identity-system-1337.json
-  const identityPath = resolve(deploymentsDir, 'identity-system-1337.json');
-  if (existsSync(identityPath)) {
-    const deployments = JSON.parse(readFileSync(identityPath, 'utf-8'));
-    if (deployments.identityRegistry) {
-      NETWORK_CONFIG.localnet.registries.IDENTITY = deployments.identityRegistry;
-    }
-    if (deployments.reputationRegistry) {
-      NETWORK_CONFIG.localnet.registries.REPUTATION = deployments.reputationRegistry;
-    }
-    if (deployments.validationRegistry) {
-      NETWORK_CONFIG.localnet.registries.VALIDATION = deployments.validationRegistry;
-    }
-    logger.info('Loaded localnet addresses from identity-system-1337.json');
+  if (addresses.identityRegistry) {
+    NETWORK_CONFIG.localnet.registries.IDENTITY = addresses.identityRegistry;
+  }
+  if (addresses.reputationRegistry) {
+    NETWORK_CONFIG.localnet.registries.REPUTATION = addresses.reputationRegistry;
+  }
+  if (addresses.validationRegistry) {
+    NETWORK_CONFIG.localnet.registries.VALIDATION = addresses.validationRegistry;
   }
   
-  // Also check localnet-addresses.json
-  const localnetPath = resolve(deploymentsDir, 'localnet-addresses.json');
-  if (existsSync(localnetPath)) {
-    const deployments = JSON.parse(readFileSync(localnetPath, 'utf-8'));
-    if (deployments.IdentityRegistry) {
-      NETWORK_CONFIG.localnet.registries.IDENTITY = deployments.IdentityRegistry;
-    }
-    if (deployments.ReputationRegistry) {
-      NETWORK_CONFIG.localnet.registries.REPUTATION = deployments.ReputationRegistry;
-    }
-    if (deployments.ValidationRegistry) {
-      NETWORK_CONFIG.localnet.registries.VALIDATION = deployments.ValidationRegistry;
-    }
-  }
+  logger.info('Loaded localnet addresses from @jeju/contracts');
 }
 
 /**

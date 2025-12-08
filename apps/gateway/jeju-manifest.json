@@ -12,7 +12,8 @@
   },
   "ports": {
     "main": 4001,
-    "nodeApi": 4002
+    "nodeApi": 4002,
+    "a2a": 4003
   },
   "dependencies": ["contracts", "config"],
   "optional": false,
@@ -21,7 +22,7 @@
   "tags": ["protocol", "infrastructure", "paymaster", "nodes", "staking", "liquidity", "elizaOS", "multi-token"],
   "agent": {
     "enabled": true,
-    "a2aEndpoint": "/a2a",
+    "a2aEndpoint": "http://localhost:4003/a2a",
     "tags": ["jeju-app", "protocol", "infrastructure", "nodes", "staking"],
     "metadata": {
       "category": "infrastructure",

@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * All Features Integration Test
  * Comprehensive test of ALL Bazaar features in one session
  */

@@ -9,6 +9,7 @@ import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
 import { basicSetup } from '../../synpress.config'
 import { connectWallet } from '../helpers/wallet-helpers';
 import { GATEWAY_URL } from '../fixtures/test-data';
+import type { Page } from '@playwright/test';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
 const { expect } = test;
@@ -16,7 +17,7 @@ const { expect } = test;
 /**
  * Validate screen has no errors
  */
-async function validateNoErrors(page: any, screenName: string) {
+async function validateNoErrors(page: Page, screenName: string) {
   const bodyText = await page.textContent('body');
   
   // Check for error keywords

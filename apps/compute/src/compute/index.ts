@@ -14,6 +14,7 @@ export type {
   ChatMessage,
   HardwareInfo,
   ModelConfig,
+  NodeMetrics,
   ProviderConfig,
 } from './node';
 
@@ -23,6 +24,7 @@ export {
   countTokens,
   createInferenceEngine,
   detectHardware,
+  formatHardwareInfo,
   generateHardwareHash,
   generateSimulatedAttestation,
   getAttestationHash,
@@ -36,11 +38,18 @@ export {
 // Export SDK types
 export type {
   Capability,
+  ComputeResources,
+  CreateRentalParams,
+  GPUType,
   InferenceRequest,
   InferenceResponse,
   Ledger,
   Provider,
+  ProviderResourcesInfo,
   ProviderSubAccount,
+  Rental,
+  RentalStatus,
+  ResourcePricing,
   SDKConfig,
   Service,
   Settlement,
@@ -49,7 +58,12 @@ export type {
 // Export SDK
 export { JejuComputeSDK, createSDK } from './sdk';
 
-// Legacy alias for backwards compatibility
+// Export enums
+export { GPUTypeEnum, RentalStatusEnum } from './sdk/types';
+
+/**
+ * @deprecated Use JejuComputeSDK instead. BabylonComputeSDK is kept for backwards compatibility only.
+ */
 export { JejuComputeSDK as BabylonComputeSDK } from './sdk';
 
 // Export Moderation SDK types

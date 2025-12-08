@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Complete Swap Flow with Wallet - Every step verified
  */
 

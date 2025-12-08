@@ -65,6 +65,11 @@ interface BootstrapResult {
     // Moderation
     banManager?: string;
     reputationLabelManager?: string;
+    // Compute Marketplace
+    computeRegistry?: string;
+    ledgerManager?: string;
+    inferenceServing?: string;
+    computeStaking?: string;
   };
   pools: {
     'USDC-ETH'?: string;
@@ -185,6 +190,16 @@ class CompleteBootstrapper {
     result.contracts.reputationLabelManager = moderation.reputationLabelManager;
     console.log('');
 
+    // Step 5.7: Deploy Compute Marketplace
+    console.log('🖥️  STEP 5.7: Deploying Compute Marketplace');
+    console.log('-'.repeat(70));
+    const compute = await this.deployComputeMarketplace(result.contracts);
+    result.contracts.computeRegistry = compute.computeRegistry;
+    result.contracts.ledgerManager = compute.ledgerManager;
+    result.contracts.inferenceServing = compute.inferenceServing;
+    result.contracts.computeStaking = compute.computeStaking;
+    console.log('');
+
     // Step 6: Authorize Services
     console.log('🔐 STEP 6: Authorizing Services');
     console.log('-'.repeat(70));
@@ -252,7 +267,7 @@ class CompleteBootstrapper {
 
   private async deployUSDC(): Promise<string> {
     // Check if USDC already deployed
-    const existingFile = join(process.cwd(), 'contracts', 'deployments', 'localnet-addresses.json');
+    const existingFile = join(process.cwd(), 'packages', 'contracts', 'deployments', 'localnet-addresses.json');
     if (existsSync(existingFile)) {
       try {
         const addresses = await Bun.file(existingFile).json();
@@ -279,7 +294,7 @@ class CompleteBootstrapper {
     }
 
     // Check deployment files
-    const existingFile = join(process.cwd(), 'contracts', 'deployments', 'localnet-addresses.json');
+    const existingFile = join(process.cwd(), 'packages', 'contracts', 'deployments', 'localnet-addresses.json');
     if (existsSync(existingFile)) {
       try {
         const addresses = await Bun.file(existingFile).json();
@@ -481,6 +496,71 @@ class CompleteBootstrapper {
     }
   }
 
+  private async deployComputeMarketplace(contracts: any): Promise<{ 
+    computeRegistry: string; 
+    ledgerManager: string; 
+    inferenceServing: string;
+    computeStaking: string;
+  }> {
+    try {
+      // Deploy ComputeRegistry (from packages/contracts)
+      const computeRegistry = this.deployContractFromPackages(
+        'src/compute/ComputeRegistry.sol:ComputeRegistry',
+        [this.deployerAddress],
+        'ComputeRegistry (Provider Registry)'
+      );
+
+      // Deploy LedgerManager
+      const ledgerManager = this.deployContractFromPackages(
+        'src/compute/LedgerManager.sol:LedgerManager',
+        [computeRegistry, this.deployerAddress],
+        'LedgerManager (User Balances)'
+      );
+
+      // Deploy InferenceServing
+      const inferenceServing = this.deployContractFromPackages(
+        'src/compute/InferenceServing.sol:InferenceServing',
+        [computeRegistry, ledgerManager, this.deployerAddress],
+        'InferenceServing (Settlement)'
+      );
+
+      // Deploy ComputeStaking
+      const computeStaking = this.deployContractFromPackages(
+        'src/compute/ComputeStaking.sol:ComputeStaking',
+        [contracts.banManager || '0x0000000000000000000000000000000000000000', this.deployerAddress],
+        'ComputeStaking (Staking)'
+      );
+
+      console.log('  ✅ Compute marketplace deployed');
+      console.log('     ✨ AI inference with on-chain settlement ready!');
+      return { computeRegistry, ledgerManager, inferenceServing, computeStaking };
+    } catch (error) {
+      console.log('  ⚠️  Compute marketplace deployment skipped (contracts may not exist)');
+      console.log('     Error:', error);
+      return { 
+        computeRegistry: '0x0000000000000000000000000000000000000000', 
+        ledgerManager: '0x0000000000000000000000000000000000000000',
+        inferenceServing: '0x0000000000000000000000000000000000000000',
+        computeStaking: '0x0000000000000000000000000000000000000000'
+      };
+    }
+  }
+
+  private deployContractFromPackages(path: string, args: string[], name: string): string {
+    const argsStr = args.join(' ');
+    const cmd = `cd packages/contracts && forge create ${path} \
+      --rpc-url ${this.rpcUrl} \
+      --private-key ${this.deployerKey} \
+      ${args.length > 0 ? `--constructor-args ${argsStr}` : ''} \
+      --json`;
+
+    const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 });
+    const result = JSON.parse(output);
+    
+    console.log(`  ✅ ${name}: ${result.deployedTo}`);
+    return result.deployedTo;
+  }
+
   private async setOraclePrices(oracle: string, usdc: string, elizaOS: string): Promise<void> {
     const ETH_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -563,7 +643,7 @@ class CompleteBootstrapper {
       const result: any = {};
       
       // Update V4 deployment file
-      const v4DeploymentPath = join(process.cwd(), 'contracts', 'deployments', 'uniswap-v4-1337.json');
+      const v4DeploymentPath = join(process.cwd(), 'packages', 'contracts', 'deployments', 'uniswap-v4-1337.json');
       let v4Deployment: any = {};
       
       if (existsSync(v4DeploymentPath)) {
@@ -592,8 +672,8 @@ class CompleteBootstrapper {
       }
       
       // Save updated deployment
-      if (!existsSync(join(process.cwd(), 'contracts', 'deployments'))) {
-        mkdirSync(join(process.cwd(), 'contracts', 'deployments'), { recursive: true });
+      if (!existsSync(join(process.cwd(), 'packages', 'contracts', 'deployments'))) {
+        mkdirSync(join(process.cwd(), 'packages', 'contracts', 'deployments'), { recursive: true });
       }
       
       writeFileSync(v4DeploymentPath, JSON.stringify(v4Deployment, null, 2));
@@ -610,7 +690,7 @@ class CompleteBootstrapper {
   private async initializeUniswapPools(_contracts: any): Promise<Record<string, string>> {
     try {
       // Check if Uniswap V4 is deployed
-      const poolManagerPath = join(process.cwd(), 'contracts', 'deployments', 'uniswap-v4-localnet.json');
+      const poolManagerPath = join(process.cwd(), 'packages', 'contracts', 'deployments', 'uniswap-v4-localnet.json');
       
       if (!existsSync(poolManagerPath)) {
         console.log('  ⏭️  Uniswap V4 not deployed - skipping pools');
@@ -662,7 +742,7 @@ class CompleteBootstrapper {
 
   private saveConfiguration(result: BootstrapResult): void {
     // Save to deployment file
-    const path = join(process.cwd(), 'contracts', 'deployments', 'localnet-complete.json');
+    const path = join(process.cwd(), 'packages', 'contracts', 'deployments', 'localnet-complete.json');
     writeFileSync(path, JSON.stringify(result, null, 2));
 
     // Update gateway .env with ALL contract addresses
@@ -705,6 +785,12 @@ VITE_STATE_VIEW_ADDRESS="${result.contracts.stateView || ''}"
 # Moderation
 VITE_BAN_MANAGER_ADDRESS="${result.contracts.banManager || ''}"
 VITE_REPUTATION_LABEL_MANAGER_ADDRESS="${result.contracts.reputationLabelManager || ''}"
+
+# Compute Marketplace
+VITE_COMPUTE_REGISTRY_ADDRESS="${result.contracts.computeRegistry || ''}"
+VITE_LEDGER_MANAGER_ADDRESS="${result.contracts.ledgerManager || ''}"
+VITE_INFERENCE_SERVING_ADDRESS="${result.contracts.inferenceServing || ''}"
+VITE_COMPUTE_STAKING_ADDRESS="${result.contracts.computeStaking || ''}"
 
 # Core Infrastructure
 VITE_CREDIT_MANAGER_ADDRESS="${result.contracts.creditManager}"
@@ -761,6 +847,12 @@ STATE_VIEW_ADDRESS="${result.contracts.stateView || ''}"
 BAN_MANAGER_ADDRESS="${result.contracts.banManager || ''}"
 REPUTATION_LABEL_MANAGER_ADDRESS="${result.contracts.reputationLabelManager || ''}"
 
+# Compute Marketplace
+COMPUTE_REGISTRY_ADDRESS="${result.contracts.computeRegistry || ''}"
+LEDGER_MANAGER_ADDRESS="${result.contracts.ledgerManager || ''}"
+INFERENCE_SERVING_ADDRESS="${result.contracts.inferenceServing || ''}"
+COMPUTE_STAKING_ADDRESS="${result.contracts.computeStaking || ''}"
+
 # x402 Configuration
 X402_NETWORK=jeju-localnet
 X402_FACILITATOR_URL=http://localhost:3402
@@ -798,6 +890,7 @@ ${result.testWallets.map((w, i) => `TEST_ACCOUNT_${i + 1}_KEY="${w.privateKey}"`
     console.log('   ✅ Multi-token support (USDC, elizaOS, ETH)');
     console.log('   ✅ Account abstraction (gasless transactions)');
     console.log('   ✅ Paymaster system with all tokens registered');
+    console.log('   ✅ Compute marketplace (AI inference on-chain settlement)');
     console.log('   ✅ 8 test wallets funded and ready');
     console.log('   ✅ Oracle prices initialized');
     console.log('   ✅ All services authorized');

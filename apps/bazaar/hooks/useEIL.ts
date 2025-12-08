@@ -21,7 +21,7 @@ const CROSS_CHAIN_PAYMASTER_ABI = [
       { name: 'feeIncrement', type: 'uint256' }
     ],
     outputs: [{ type: 'bytes32' }],
-    stateMutability: 'nonpayable'
+    stateMutability: 'payable'
   },
   {
     type: 'function',
@@ -88,6 +88,9 @@ export interface ChainInfo {
   paymasterAddress?: Address
 }
 
+// EIL config from packages/config/eil.json
+import eilConfig from '../../../packages/config/eil.json'
+
 // ============ Supported Chains ============
 
 export const SUPPORTED_CHAINS: ChainInfo[] = [
@@ -105,27 +108,28 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
  * Hook to check if EIL is available and get configuration
  */
 export function useEILConfig() {
-  const [config, setConfig] = useState<{
-    isAvailable: boolean
-    crossChainPaymaster: Address | undefined
-    supportedChains: ChainInfo[]
-  }>({
-    isAvailable: false,
-    crossChainPaymaster: undefined,
-    supportedChains: []
-  })
+  const { chain } = useAccount()
+  const chainId = chain?.id?.toString() || '420691'
+  
+  // Get paymaster for current chain from config
+  const crossChainPaymaster = eilConfig.crossChainPaymasters[chainId as keyof typeof eilConfig.crossChainPaymasters] as Address | undefined
+  
+  // Check if configured (not zero address)
+  const isAvailable = crossChainPaymaster && crossChainPaymaster !== '0x0000000000000000000000000000000000000000'
+  
+  // Build chain info from config
+  const configuredChains = SUPPORTED_CHAINS.map(chain => ({
+    ...chain,
+    paymasterAddress: eilConfig.crossChainPaymasters[chain.id.toString() as keyof typeof eilConfig.crossChainPaymasters] as Address | undefined
+  }))
 
-  useEffect(() => {
-    const paymasterAddress = process.env.NEXT_PUBLIC_CROSS_CHAIN_PAYMASTER as Address | undefined
-    
-    setConfig({
-      isAvailable: Boolean(paymasterAddress),
-      crossChainPaymaster: paymasterAddress,
-      supportedChains: SUPPORTED_CHAINS
-    })
-  }, [])
-
-  return config
+  return {
+    isAvailable: Boolean(isAvailable),
+    crossChainPaymaster: isAvailable ? crossChainPaymaster : undefined,
+    supportedChains: configuredChains,
+    l1StakeManager: eilConfig.l1StakeManager as Address,
+    supportedTokens: eilConfig.supportedTokens as Address[],
+  }
 }
 
 /**
@@ -162,6 +166,10 @@ export function useCrossChainSwap(paymasterAddress: Address | undefined) {
     const feeIncrement = parseEther('0.0001')
     const gasOnDestination = parseEther('0.001')
 
+    // For ETH transfers, value = amount + maxFee. For ERC20, value = maxFee (for fee payment)
+    const isETH = params.sourceToken === '0x0000000000000000000000000000000000000000'
+    const txValue = isETH ? params.amount + maxFee : maxFee
+
     writeContract({
       address: paymasterAddress,
       abi: CROSS_CHAIN_PAYMASTER_ABI,
@@ -175,7 +183,8 @@ export function useCrossChainSwap(paymasterAddress: Address | undefined) {
         gasOnDestination,
         maxFee,
         feeIncrement
-      ]
+      ],
+      value: txValue
     })
   }, [paymasterAddress, userAddress, writeContract])
 

@@ -88,6 +88,9 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
     /// @notice Request ID to claiming XLP
     mapping(bytes32 => address) public requestClaimedBy;
     
+    /// @notice Track fulfilled voucher hashes to prevent replay attacks
+    mapping(bytes32 => bool) public fulfilledVoucherHashes;
+    
     // ============ Structs ============
     
     struct VoucherRequest {
@@ -121,6 +124,7 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
         uint256 expiresBlock;
         bool fulfilled;
         bool slashed;
+        bool claimed;  // Track if source funds have been claimed
     }
     
     // ============ Events ============
@@ -209,6 +213,7 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
     error Unauthorized();
     error TransferFailed();
     error InvalidRecipient();
+    error VoucherAlreadyClaimed();
     
     // ============ Constructor ============
     
@@ -303,8 +308,15 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
                 if (!refundSuccess) revert TransferFailed();
             }
         } else {
-            // ERC20 transfer
+            // ERC20 transfer - fee must be paid in ETH
+            if (msg.value < maxFee) revert InsufficientFee();
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            
+            // Refund excess fee
+            if (msg.value > maxFee) {
+                (bool refundSuccess, ) = msg.sender.call{value: msg.value - maxFee}("");
+                if (!refundSuccess) revert TransferFailed();
+            }
         }
         
         // Store request
@@ -371,12 +383,17 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
         
         // Return tokens to requester
         if (request.token == address(0)) {
-            // Native ETH
+            // Native ETH - refund amount + maxFee
             (bool success, ) = request.requester.call{value: request.amount + request.maxFee}("");
             if (!success) revert TransferFailed();
         } else {
-            // ERC20
+            // ERC20 - refund tokens AND the ETH fee that was collected
             IERC20(request.token).safeTransfer(request.requester, request.amount);
+            // Also refund the ETH fee
+            if (request.maxFee > 0) {
+                (bool feeSuccess, ) = request.requester.call{value: request.maxFee}("");
+                if (!feeSuccess) revert TransferFailed();
+            }
         }
         
         emit VoucherExpired(requestId, request.requester);
@@ -477,7 +494,9 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
         require(!vouchers[voucherId].fulfilled, "Already fulfilled");
         
         vouchers[voucherId].fulfilled = true;
-        emit VoucherFulfilled(voucherId, vouchers[voucherId].xlp, vouchers[voucherId].amount);
+        // Get recipient from the original request
+        VoucherRequest storage request = voucherRequests[vouchers[voucherId].requestId];
+        emit VoucherFulfilled(voucherId, request.recipient, vouchers[voucherId].amount);
     }
     
     // ============ Voucher Issuance (XLP) ============
@@ -498,8 +517,9 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
         if (request.claimed) revert RequestAlreadyClaimed();
         if (request.expired || block.number > request.deadline) revert RequestExpired();
         
-        // Verify XLP has sufficient stake
-        uint256 requiredStake = request.amount / 10; // 10% of transfer amount
+        // Verify XLP has sufficient stake (10% of transfer amount, minimum 0.01 ETH)
+        uint256 requiredStake = request.amount / 10;
+        if (requiredStake < 0.01 ether) requiredStake = 0.01 ether;
         if (xlpVerifiedStake[msg.sender] < requiredStake) revert InsufficientXLPStake();
         
         // Calculate fee based on current block
@@ -543,7 +563,8 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
             issuedBlock: block.number,
             expiresBlock: block.number + VOUCHER_TIMEOUT,
             fulfilled: false,
-            slashed: false
+            slashed: false,
+            claimed: false
         });
         
         emit VoucherIssued(voucherId, requestId, msg.sender, fee);
@@ -562,7 +583,11 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
         if (voucher.xlp != msg.sender) revert OnlyXLP();
         if (!voucher.fulfilled) revert VoucherExpiredError(); // Must be fulfilled first
         if (voucher.slashed) revert Unauthorized();
+        if (voucher.claimed) revert VoucherAlreadyClaimed(); // Prevent double-claim
         if (block.number < voucher.issuedBlock + CLAIM_DELAY) revert ClaimDelayNotPassed();
+        
+        // Mark as claimed BEFORE transfers (checks-effects-interactions)
+        voucher.claimed = true;
         
         // XLP receives the locked amount (they already spent this on destination)
         // Plus the fee for their service
@@ -618,6 +643,10 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
             gasAmount,
             chainId
         ));
+        
+        // Prevent replay attacks
+        if (fulfilledVoucherHashes[voucherHash]) revert VoucherAlreadyFulfilled();
+        fulfilledVoucherHashes[voucherHash] = true;
         
         address signer = voucherHash.toEthSignedMessageHash().recover(xlpSignature);
         if (signer != xlp) revert InvalidVoucherSignature();

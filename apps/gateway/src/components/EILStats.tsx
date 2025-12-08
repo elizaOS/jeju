@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { formatEther } from 'viem';
 
 interface EILStatsData {
   totalVolumeEth: string;

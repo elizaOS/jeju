@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Complete Liquidity Flow with Wallet - Every field interaction
  */
 

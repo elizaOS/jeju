@@ -1,9 +1,15 @@
-import { Address } from 'viem'
+import type { Address } from 'viem'
 import { JEJU_CHAIN_ID } from './chains'
-
-import v4Deployment from '../../../contracts/deployments/uniswap-v4-1337.json'
-import factoryDeployment from '../../../contracts/deployments/erc20-factory-1337.json'
-import marketplaceDeployment from '../../../contracts/deployments/bazaar-marketplace-1337.json'
+import {
+  getUniswapV4,
+  getBazaarMarketplace,
+  getERC20Factory,
+  bazaarMarketplaceDeployments,
+  erc20FactoryDeployments,
+  ZERO_ADDRESS,
+  isValidAddress,
+  type ChainId,
+} from '@jeju/contracts'
 
 export interface V4Contracts {
   poolManager: Address
@@ -26,51 +32,48 @@ export interface TokenFactoryContracts {
   erc20Factory: Address
 }
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address
+function buildV4Contracts(chainId: ChainId): V4Contracts {
+  const v4 = getUniswapV4(chainId)
+  return {
+    poolManager: (v4.poolManager || ZERO_ADDRESS) as Address,
+    weth: (v4.weth || ZERO_ADDRESS) as Address,
+    swapRouter: v4.swapRouter as Address | undefined,
+    positionManager: v4.positionManager as Address | undefined,
+    quoterV4: v4.quoterV4 as Address | undefined,
+    stateView: v4.stateView as Address | undefined,
+  }
+}
 
 export const V4_CONTRACTS: Record<number, V4Contracts> = {
-  1337: {
-    poolManager: ((v4Deployment as Record<string, string>).poolManager || ZERO_ADDRESS) as Address,
-    weth: v4Deployment.weth as Address,
-    swapRouter: v4Deployment.swapRouter as Address,
-    positionManager: v4Deployment.positionManager as Address,
-    quoterV4: v4Deployment.quoterV4 as Address,
-    stateView: v4Deployment.stateView as Address,
-  },
-  420691: {
-    poolManager: ((v4Deployment as Record<string, string>).poolManager || ZERO_ADDRESS) as Address,
-    weth: v4Deployment.weth as Address,
-    swapRouter: v4Deployment.swapRouter as Address,
-    positionManager: v4Deployment.positionManager as Address,
-    quoterV4: v4Deployment.quoterV4 as Address,
-    stateView: v4Deployment.stateView as Address,
-  },
+  1337: buildV4Contracts(1337),
+  420691: buildV4Contracts(420691),
 }
 
-const marketplaceData = marketplaceDeployment as Record<string, string>
+function buildNFTContracts(chainId: ChainId): NFTContracts {
+  const marketplace = bazaarMarketplaceDeployments[chainId]
+  const marketplaceAddr = getBazaarMarketplace(chainId) || ZERO_ADDRESS
+  return {
+    marketplace: marketplaceAddr as Address,
+    hyperscapeGold: (marketplace?.goldToken || ZERO_ADDRESS) as Address,
+    hyperscapeItems: marketplaceAddr as Address,
+  }
+}
 
 export const NFT_CONTRACTS: Record<number, NFTContracts> = {
-  1337: {
-    marketplace: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
-    hyperscapeGold: (marketplaceData.goldToken || marketplaceData.Token || ZERO_ADDRESS) as Address,
-    hyperscapeItems: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
-  },
-  [JEJU_CHAIN_ID]: {
-    marketplace: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
-    hyperscapeGold: (marketplaceData.goldToken || marketplaceData.Token || ZERO_ADDRESS) as Address,
-    hyperscapeItems: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
-  },
+  1337: buildNFTContracts(1337),
+  [JEJU_CHAIN_ID]: buildNFTContracts(420691),
 }
 
-const factoryData = factoryDeployment as Record<string, string>
+function buildTokenFactoryContracts(chainId: ChainId): TokenFactoryContracts {
+  const factory = erc20FactoryDeployments[chainId]
+  return {
+    erc20Factory: (getERC20Factory(chainId) || factory?.at || ZERO_ADDRESS) as Address,
+  }
+}
 
 export const TOKEN_FACTORY_CONTRACTS: Record<number, TokenFactoryContracts> = {
-  1337: {
-    erc20Factory: (factoryData.factory || factoryData.at || ZERO_ADDRESS) as Address,
-  },
-  [JEJU_CHAIN_ID]: {
-    erc20Factory: (factoryData.factory || factoryData.at || ZERO_ADDRESS) as Address,
-  },
+  1337: buildTokenFactoryContracts(1337),
+  [JEJU_CHAIN_ID]: buildTokenFactoryContracts(420691),
 }
 
 export function getV4Contracts(chainId: number): V4Contracts {
@@ -92,7 +95,7 @@ export function hasV4Periphery(chainId: number): boolean {
 
 export function hasNFTMarketplace(chainId: number): boolean {
   const contracts = getNFTContracts(chainId)
-  return !!(contracts.marketplace && contracts.hyperscapeItems)
+  return !!(contracts.marketplace && contracts.hyperscapeItems && isValidAddress(contracts.marketplace))
 }
 
 export function getTokenFactoryContracts(chainId: number): TokenFactoryContracts | undefined {
@@ -101,6 +104,5 @@ export function getTokenFactoryContracts(chainId: number): TokenFactoryContracts
 
 export function hasTokenFactory(chainId: number): boolean {
   const contracts = getTokenFactoryContracts(chainId)
-  return !!contracts?.erc20Factory
+  return !!contracts?.erc20Factory && isValidAddress(contracts.erc20Factory)
 }
-

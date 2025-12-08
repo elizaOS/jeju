@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * ALL COMPONENTS TEST SUITE
  * 
  * Tests every UI component in Bazaar with all variants and states
@@ -11,7 +12,7 @@ import { basicSetup } from '../../synpress.config'
 const test = testWithSynpress(metaMaskFixtures(basicSetup))
 const { expect } = test
 
-async function connectWallet(page: any, metamask: MetaMask) {
+async function connectWallet(page: Page, metamask: MetaMask) {
   await page.goto('/')
   const connectBtn = page.getByRole('button', { name: /Connect Wallet/i })
   if (await connectBtn.isVisible()) {

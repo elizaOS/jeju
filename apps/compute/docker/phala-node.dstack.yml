@@ -1,4 +1,4 @@
-# Babylon Compute Node - Phala Cloud Deployment
+# Jeju Compute Node - Phala Cloud Deployment
 #
 # Deploy with: dstack apply -f docker/phala-node.dstack.yml
 #
@@ -12,9 +12,12 @@
 #   - MODEL_NAME: Model to serve (default: llama2)
 #   - MODEL_BACKEND: Backend type (ollama, mock)
 #   - OLLAMA_ENDPOINT: Ollama server URL if using ollama backend
+#
+# Get your Phala API key from: https://cloud.phala.network
+# Then run: PHALA_API_KEY=xxx dstack apply -f docker/phala-node.dstack.yml
 
 type: service
-name: babylon-inference-node
+name: jeju-compute-node
 
 # GPU configuration for H200
 resources:
@@ -29,7 +32,7 @@ confidential:
   attestation: true
 
 # Container image
-image: ghcr.io/babylon/compute-node:latest
+image: ghcr.io/jeju/compute-node:latest
 
 # Alternatively, build from source
 # build:
@@ -86,7 +89,7 @@ gateway:
 
 # Commands to run after deployment
 commands:
-  # Register with Babylon network after startup
+  # Register with Jeju network after startup
   post_start: |
     echo "Waiting for service to be ready..."
     sleep 10
@@ -94,7 +97,7 @@ commands:
     # Verify health
     curl -f http://localhost:8080/health || exit 1
     
-    echo "Node is ready!"
+    echo "Jeju Compute Node is ready!"
     echo "Endpoint: https://${DSTACK_SERVICE_URL}"
     echo "Provider: $(curl -s http://localhost:8080/health | jq -r .provider)"
 

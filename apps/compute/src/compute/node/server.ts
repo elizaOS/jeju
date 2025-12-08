@@ -25,8 +25,13 @@ import type {
   AttestationReport,
   ChatCompletionRequest,
   ChatCompletionResponse,
+  NodeMetrics,
   ProviderConfig,
 } from './types';
+
+// Warmth thresholds (milliseconds)
+const COLD_THRESHOLD = 60_000; // 60s without inference = cold
+const WARM_THRESHOLD = 10_000; // 10s without inference = warm
 
 /**
  * Compute Node Server
@@ -37,6 +42,13 @@ export class ComputeNodeServer {
   private config: ProviderConfig;
   private engines: Map<string, InferenceEngine> = new Map();
   private attestation: AttestationReport | null = null;
+  
+  // Metrics tracking
+  private startTime: number = Date.now();
+  private firstInferenceTime: number | null = null;
+  private lastInferenceTime: number | null = null;
+  private totalInferences: number = 0;
+  private totalLatency: number = 0;
 
   constructor(config: ProviderConfig) {
     this.config = config;
@@ -57,11 +69,19 @@ export class ComputeNodeServer {
 
     // Health check
     this.app.get('/health', (c) => {
+      const metrics = this.getMetrics();
       return c.json({
         status: 'ok',
         provider: this.wallet.address,
         models: this.config.models.map((m) => m.name),
+        warmth: metrics.warmth,
+        uptime: metrics.uptime,
       });
+    });
+    
+    // Metrics endpoint
+    this.app.get('/v1/metrics', (c) => {
+      return c.json(this.getMetrics());
     });
 
     // List models
@@ -115,7 +135,12 @@ export class ComputeNodeServer {
       }
 
       // Non-streaming
+      const inferenceStart = Date.now();
       const response = await engine.complete(request);
+      const inferenceEnd = Date.now();
+      
+      // Track metrics
+      this.recordInference(inferenceEnd - inferenceStart);
 
       // Get user address and settlement nonce from auth headers
       const userAddress = c.req.header('x-jeju-address');
@@ -281,24 +306,96 @@ export class ComputeNodeServer {
   getAddress(): string {
     return this.wallet.address;
   }
+  
+  /**
+   * Get current metrics
+   */
+  getMetrics(): NodeMetrics {
+    const now = Date.now();
+    
+    // Calculate warmth
+    let warmth: 'cold' | 'warm' | 'hot' = 'cold';
+    if (this.lastInferenceTime !== null) {
+      const timeSinceInference = now - this.lastInferenceTime;
+      if (timeSinceInference < WARM_THRESHOLD) {
+        warmth = 'hot';
+      } else if (timeSinceInference < COLD_THRESHOLD) {
+        warmth = 'warm';
+      }
+    }
+    
+    return {
+      coldStartTime: this.firstInferenceTime !== null 
+        ? this.firstInferenceTime - this.startTime 
+        : null,
+      warmth,
+      lastInferenceAt: this.lastInferenceTime,
+      totalInferences: this.totalInferences,
+      averageLatency: this.totalInferences > 0 
+        ? this.totalLatency / this.totalInferences 
+        : null,
+      uptime: now - this.startTime,
+    };
+  }
+  
+  /**
+   * Record an inference for metrics tracking
+   */
+  private recordInference(latencyMs: number): void {
+    const now = Date.now();
+    
+    if (this.firstInferenceTime === null) {
+      this.firstInferenceTime = now;
+    }
+    
+    this.lastInferenceTime = now;
+    this.totalInferences++;
+    this.totalLatency += latencyMs;
+  }
 }
 
 /**
  * Create and start a compute node from environment variables
+ *
+ * Default port is 4007 (COMPUTE_PORT) for Jeju integration
  */
 export async function startComputeNode(): Promise<ComputeNodeServer> {
   const privateKey = process.env.PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is required');
+    console.error(`
+╔══════════════════════════════════════════════════════════════════╗
+║                 PRIVATE_KEY Required                             ║
+╚══════════════════════════════════════════════════════════════════╝
+
+To start a compute node, you need a wallet private key.
+
+Quick start with test key:
+  PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 bun run node
+
+Or copy the example env file:
+  cp env.example .env
+  # Edit .env with your private key
+  bun run node
+
+Generate a new wallet:
+  cast wallet new
+`);
+    process.exit(1);
   }
+
+  // Use COMPUTE_PORT (Jeju standard) with fallback to PORT
+  const port = Number.parseInt(
+    process.env.COMPUTE_PORT || process.env.PORT || '4007',
+    10
+  );
 
   const config: ProviderConfig = {
     privateKey,
     registryAddress: process.env.REGISTRY_ADDRESS || '',
     ledgerAddress: process.env.LEDGER_ADDRESS || '',
     inferenceAddress: process.env.INFERENCE_ADDRESS || '',
-    rpcUrl: process.env.RPC_URL || 'http://localhost:8545',
-    port: Number.parseInt(process.env.PORT || '8080', 10),
+    rpcUrl: process.env.RPC_URL || process.env.JEJU_RPC_URL || 'http://localhost:9545',
+    port,
     models: [
       {
         name: process.env.MODEL_NAME || 'mock-model',

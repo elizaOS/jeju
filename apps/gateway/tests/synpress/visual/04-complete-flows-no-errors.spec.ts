@@ -8,11 +8,12 @@ import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
 import { basicSetup } from '../../synpress.config'
 import { connectWallet } from '../helpers/wallet-helpers';
 import { GATEWAY_URL } from '../fixtures/test-data';
+import type { Page } from '@playwright/test';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
 const { expect } = test;
 
-async function assertNoErrorsOnPage(page: any, stepName: string) {
+async function assertNoErrorsOnPage(page: Page, stepName: string) {
   const bodyText = await page.textContent('body');
   
   // Check for error indicators

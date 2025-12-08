@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -45,6 +46,8 @@ interface IPredictionOracle {
  * - Any IPredictionOracle implementation
  */
 contract Predimarket is ReentrancyGuard, Pausable, Ownable {
+    using SafeERC20 for IERC20;
+    
     enum GameType {
         GENERIC,          // Generic prediction market
         CALIGULAND,       // Caliguland social deduction game
@@ -273,7 +276,7 @@ contract Predimarket is ReentrancyGuard, Pausable, Ownable {
         if (shares < minShares) revert SlippageTooHigh();
 
         // Transfer tokens from user
-        require(IERC20(token).transferFrom(msg.sender, address(this), tokenAmount), "Transfer failed");
+        IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmount);
 
         // Track deposits per market per token
         marketTokenDeposits[sessionId][token] += tokenAmount;
@@ -319,7 +322,7 @@ contract Predimarket is ReentrancyGuard, Pausable, Ownable {
         if (shares < minShares) revert SlippageTooHigh();
 
         // Transfer tokens from user
-        require(IERC20(token).transferFrom(msg.sender, address(this), tokenAmount), "Transfer failed");
+        IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmount);
 
         // Track deposits per market per token
         marketTokenDeposits[sessionId][token] += tokenAmount;
@@ -398,7 +401,7 @@ contract Predimarket is ReentrancyGuard, Pausable, Ownable {
         marketTokenDeposits[sessionId][token] -= payout;
 
         // Transfer payout in requested token
-        require(IERC20(token).transfer(msg.sender, payout), "Transfer failed");
+        IERC20(token).safeTransfer(msg.sender, payout);
 
         emit SharesSold(sessionId, msg.sender, outcome, shareAmount, payout, token);
     }
@@ -448,7 +451,7 @@ contract Predimarket is ReentrancyGuard, Pausable, Ownable {
         marketTokenDeposits[sessionId][token] -= payout;
 
         // Transfer payout to user
-        require(IERC20(token).transfer(msg.sender, payout), "Transfer failed");
+        IERC20(token).safeTransfer(msg.sender, payout);
 
         emit SharesSold(sessionId, msg.sender, outcome, shareAmount, payout, token);
     }
@@ -503,10 +506,10 @@ contract Predimarket is ReentrancyGuard, Pausable, Ownable {
         marketTokenDeposits[sessionId][token] -= (payout + platformFeeAmount);
 
         // Transfer platform fee to treasury
-        require(IERC20(token).transfer(treasury, platformFeeAmount), "Transfer failed");
+        IERC20(token).safeTransfer(treasury, platformFeeAmount);
         
         // Transfer payout to user
-        require(IERC20(token).transfer(msg.sender, payout), "Transfer failed");
+        IERC20(token).safeTransfer(msg.sender, payout);
 
         emit PayoutClaimed(sessionId, msg.sender, payout);
     }
@@ -542,10 +545,10 @@ contract Predimarket is ReentrancyGuard, Pausable, Ownable {
         marketTokenDeposits[sessionId][token] -= (payout + platformFeeAmount);
 
         // Transfer platform fee to treasury
-        require(IERC20(token).transfer(treasury, platformFeeAmount), "Transfer failed");
+        IERC20(token).safeTransfer(treasury, platformFeeAmount);
         
         // Transfer payout to user
-        require(IERC20(token).transfer(msg.sender, payout), "Transfer failed");
+        IERC20(token).safeTransfer(msg.sender, payout);
 
         emit PayoutClaimed(sessionId, msg.sender, payout);
     }

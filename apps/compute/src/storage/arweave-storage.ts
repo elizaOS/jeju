@@ -169,7 +169,7 @@ export class ArweaveStorage implements Storage {
     // Build tags
     const tags: { name: string; value: string }[] = [
       { name: 'Content-Hash', value: contentHash },
-      { name: 'App-Name', value: 'babylon-experimental' },
+      { name: 'App-Name', value: 'jeju-compute' },
       { name: 'Timestamp', value: Date.now().toString() },
     ];
 

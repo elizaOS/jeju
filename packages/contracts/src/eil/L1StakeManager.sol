@@ -421,8 +421,10 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
      * @param chainId Target L2 chain ID
      * @param xlp XLP address to sync
      * @dev Sends a cross-chain message to update stake on L2
+     *      Only callable by the XLP themselves or the owner
      */
     function syncStakeToL2(uint256 chainId, address xlp) external {
+        require(msg.sender == xlp || msg.sender == owner(), "Unauthorized");
         require(address(messenger) != address(0), "Messenger not set");
         address paymaster = l2Paymasters[chainId];
         require(paymaster != address(0), "Paymaster not registered");

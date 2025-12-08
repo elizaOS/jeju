@@ -1,0 +1,32 @@
+{
+  "name": "intents",
+  "displayName": "Open Intents Framework",
+  "description": "Cross-chain intent aggregation, solving, and visualization with A2A/MCP interfaces",
+  "version": "1.0.0",
+  "type": "infrastructure",
+  "port": {
+    "aggregator": 4010,
+    "viewer": 4011
+  },
+  "dependencies": {
+    "services": ["indexer", "gateway"],
+    "contracts": ["InputSettler", "OutputSettler", "SolverRegistry"]
+  },
+  "endpoints": {
+    "aggregator": {
+      "a2a": "/a2a",
+      "mcp": "/mcp",
+      "rest": "/api"
+    },
+    "viewer": {
+      "ui": "/"
+    }
+  },
+  "capabilities": {
+    "a2a": true,
+    "mcp": true,
+    "x402": true
+  },
+  "tags": ["intents", "cross-chain", "oif", "eil", "aggregator", "solver"]
+}
+

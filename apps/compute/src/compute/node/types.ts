@@ -60,6 +60,21 @@ export interface HardwareInfo {
   gpuVram: number | null;
   cudaVersion: string | null;
   mlxVersion: string | null;
+  // Extended info
+  hostname: string | null;
+  macAddress: string | null;
+  cpuModel: string | null;
+  teeCapable: boolean;
+  containerRuntime: 'docker' | 'podman' | null;
+}
+
+export interface NodeMetrics {
+  coldStartTime: number | null; // ms to first inference
+  warmth: 'cold' | 'warm' | 'hot';
+  lastInferenceAt: number | null;
+  totalInferences: number;
+  averageLatency: number | null;
+  uptime: number; // ms since start
 }
 
 export interface AttestationReport {

@@ -90,13 +90,13 @@ describe('Ollama Inference Engine', () => {
 
       // Verify request was made correctly
       expect(capturedRequest).not.toBeNull();
-      if (!capturedRequest) throw new Error('capturedRequest is null');
-      expect(capturedRequest.url).toBe('http://localhost:11434/api/chat');
-      expect(capturedRequest.body.model).toBe('llama2');
-      expect(capturedRequest.body.messages).toEqual([
+      const req = capturedRequest!;
+      expect(req.url).toBe('http://localhost:11434/api/chat');
+      expect(req.body.model).toBe('llama2');
+      expect(req.body.messages).toEqual([
         { role: 'user', content: 'Hello!' },
       ]);
-      expect(capturedRequest.body.stream).toBe(false);
+      expect(req.body.stream).toBe(false);
 
       // Verify response is formatted correctly
       expect(response.model).toBe('llama2');

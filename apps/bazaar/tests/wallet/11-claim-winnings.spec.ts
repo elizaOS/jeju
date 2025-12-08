@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Claim Winnings with Real MetaMask Transactions
  * 
  * ⚠️ REQUIRES:

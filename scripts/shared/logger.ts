@@ -126,7 +126,7 @@ export class Logger {
     return parts.join(' ');
   }
   
-  private log(level: LogLevel, message: string, ...args: any[]): void {
+  private log(level: LogLevel, message: string, ...args: unknown[]): void {
     if (!this.shouldLog(level)) return;
     
     const formatted = this.format(level, message);
@@ -144,23 +144,23 @@ export class Logger {
     }
   }
   
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     this.log('debug', message, ...args);
   }
   
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     this.log('info', message, ...args);
   }
   
-  success(message: string, ...args: any[]): void {
+  success(message: string, ...args: unknown[]): void {
     this.log('success', message, ...args);
   }
   
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     this.log('warn', message, ...args);
   }
   
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     this.log('error', message, ...args);
   }
   

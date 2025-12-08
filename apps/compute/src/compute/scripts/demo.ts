@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Babylon Compute Marketplace - End-to-End Demo
+ * Jeju Compute Marketplace - End-to-End Demo
  *
  * This demo shows the complete flow:
  * 1. Deploy contracts (if needed)
@@ -20,11 +20,21 @@
 import { formatEther, JsonRpcProvider, parseEther, Wallet } from 'ethers';
 import { ComputeNodeServer } from '../node/server';
 import type { ProviderConfig } from '../node/types';
-import { BabylonComputeSDK } from '../sdk/sdk';
+import { JejuComputeSDK } from '../sdk/sdk';
+import type { InferenceResponse } from '../sdk/types';
 
-// Demo configuration
+// Demo configuration - uses Jeju localnet (port 9545) by default
 const DEMO_CONFIG = {
-  // Local Anvil accounts
+  // Local Jeju localnet (via Kurtosis)
+  localnet: {
+    rpcUrl: 'http://127.0.0.1:9545',
+    deployer:
+      '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+    provider:
+      '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+    user: '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+  },
+  // Standalone Anvil (for isolated testing)
   anvil: {
     rpcUrl: 'http://127.0.0.1:8545',
     deployer:
@@ -41,11 +51,12 @@ const DEMO_CONFIG = {
 };
 
 async function main() {
-  const network = process.env.NETWORK || 'anvil';
+  // Default to localnet (Jeju's Kurtosis network) instead of standalone anvil
+  const network = process.env.NETWORK || 'localnet';
   const isTestnet = network === 'sepolia';
 
   console.log('\n' + '='.repeat(60));
-  console.log('🎮 BABYLON COMPUTE MARKETPLACE - DEMO');
+  console.log('🎮 JEJU COMPUTE MARKETPLACE - DEMO');
   console.log('='.repeat(60));
   console.log(`\nNetwork: ${network.toUpperCase()}`);
 
@@ -65,11 +76,17 @@ async function main() {
       console.error('\n❌ PRIVATE_KEY required for testnet');
       process.exit(1);
     }
-  } else {
+  } else if (network === 'anvil') {
     rpcUrl = DEMO_CONFIG.anvil.rpcUrl;
     deployerKey = DEMO_CONFIG.anvil.deployer;
     providerKey = DEMO_CONFIG.anvil.provider;
     userKey = DEMO_CONFIG.anvil.user;
+  } else {
+    // Default: localnet (Jeju Kurtosis)
+    rpcUrl = process.env.JEJU_RPC_URL || DEMO_CONFIG.localnet.rpcUrl;
+    deployerKey = DEMO_CONFIG.localnet.deployer;
+    providerKey = DEMO_CONFIG.localnet.provider;
+    userKey = DEMO_CONFIG.localnet.user;
   }
 
   const rpcProvider = new JsonRpcProvider(rpcUrl);
@@ -134,7 +151,7 @@ async function main() {
   console.log('👤 STEP 2: Register Provider');
   console.log('-'.repeat(60));
 
-  const providerSDK = new BabylonComputeSDK({
+  const providerSDK = new JejuComputeSDK({
     rpcUrl,
     signer: providerWallet,
     contracts,
@@ -160,13 +177,16 @@ async function main() {
   console.log('🖥️  STEP 3: Start Compute Node');
   console.log('-'.repeat(60));
 
+  // Compute node port (4007 is Jeju standard, fallback to 8080 for standalone)
+  const computePort = parseInt(process.env.COMPUTE_PORT || '4007', 10);
+  
   const nodeConfig: ProviderConfig = {
     privateKey: providerKey,
     registryAddress: contracts.registry,
     ledgerAddress: contracts.ledger,
     inferenceAddress: contracts.inference,
     rpcUrl,
-    port: 8080,
+    port: computePort,
     models: [
       {
         name: 'demo-model',
@@ -183,7 +203,7 @@ async function main() {
 
   // Wait for server to be ready
   await new Promise((r) => setTimeout(r, 1000));
-  console.log('   ✅ Compute node running at http://localhost:8080');
+  console.log(`   ✅ Compute node running at http://localhost:${computePort}`);
 
   // =========================================
   // STEP 4: Fund User Ledger
@@ -192,7 +212,7 @@ async function main() {
   console.log('💳 STEP 4: Fund User Ledger');
   console.log('-'.repeat(60));
 
-  const userSDK = new BabylonComputeSDK({
+  const userSDK = new JejuComputeSDK({
     rpcUrl,
     signer: userWallet,
     contracts,
@@ -206,9 +226,11 @@ async function main() {
   await userSDK.transferToProvider(providerWallet.address, parseEther('0.1'));
   console.log('   ✅ Sub-account funded');
 
-  console.log('   Acknowledging provider...');
-  await userSDK.acknowledgeProvider(providerWallet.address);
-  console.log('   ✅ Provider acknowledged');
+  // Provider must acknowledge the user to enable settlements
+  // In production, provider would do this after seeing the transfer
+  console.log('   Provider acknowledging user...');
+  await providerSDK.acknowledgeUser(userWallet.address);
+  console.log('   ✅ User acknowledged by provider');
 
   // =========================================
   // STEP 5: Make Inference Request
@@ -221,12 +243,12 @@ async function main() {
   const authHeaders = await userSDK.generateAuthHeaders(providerWallet.address);
   console.log('   Generated auth headers');
   console.log(
-    `   Settlement nonce: ${authHeaders['x-babylon-settlement-nonce']}`
+    `   Settlement nonce: ${authHeaders['x-jeju-settlement-nonce']}`
   );
 
   // Make request
   console.log('   Sending inference request...');
-  const response = await fetch('http://localhost:8080/v1/chat/completions', {
+  const response = await fetch(`http://localhost:${computePort}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -238,7 +260,7 @@ async function main() {
     }),
   });
 
-  const result = await response.json();
+  const result = await response.json() as InferenceResponse;
   console.log('\n   📝 Response:');
   console.log(`   Model: ${result.model}`);
   console.log(`   Content: ${result.choices[0].message.content}`);
@@ -260,12 +282,8 @@ async function main() {
 
   if (result.settlement) {
     console.log('   Settling on-chain...');
-    try {
-      await userSDK.settleFromResponse(result);
-      console.log('   ✅ Settlement complete!');
-    } catch (error) {
-      console.log(`   ⚠️  Settlement skipped: ${error}`);
-    }
+    await userSDK.settleFromResponse(result);
+    console.log('   ✅ Settlement complete!');
   } else {
     console.log('   ⚠️  No settlement data in response');
   }
@@ -285,12 +303,12 @@ async function main() {
   console.log(`   ✅ Settlement data generated`);
 
   console.log('\n📡 Endpoints:');
-  console.log(`   Health: http://localhost:8080/health`);
-  console.log(`   Models: http://localhost:8080/v1/models`);
-  console.log(`   Inference: http://localhost:8080/v1/chat/completions`);
+  console.log(`   Health: http://localhost:${computePort}/health`);
+  console.log(`   Models: http://localhost:${computePort}/v1/models`);
+  console.log(`   Inference: http://localhost:${computePort}/v1/chat/completions`);
 
   console.log('\n💡 Try it yourself:');
-  console.log('   curl http://localhost:8080/v1/chat/completions \\');
+  console.log(`   curl http://localhost:${computePort}/v1/chat/completions \\`);
   console.log('     -H "Content-Type: application/json" \\');
   console.log(
     '     -d \'{"model": "demo-model", "messages": [{"role": "user", "content": "Hello!"}]}\''

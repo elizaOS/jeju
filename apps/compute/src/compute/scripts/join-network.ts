@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Babylon Compute Network - Provider Onboarding
+ * Jeju Compute Network - Provider Onboarding
  *
- * This script helps providers join the Babylon compute network.
+ * This script helps providers join the Jeju compute network.
  * It handles:
  * 1. Wallet setup and funding check
  * 2. Contract registration with stake
@@ -79,7 +79,7 @@ const INFERENCE_ABI = [
 ];
 
 async function main() {
-  console.log('\n🚀 Babylon Compute Network - Provider Onboarding\n');
+  console.log('\n🚀 Jeju Compute Network - Provider Onboarding\n');
   console.log('='.repeat(50));
 
   // 1. Check environment
@@ -154,11 +154,11 @@ async function main() {
   console.log(
     `   Memory: ${Math.round(hardware.memory / 1024 / 1024 / 1024)}GB`
   );
-  if (hardware.gpu) {
-    console.log(`   GPU: ${hardware.gpu}`);
+  if (hardware.gpuType) {
+    console.log(`   GPU: ${hardware.gpuType}`);
   }
-  if (hardware.mlxAvailable) {
-    console.log(`   MLX: Available`);
+  if (hardware.mlxVersion) {
+    console.log(`   MLX: ${hardware.mlxVersion}`);
   }
   const hardwareHash = generateHardwareHash(hardware);
   console.log(`   Hardware Hash: ${hardwareHash.slice(0, 18)}...`);
@@ -185,7 +185,7 @@ async function main() {
 
     try {
       const tx = await registry.register(
-        `babylon-provider-${wallet.address.slice(0, 8)}`,
+        `jeju-provider-${wallet.address.slice(0, 8)}`,
         endpoint,
         attestationHash,
         { value: actualStake }

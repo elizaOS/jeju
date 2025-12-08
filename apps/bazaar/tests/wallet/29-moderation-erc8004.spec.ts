@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Moderation & ERC-8004 Integration Tests
  * Tests ban enforcement, reputation badges, and reporting
  */

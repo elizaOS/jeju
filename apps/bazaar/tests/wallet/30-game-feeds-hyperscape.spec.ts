@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Game Feeds & Hyperscape Events Tests
  * Tests real-time game feed integration and Hyperscape oracle events
  */

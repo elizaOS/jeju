@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Complete deep flow testing - EVERY action with wallet connected
  */
 

@@ -1,5 +1,5 @@
 /**
- * Full Integration Test for Babylon Compute Marketplace
+ * Full Integration Test for Jeju Compute Marketplace
  *
  * This test validates the entire end-to-end flow:
  * 1. Deploy contracts to Anvil
@@ -53,7 +53,7 @@ const LEDGER_ABI = [
   'function createLedger() payable',
   'function deposit() payable',
   'function transferToProvider(address provider, uint256 amount)',
-  'function acknowledgeProvider(address provider)',
+  'function acknowledgeUser(address user)',
   'function setInferenceContract(address inference)',
   'function getLedger(address user) view returns (tuple(uint256 totalBalance, uint256 availableBalance, uint256 lockedBalance, uint256 createdAt))',
   'function getSubAccount(address user, address provider) view returns (tuple(uint256 balance, uint256 pendingRefund, uint256 refundUnlockTime, bool acknowledged))',
@@ -118,7 +118,7 @@ async function deployContracts(): Promise<DeployedContracts> {
   console.log('\n📦 Deploying contracts to Anvil...\n');
 
   // Read compiled contract artifacts from forge output
-  const artifactsPath = `${import.meta.dir}/../../../../contracts/out`;
+  const artifactsPath = `${import.meta.dir}/../../../../../packages/contracts/out`;
 
   // ComputeRegistry
   const registryArtifact = await Bun.file(
@@ -404,15 +404,16 @@ describe('Full Integration Test', () => {
       expect(ledger.lockedBalance).toBe(parseEther('0.5'));
     });
 
-    test('user can acknowledge provider', async () => {
+    test('provider can acknowledge user', async () => {
       if (!contracts) return;
 
-      const ledgerWithUser = contracts.ledger.connect(userWallet) as Contract;
+      // Provider acknowledges the user (enables settlements)
+      const ledgerWithProvider = contracts.ledger.connect(providerWallet) as Contract;
 
       const tx = await sendFn(
-        ledgerWithUser,
-        'acknowledgeProvider',
-        providerWallet.address
+        ledgerWithProvider,
+        'acknowledgeUser',
+        userWallet.address
       );
       await tx.wait();
 
@@ -493,10 +494,10 @@ describe('Full Integration Test', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-babylon-address': userWallet.address,
-          'x-babylon-nonce': nonce,
-          'x-babylon-signature': signature,
-          'x-babylon-timestamp': timestamp,
+          'x-jeju-address': userWallet.address,
+          'x-jeju-nonce': nonce,
+          'x-jeju-signature': signature,
+          'x-jeju-timestamp': timestamp,
         },
         body: JSON.stringify({
           model: 'test-model',

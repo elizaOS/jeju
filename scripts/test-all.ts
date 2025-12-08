@@ -60,11 +60,25 @@ const TEST_SUITES: TestSuite[] = [
     required: false
   },
   
+  // Compute marketplace tests
+  {
+    name: 'Compute SDK Tests',
+    command: 'bun test src/compute/tests/',
+    cwd: 'apps/compute',
+    required: false
+  },
+  
   // Contract tests (Foundry)
   {
     name: 'Registry Contract Tests',
     command: 'forge test --match-path "test/*Registry*.t.sol" -vv',
     cwd: 'contracts',
+    required: false
+  },
+  {
+    name: 'Compute Contract Tests',
+    command: 'forge test --match-path "test/ComputeRegistry.t.sol" --match-path "test/LedgerManager.t.sol" --match-path "test/InferenceServing.t.sol" -vv',
+    cwd: 'packages/contracts',
     required: false
   },
   {

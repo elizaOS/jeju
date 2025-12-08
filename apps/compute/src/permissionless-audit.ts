@@ -45,14 +45,14 @@ async function main() {
   check('Arweave', true, 'Irys SDK (wallet signature)');
   check('IPFS', true, 'Content-addressed');
 
-  // Babylon Compute Marketplace
-  console.log('\n[Babylon Compute Marketplace]');
+  // Jeju Compute Marketplace
+  console.log('\n[Jeju Compute Marketplace]');
   check(
     'Smart Contracts',
     true,
     'ComputeRegistry, LedgerManager, InferenceServing'
   );
-  check('SDK', true, 'BabylonComputeSDK (wallet-only)');
+  check('SDK', true, 'JejuComputeSDK (wallet-only)');
   check('Compute Node', true, 'OpenAI-compatible server');
   check('Settlement', true, 'On-chain with provider signatures');
   check('Attestation', true, 'Simulated (Phala TEE ready)');

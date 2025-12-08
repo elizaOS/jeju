@@ -1,0 +1,281 @@
+/**
+ * @fileoverview Solver Agent - Main agent logic for filling intents
+ */
+
+import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient, type Chain } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { base, arbitrum, optimism } from 'viem/chains';
+import { LiquidityManager } from './liquidity';
+import { StrategyEngine } from './strategy';
+import { EventMonitor, type IntentEvent } from './monitor';
+
+// Custom Jeju chain definition
+const jeju: Chain = {
+  id: 420691,
+  name: 'Jeju',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['http://localhost:8545'] },
+  },
+};
+
+interface SolverConfig {
+  chains: Array<{ chainId: number; name: string; rpcUrl: string }>;
+  minProfitBps: number;
+  maxGasPrice: bigint;
+  maxExposurePerChain: string;
+  maxIntentSize: string;
+  minReputation: number;
+  intentCheckIntervalMs: number;
+  liquidityRebalanceIntervalMs: number;
+}
+
+interface SolverAgentDeps {
+  config: SolverConfig;
+  liquidityManager: LiquidityManager;
+  strategyEngine: StrategyEngine;
+  eventMonitor: EventMonitor;
+}
+
+export class SolverAgent {
+  private config: SolverConfig;
+  private liquidityManager: LiquidityManager;
+  private strategyEngine: StrategyEngine;
+  private eventMonitor: EventMonitor;
+  private clients: Map<number, { public: PublicClient; wallet?: WalletClient }> = new Map();
+  private _running = false;
+  private pendingFills: Set<string> = new Set();
+
+  constructor(deps: SolverAgentDeps) {
+    this.config = deps.config;
+    this.liquidityManager = deps.liquidityManager;
+    this.strategyEngine = deps.strategyEngine;
+    this.eventMonitor = deps.eventMonitor;
+  }
+
+  async start(): Promise<void> {
+    console.log('📡 Initializing chain connections...');
+
+    // Initialize clients for each chain
+    for (const chain of this.config.chains) {
+      const chainDef = this.getChainDef(chain.chainId);
+      const publicClient = createPublicClient({
+        chain: chainDef,
+        transport: http(chain.rpcUrl),
+      });
+
+      // Create wallet client if private key available
+      const privateKey = process.env.SOLVER_PRIVATE_KEY;
+      let walletClient: WalletClient | undefined;
+      if (privateKey) {
+        const account = privateKeyToAccount(privateKey as `0x${string}`);
+        walletClient = createWalletClient({
+          account,
+          chain: chainDef,
+          transport: http(chain.rpcUrl),
+        });
+      }
+
+      this.clients.set(chain.chainId, { public: publicClient, wallet: walletClient });
+      console.log(`   ✓ Connected to ${chain.name} (${chain.chainId})`);
+    }
+
+    // Initialize liquidity
+    await this.liquidityManager.initialize(this.clients);
+
+    // Start event monitoring
+    this.eventMonitor.on('intent', this.handleIntent.bind(this));
+    await this.eventMonitor.start(this.clients);
+
+    this._running = true;
+  }
+
+  async stop(): Promise<void> {
+    this._running = false;
+    await this.eventMonitor.stop();
+    console.log('Solver agent stopped');
+  }
+
+  private async handleIntent(event: IntentEvent): Promise<void> {
+    const { orderId, sourceChain, destinationChain, inputToken, inputAmount, outputToken, outputAmount } = event;
+
+    // Skip if already processing
+    if (this.pendingFills.has(orderId)) return;
+
+    console.log(`\n🎯 New Intent: ${orderId.slice(0, 10)}...`);
+    console.log(`   Route: ${sourceChain} → ${destinationChain}`);
+    console.log(`   Amount: ${inputAmount}`);
+
+    // Check profitability
+    const evaluation = await this.strategyEngine.evaluate({
+      orderId,
+      sourceChain,
+      destinationChain,
+      inputToken,
+      inputAmount,
+      outputToken,
+      outputAmount,
+    });
+
+    if (!evaluation.profitable) {
+      console.log(`   ❌ Not profitable: ${evaluation.reason}`);
+      return;
+    }
+
+    console.log(`   ✅ Profitable: ${evaluation.expectedProfitBps} bps`);
+
+    // Check liquidity
+    const hasLiquidity = await this.liquidityManager.hasLiquidity(
+      destinationChain,
+      outputToken,
+      outputAmount
+    );
+
+    if (!hasLiquidity) {
+      console.log(`   ❌ Insufficient liquidity`);
+      return;
+    }
+
+    // Execute fill
+    this.pendingFills.add(orderId);
+
+    const result = await this.executeFill({
+      orderId,
+      sourceChain,
+      destinationChain,
+      outputToken,
+      outputAmount,
+      recipient: event.recipient,
+    });
+
+    if (result.success) {
+      console.log(`   ✅ Fill executed: ${result.txHash}`);
+    } else {
+      console.log(`   ❌ Fill failed: ${result.error}`);
+    }
+
+    this.pendingFills.delete(orderId);
+  }
+
+  private async executeFill(params: {
+    orderId: string;
+    sourceChain: number;
+    destinationChain: number;
+    outputToken: string;
+    outputAmount: string;
+    recipient: string;
+  }): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    const client = this.clients.get(params.destinationChain);
+    if (!client?.wallet) {
+      return { success: false, error: 'No wallet configured for destination chain' };
+    }
+
+    const outputSettlerAddress = this.getOutputSettler(params.destinationChain);
+    if (!outputSettlerAddress) {
+      return { success: false, error: 'No OutputSettler deployed on destination chain' };
+    }
+
+    console.log(`   📤 Filling on chain ${params.destinationChain}...`);
+
+    // Get current gas price and check limit
+    const gasPrice = await client.public.getGasPrice();
+    if (gasPrice > this.config.maxGasPrice) {
+      return { success: false, error: `Gas price too high: ${gasPrice} > ${this.config.maxGasPrice}` };
+    }
+
+    // Determine if native or ERC20 transfer
+    const isNativeToken = params.outputToken === '0x0000000000000000000000000000000000000000';
+    const outputAmount = BigInt(params.outputAmount);
+
+    // Build transaction
+    const fillAbi = [{
+      type: 'function',
+      name: 'fill',
+      inputs: [
+        { name: 'orderId', type: 'bytes32' },
+        { name: 'recipient', type: 'address' },
+        { name: 'token', type: 'address' },
+        { name: 'amount', type: 'uint256' },
+      ],
+      outputs: [],
+      stateMutability: isNativeToken ? 'payable' : 'nonpayable',
+    }] as const;
+
+    // If ERC20, first approve the OutputSettler
+    if (!isNativeToken) {
+      const approveAbi = [{
+        type: 'function',
+        name: 'approve',
+        inputs: [
+          { name: 'spender', type: 'address' },
+          { name: 'amount', type: 'uint256' },
+        ],
+        outputs: [{ type: 'bool' }],
+        stateMutability: 'nonpayable',
+      }] as const;
+
+      const approveHash = await client.wallet.writeContract({
+        address: params.outputToken as `0x${string}`,
+        abi: approveAbi,
+        functionName: 'approve',
+        args: [outputSettlerAddress, outputAmount],
+      });
+
+      console.log(`   📝 Approval tx: ${approveHash}`);
+
+      // Wait for approval
+      await client.public.waitForTransactionReceipt({ hash: approveHash });
+    }
+
+    // Execute fill
+    const fillHash = await client.wallet.writeContract({
+      address: outputSettlerAddress,
+      abi: fillAbi,
+      functionName: 'fill',
+      args: [
+        params.orderId as `0x${string}`,
+        params.recipient as `0x${string}`,
+        params.outputToken as `0x${string}`,
+        outputAmount,
+      ],
+      value: isNativeToken ? outputAmount : undefined,
+    });
+
+    console.log(`   📝 Fill tx: ${fillHash}`);
+
+    // Wait for confirmation
+    const receipt = await client.public.waitForTransactionReceipt({ hash: fillHash });
+    
+    if (receipt.status === 'reverted') {
+      return { success: false, error: 'Transaction reverted' };
+    }
+
+    // Update liquidity tracking
+    await this.liquidityManager.recordFill(
+      params.destinationChain,
+      params.outputToken,
+      params.outputAmount
+    );
+
+    return { success: true, txHash: fillHash };
+  }
+
+  private getOutputSettler(chainId: number): `0x${string}` | undefined {
+    const addr = process.env[`OIF_OUTPUT_SETTLER_${chainId}`];
+    if (addr && addr.startsWith('0x') && addr.length === 42) {
+      return addr as `0x${string}`;
+    }
+    return undefined;
+  }
+
+  private getChainDef(chainId: number): Chain {
+    switch (chainId) {
+      case 8453: return base;
+      case 42161: return arbitrum;
+      case 10: return optimism;
+      case 420691: return jeju;
+      default: return base;
+    }
+  }
+}
+

@@ -10,9 +10,8 @@
  *   3. Run this script: bun run scripts/run-localnet-simulations.ts
  */
 
-import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
 import { spawn } from 'bun'
+import { rawDeployments, isValidAddress } from '@jeju/contracts'
 
 const COLORS = {
   RESET: '\x1b[0m',
@@ -27,43 +26,34 @@ async function checkPrerequisites(): Promise<boolean> {
   console.log(`${COLORS.CYAN}${COLORS.BRIGHT}Checking prerequisites...${COLORS.RESET}\n`)
 
   // Check if localnet is running
-  try {
-    const response = await fetch('http://localhost:9545', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
-    })
-    
-    if (!response.ok) {
-      console.error(`${COLORS.RED}❌ Localnet not responding at http://localhost:9545${COLORS.RESET}`)
-      console.log('   Run: bun run localnet:start')
-      return false
-    }
-    
-    console.log(`${COLORS.GREEN}✅ Localnet is running${COLORS.RESET}`)
-  } catch {
-    console.error(`${COLORS.RED}❌ Cannot connect to localnet${COLORS.RESET}`)
+  const response = await fetch('http://localhost:9545', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
+  }).catch(() => null)
+  
+  if (!response?.ok) {
+    console.error(`${COLORS.RED}❌ Localnet not responding at http://localhost:9545${COLORS.RESET}`)
     console.log('   Run: bun run localnet:start')
     return false
   }
+  
+  console.log(`${COLORS.GREEN}✅ Localnet is running${COLORS.RESET}`)
 
-  // Check for deployed contracts
-  const deploymentsDir = join(process.cwd(), '../..', 'contracts/deployments')
+  // Check for deployed contracts using @jeju/contracts
   const requiredDeployments = [
-    'uniswap-v4-1337.json',
-    'bazaar-marketplace-1337.json',
-    'erc20-factory-1337.json',
-  ]
+    { name: 'uniswap-v4', deployment: rawDeployments.uniswapV4_1337, key: 'swapRouter' },
+    { name: 'bazaar-marketplace', deployment: rawDeployments.bazaarMarketplace1337, key: 'marketplace' },
+    { name: 'erc20-factory', deployment: rawDeployments.erc20Factory1337, key: 'at' },
+  ] as const
 
   let allDeployed = true
-  for (const file of requiredDeployments) {
-    const path = join(deploymentsDir, file)
-    if (existsSync(path)) {
-      const deployment = JSON.parse(readFileSync(path, 'utf-8'))
-      const address = Object.values(deployment)[0]
-      console.log(`${COLORS.GREEN}✅ ${file.replace('-1337.json', '')}: ${address}${COLORS.RESET}`)
+  for (const { name, deployment, key } of requiredDeployments) {
+    const address = (deployment as Record<string, string>)[key]
+    if (isValidAddress(address)) {
+      console.log(`${COLORS.GREEN}✅ ${name}: ${address}${COLORS.RESET}`)
     } else {
-      console.error(`${COLORS.RED}❌ Missing: ${file}${COLORS.RESET}`)
+      console.error(`${COLORS.RED}❌ Missing: ${name}${COLORS.RESET}`)
       allDeployed = false
     }
   }
@@ -117,4 +107,3 @@ async function main() {
 }
 
 main()
-

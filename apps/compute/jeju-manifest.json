@@ -4,16 +4,19 @@
   "displayName": "Jeju Compute Marketplace",
   "version": "1.0.0",
   "type": "core",
-  "description": "Decentralized AI compute marketplace with ERC-8004 integration. Run inference nodes, stake as providers, earn rewards for serving AI models. Permissionless - wallet signatures only.",
+  "description": "Decentralized compute marketplace with SSH/Docker rentals (vast.ai-style), ERC-8004 integration. Run compute nodes, rent GPU resources, stake as providers.",
   "commands": {
     "dev": "bun run dev",
     "build": "bun run build",
     "start": "bun run node",
+    "gateway": "bun run gateway",
     "test": "bun run test"
   },
   "ports": {
     "main": 4007,
-    "nodeApi": 4008
+    "nodeApi": 4008,
+    "gateway": 4009,
+    "sshProxy": 2222
   },
   "dependencies": ["contracts", "config"],
   "optional": false,

@@ -62,7 +62,7 @@ async function main(): Promise<void> {
 
   const response = await fetch(`https://arweave.net/${receipt.id}`);
   if (response.ok) {
-    const downloaded = await response.json();
+    const downloaded = await response.json() as { wallet: string };
     if (downloaded.wallet === account.address) {
       console.log('✓ Verified\n');
     }

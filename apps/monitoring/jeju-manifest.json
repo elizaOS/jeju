@@ -1,0 +1,38 @@
+{
+  "$schema": "../../packages/config/jeju-manifest.schema.json",
+  "name": "monitoring",
+  "displayName": "Jeju Monitoring",
+  "version": "1.0.0",
+  "type": "core",
+  "description": "Query blockchain metrics and system health via Prometheus. Exposes PromQL queries, active alerts, and scrape target status via A2A protocol.",
+  "commands": {
+    "dev": "bun run server/a2a.ts",
+    "start": "bun run server/a2a.ts"
+  },
+  "ports": {
+    "main": 9091,
+    "prometheus": 9090,
+    "grafana": 3000
+  },
+  "dependencies": [],
+  "optional": true,
+  "enabled": true,
+  "autoStart": false,
+  "tags": ["monitoring", "prometheus", "grafana", "metrics", "alerts", "observability"],
+  "healthCheck": {
+    "url": "http://localhost:9091/.well-known/agent-card.json",
+    "interval": 30000
+  },
+  "agent": {
+    "enabled": true,
+    "a2aEndpoint": "/api/a2a",
+    "tags": ["jeju-app", "monitoring", "metrics", "alerts"],
+    "metadata": {
+      "category": "observability",
+      "provider": "jeju-network"
+    },
+    "trustModels": ["open"],
+    "x402Support": false
+  }
+}
+

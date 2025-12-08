@@ -1,0 +1,28 @@
+{
+  "name": "@jeju/intents",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Open Intents Framework - Cross-chain intent aggregation, solving, and visualization",
+  "workspaces": [
+    "aggregator",
+    "solver",
+    "viewer"
+  ],
+  "scripts": {
+    "dev": "concurrently \"bun run dev:aggregator\" \"bun run dev:viewer\"",
+    "dev:aggregator": "cd aggregator && bun run dev",
+    "dev:solver": "cd solver && bun run dev",
+    "dev:viewer": "cd viewer && bun run dev",
+    "build": "bun run build:aggregator && bun run build:viewer",
+    "build:aggregator": "cd aggregator && bun run build",
+    "build:solver": "cd solver && bun run build",
+    "build:viewer": "cd viewer && bun run build",
+    "test": "bun run test:aggregator && bun run test:solver",
+    "test:aggregator": "cd aggregator && bun test",
+    "test:solver": "cd solver && bun test"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.1.0"
+  }
+}

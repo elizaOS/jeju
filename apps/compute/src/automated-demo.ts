@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Permissionless Demo
+ * Permissionless Compute Demo
  *
  * Run: PRIVATE_KEY=0x... bun run demo:bun
  */
@@ -12,12 +12,8 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { AIAgent } from './game/agent.js';
 import { GameEnvironment } from './game/environment.js';
 import { AITrainer } from './game/trainer.js';
-import {
-  generateBabylonWorkerCode,
-  MARLIN_CONTRACTS,
-  MarlinOysterClient,
-} from './infra/marlin-oyster.js';
 import { TEEEnclave } from './tee/enclave.js';
+import { detectHardware, generateHardwareHash } from './compute/node/hardware.js';
 
 // Config
 interface DemoConfig {
@@ -84,10 +80,8 @@ async function uploadToArweave(
     typeof data === 'string' ? data : new TextDecoder().decode(data);
   const dataBuffer = Buffer.from(dataStr);
 
-  const { createRequire } = await import('module');
-  const require = createRequire(import.meta.url);
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Irys = require('@irys/sdk').default;
+  // Dynamic import for Irys SDK
+  const { default: Irys } = await import('@irys/sdk');
 
   const url =
     network === 'mainnet'
@@ -234,7 +228,7 @@ async function testTamperDetection(
 
 // Main
 async function main(): Promise<void> {
-  console.log('\nPermissionless Demo\n');
+  console.log('\nJeju Compute - Permissionless Demo\n');
 
   const config = getConfig();
   const startTime = Date.now();
@@ -270,9 +264,25 @@ async function main(): Promise<void> {
     walletTest.address.slice(0, 12)
   );
 
-  // Test 3: TEE
-  console.log('\n3. TEE Enclave');
-  const codeHash = keccak256(toBytes('babylon-demo'));
+  // Test 3: Hardware Detection
+  console.log('\n3. Hardware Detection');
+  const hardware = await detectHardware();
+  const hardwareHash = generateHardwareHash(hardware);
+  console.log(`   Platform: ${hardware.platform}/${hardware.arch}`);
+  console.log(`   CPUs: ${hardware.cpus}`);
+  console.log(`   Memory: ${Math.round(hardware.memory / 1024 / 1024 / 1024)}GB`);
+  if (hardware.gpuType) {
+    console.log(`   GPU: ${hardware.gpuType}`);
+  }
+  if (hardware.mlxVersion) {
+    console.log(`   MLX: ${hardware.mlxVersion}`);
+  }
+  console.log(`   Hash: ${hardwareHash.slice(0, 18)}...`);
+  addResult('Hardware Detection', true, true, `${hardware.platform}/${hardware.arch}`);
+
+  // Test 4: TEE
+  console.log('\n4. TEE Enclave');
+  const codeHash = keccak256(toBytes('jeju-demo'));
   const enclave = await TEEEnclave.create({
     codeHash,
     instanceId: `demo-${Date.now()}`,
@@ -286,8 +296,8 @@ async function main(): Promise<void> {
     enclave.getOperatorAddress().slice(0, 12)
   );
 
-  // Test 4: Encryption
-  console.log('\n4. AES-256-GCM Encryption');
+  // Test 5: Encryption
+  console.log('\n5. AES-256-GCM Encryption');
   const encryptionTest = await testEncryption(enclave);
   console.log(`   Encrypted: ${encryptionTest.encrypted ? '✓' : '✗'}`);
   console.log(
@@ -301,8 +311,8 @@ async function main(): Promise<void> {
     'Verified'
   );
 
-  // Test 5: Tamper detection
-  console.log('\n5. Tamper Detection');
+  // Test 6: Tamper detection
+  console.log('\n6. Tamper Detection');
   const tamperTest = await testTamperDetection(enclave);
   console.log(`   Tamper detected: ${tamperTest.tamperDetected ? '✓' : '✗'}`);
   addResult(
@@ -312,15 +322,15 @@ async function main(): Promise<void> {
     'GCM auth tag'
   );
 
-  // Test 6: Arweave upload
-  console.log('\n6. Arweave Storage');
+  // Test 7: Arweave upload
+  console.log('\n7. Arweave Storage');
   const arweaveResult = await uploadToArweave(
     encryptionTest.sealedData,
     config.privateKey,
     config.arweaveNetwork,
     [
       { name: 'Content-Type', value: 'application/json' },
-      { name: 'App-Name', value: 'babylon' },
+      { name: 'App-Name', value: 'jeju-compute' },
     ]
   );
   console.log(`   TX: ${arweaveResult.txId}`);
@@ -331,8 +341,8 @@ async function main(): Promise<void> {
   console.log(`   Retrieved: ${retrieved ? '✓' : 'pending'}`);
   addResult('Arweave Storage', true, true, arweaveResult.txId.slice(0, 12));
 
-  // Test 7: Game loop
-  console.log('\n7. Game Loop');
+  // Test 8: Game loop
+  console.log('\n8. Game Loop');
   const environment = new GameEnvironment({
     sequenceLength: 5,
     patternTypes: ['linear'],
@@ -375,54 +385,6 @@ async function main(): Promise<void> {
 
   await enclave.shutdown();
 
-  // Test 8: Marlin TEE
-  console.log('\n8. TEE Infrastructure (Marlin Oyster)');
-  const marlinClient = new MarlinOysterClient(config.privateKey);
-  const status = await marlinClient.getAccountStatus();
-  console.log(`   Address: ${marlinClient.address}`);
-  console.log(`   ETH: ${status.ethBalance}`);
-  console.log(`   USDC: ${status.usdcBalance}`);
-
-  const ethBal = Number.parseFloat(status.ethBalance);
-  const usdcBal = Number.parseFloat(status.usdcBalance);
-  const walletFunded = ethBal >= 0.001 && usdcBal >= 1;
-
-  const workerCode = generateBabylonWorkerCode({
-    gameContractAddress: '0x0000000000000000000000000000000000000000',
-  });
-  const codeData = new TextEncoder().encode(workerCode);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', codeData);
-  const teeCodeHash = `0x${Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')}`;
-
-  console.log(`   Worker code: ${workerCode.length} bytes`);
-  console.log(`   Code hash: ${teeCodeHash.slice(0, 20)}...`);
-  console.log(`   Relay: ${MARLIN_CONTRACTS.subscriptionRelay}`);
-  console.log(
-    `   Funded: ${walletFunded ? '✓' : '✗ (need ETH+USDC on Arbitrum)'}`
-  );
-
-  if (walletFunded) {
-    try {
-      const workerUpload = await uploadToArweave(
-        workerCode,
-        config.privateKey,
-        config.arweaveNetwork
-      );
-      console.log(`   Worker uploaded: ${workerUpload.txId.slice(0, 16)}...`);
-    } catch {
-      console.log('   Worker upload: skipped');
-    }
-  }
-
-  addResult(
-    'TEE Infrastructure',
-    walletFunded,
-    true,
-    walletFunded ? 'Funded' : 'Needs funding'
-  );
-
   // Summary
   console.log('\n─────────────────────────────────────');
   console.log('Results:\n');
@@ -450,6 +412,7 @@ async function main(): Promise<void> {
       {
         timestamp: new Date().toISOString(),
         wallet: account.address,
+        hardware,
         arweave: arweaveResult,
         results,
       },

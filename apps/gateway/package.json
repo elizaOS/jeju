@@ -38,6 +38,7 @@
     "test:report": "playwright show-report"
   },
   "dependencies": {
+    "@jeju/contracts": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "viem": "^2.38.3",

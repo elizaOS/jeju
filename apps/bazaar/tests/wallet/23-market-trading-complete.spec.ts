@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Market Trading - Complete Real Flow
  * Tests ACTUAL market betting with position verification
  */

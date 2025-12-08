@@ -24,8 +24,7 @@ import {
   type WalletClient,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { rawDeployments } from '@jeju/contracts'
 
 // =============================================================================
 // CONFIGURATION
@@ -132,21 +131,11 @@ interface Deployments {
 }
 
 function loadDeployments(): Deployments {
-  const deploymentsDir = join(process.cwd(), '../../contracts/deployments')
-  
-  const loadJson = (filename: string) => {
-    const path = join(deploymentsDir, filename)
-    if (existsSync(path)) {
-      return JSON.parse(readFileSync(path, 'utf-8'))
-    }
-    return {}
-  }
-
   return {
-    v4: loadJson('uniswap-v4-1337.json'),
-    marketplace: loadJson('bazaar-marketplace-1337.json'),
-    factory: loadJson('erc20-factory-1337.json'),
-    tokens: loadJson('multi-token-system-1337.json'),
+    v4: rawDeployments.uniswapV4_1337 as Deployments['v4'],
+    marketplace: rawDeployments.bazaarMarketplace1337 as Deployments['marketplace'],
+    factory: rawDeployments.erc20Factory1337 as Deployments['factory'],
+    tokens: rawDeployments.multiTokenSystem1337 as Deployments['tokens'],
   }
 }
 

@@ -16,6 +16,9 @@ import {
   type NotificationLevel,
 } from './notifications';
 
+// Type for mock fetch calls
+type MockFetchCall = [url: string, options?: RequestInit];
+
 describe('Notification Utilities - AGGRESSIVE TESTS', () => {
   
   describe('sendNotification - Core Logic', () => {
@@ -68,7 +71,7 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
     it('should read config from environment variables', async () => {
       const originalEnv = { ...process.env };
       const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       process.env.DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/test/token';
       process.env.TELEGRAM_BOT_TOKEN = 'bot-token';
@@ -77,13 +80,14 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
       await sendNotification('Test message', 'info');
 
       // ASSERT: fetch was called for Discord
-      const discordCalls = mockFetch.mock.calls.filter((call: any) => 
+      const calls = mockFetch.mock.calls as MockFetchCall[];
+      const discordCalls = calls.filter((call) => 
         call[0]?.includes('discord.com')
       );
       expect(discordCalls.length).toBeGreaterThan(0);
 
       // ASSERT: fetch was called for Telegram
-      const telegramCalls = mockFetch.mock.calls.filter((call: any) => 
+      const telegramCalls = calls.filter((call) => 
         call[0]?.includes('api.telegram.org')
       );
       expect(telegramCalls.length).toBeGreaterThan(0);
@@ -141,7 +145,7 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
   describe('Discord Integration - VERIFY ACTUAL CALLS', () => {
     it('should call Discord webhook with correct payload', async () => {
       const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       const config: NotificationConfig = {
         discordWebhook: 'https://discord.com/api/webhooks/123/abc',
@@ -153,21 +157,21 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
       expect(mockFetch).toHaveBeenCalled();
       
       // ASSERT: Called correct URL
-      const calls = mockFetch.mock.calls;
+      const calls = mockFetch.mock.calls as MockFetchCall[];
       expect(calls[0][0]).toContain('discord.com/api/webhooks');
       
       // ASSERT: Sent POST request
       expect(calls[0][1]?.method).toBe('POST');
       
       // ASSERT: Sent JSON body
-      const body = JSON.parse(calls[0][1]?.body || '{}');
+      const body = JSON.parse((calls[0][1]?.body as string) || '{}');
       expect(body.content).toContain('Test message');
       expect(body.content).toContain('ℹ️');
     });
 
     it('should NOT call Discord if webhook not configured', async () => {
       const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       await sendNotification('Test', 'info', {});
 
@@ -179,7 +183,7 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
   describe('Telegram Integration - VERIFY ACTUAL CALLS', () => {
     it('should call Telegram API with correct payload', async () => {
       const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       const config: NotificationConfig = {
         telegramBotToken: 'bot-token-123',
@@ -192,16 +196,16 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
       expect(mockFetch).toHaveBeenCalled();
       
       // ASSERT: Called Telegram API
-      const calls = mockFetch.mock.calls;
-      const telegramCall = calls.find((c: any) => c[0]?.includes('api.telegram.org'));
+      const calls = mockFetch.mock.calls as MockFetchCall[];
+      const telegramCall = calls.find((c) => c[0]?.includes('api.telegram.org'));
       expect(telegramCall).toBeTruthy();
       
       // ASSERT: Correct endpoint
-      expect(telegramCall[0]).toContain('/sendMessage');
-      expect(telegramCall[0]).toContain('bot-token-123');
+      expect(telegramCall![0]).toContain('/sendMessage');
+      expect(telegramCall![0]).toContain('bot-token-123');
       
       // ASSERT: Correct payload
-      const body = JSON.parse(telegramCall[1]?.body || '{}');
+      const body = JSON.parse((telegramCall![1]?.body as string) || '{}');
       expect(body.chat_id).toBe('chat-456');
       expect(body.text).toContain('Test message');
       expect(body.parse_mode).toBe('Markdown');
@@ -209,7 +213,7 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
 
     it('should NOT call Telegram if not fully configured', async () => {
       const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       // Missing chatId
       await sendNotification('Test', 'info', {
@@ -217,7 +221,8 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
       });
 
       // ASSERT: No Telegram calls
-      const telegramCalls = mockFetch.mock.calls.filter((c: any) => 
+      const calls = mockFetch.mock.calls as MockFetchCall[];
+      const telegramCalls = calls.filter((c) => 
         c[0]?.includes('telegram.org')
       );
       expect(telegramCalls.length).toBe(0);
@@ -227,13 +232,13 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
   describe('Error Handling - MUST NOT THROW', () => {
     it('should log error but not throw when Discord fails', async () => {
       const mockFetch = mock(() => Promise.reject(new Error('Network error')));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       const originalError = console.error;
       let errorLogged = false;
-      console.error = mock((...args: any[]) => {
+      console.error = mock((...args: unknown[]) => {
         errorLogged = true;
-        originalError(...args);
+        originalError.apply(console, args as [message?: unknown, ...optionalParams: unknown[]]);
       });
 
       const config: NotificationConfig = {
@@ -251,13 +256,13 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
 
     it('should log error but not throw when Telegram fails', async () => {
       const mockFetch = mock(() => Promise.reject(new Error('API error')));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       const originalError = console.error;
       let errorLogged = false;
-      console.error = mock((...args: any[]) => {
+      console.error = mock((...args: unknown[]) => {
         errorLogged = true;
-        originalError(...args);
+        originalError.apply(console, args as [message?: unknown, ...optionalParams: unknown[]]);
       });
 
       const config: NotificationConfig = {
@@ -278,7 +283,7 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
   describe('Integration - VERIFY ALL CHANNELS', () => {
     it('should call ALL configured channels', async () => {
       const mockFetch = mock(() => Promise.resolve(new Response('', { status: 200 })));
-      global.fetch = mockFetch as any;
+      global.fetch = mockFetch as typeof fetch;
 
       const config: NotificationConfig = {
         discordWebhook: 'https://discord.com/webhook',
@@ -289,16 +294,17 @@ describe('Notification Utilities - AGGRESSIVE TESTS', () => {
       await sendNotification('Test', 'info', config);
 
       // ASSERT: Both services called
-      expect(mockFetch.mock.calls.length).toBe(2);
+      const calls = mockFetch.mock.calls as MockFetchCall[];
+      expect(calls.length).toBe(2);
       
       // ASSERT: Discord called
-      const discordCalls = mockFetch.mock.calls.filter((c: any) => 
+      const discordCalls = calls.filter((c) => 
         c[0]?.includes('discord.com')
       );
       expect(discordCalls.length).toBe(1);
       
       // ASSERT: Telegram called
-      const telegramCalls = mockFetch.mock.calls.filter((c: any) => 
+      const telegramCalls = calls.filter((c) => 
         c[0]?.includes('telegram.org')
       );
       expect(telegramCalls.length).toBe(1);

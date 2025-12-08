@@ -6,4 +6,5 @@ export * from './markets/lmsrPricing';
 export * from './indexer-client';
 export * from './moderation-contracts';
 export * from './randomColor';
+export * from './crosschain';
 

@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * COMPREHENSIVE ALL FEATURES TEST SUITE
  * 
  * Tests EVERY page, button, component, and form in Bazaar
@@ -27,7 +28,7 @@ const publicClient = createPublicClient({
 })
 
 // Helper to connect wallet
-async function connectWallet(page: any, metamask: MetaMask) {
+async function connectWallet(page: Page, metamask: MetaMask) {
   await page.goto('/')
   const connectBtn = page.getByRole('button', { name: /Connect Wallet/i })
   if (await connectBtn.isVisible()) {

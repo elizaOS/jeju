@@ -11,7 +11,8 @@
  */
 
 import { z } from 'zod';
-import { AddressSchema, SupportedChainIdSchema } from './eil';
+import { AddressSchema } from './contracts';
+import { SupportedChainIdSchema } from './eil';
 
 // ============ Intent Types (ERC-7683 Compatible) ============
 

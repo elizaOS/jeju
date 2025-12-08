@@ -45,6 +45,14 @@ app.use(cors());
 app.use(express.json());
 
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL || 'http://localhost:9090';
+const OIF_AGGREGATOR_URL = process.env.OIF_AGGREGATOR_URL || 'http://localhost:4010';
+
+function formatVolume(amount: string): string {
+  const value = parseFloat(amount) / 1e18;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
+  return value.toFixed(4);
+}
 
 app.get('/.well-known/agent-card.json', (_req, res) => {
   res.json({
@@ -83,6 +91,28 @@ app.get('/.well-known/agent-card.json', (_req, res) => {
         description: 'Get Prometheus scrape targets and their status', 
         tags: ['targets', 'health'], 
         examples: ['Show scrape targets', 'Which services are being monitored?'] 
+      },
+      // OIF (Open Intents Framework) metrics
+      {
+        id: 'oif-stats',
+        name: 'OIF Statistics',
+        description: 'Get Open Intents Framework statistics (intents, solvers, volume)',
+        tags: ['oif', 'intents', 'cross-chain'],
+        examples: ['Show OIF stats', 'How many intents today?', 'Cross-chain volume?']
+      },
+      {
+        id: 'oif-solver-health',
+        name: 'OIF Solver Health',
+        description: 'Get health status of active OIF solvers',
+        tags: ['oif', 'solvers', 'health'],
+        examples: ['Solver health check', 'Are solvers online?', 'Solver success rates']
+      },
+      {
+        id: 'oif-route-stats',
+        name: 'OIF Route Statistics',
+        description: 'Get cross-chain route performance metrics',
+        tags: ['oif', 'routes', 'performance'],
+        examples: ['Route performance', 'Best route for Base to Arbitrum?', 'Route success rates']
       }
     ]
   });
@@ -172,6 +202,71 @@ app.post('/api/a2a', async (req, res) => {
         result = { 
           message: `${upCount}/${targets.length} targets healthy`, 
           data: { targets } 
+        };
+        break;
+      }
+
+      // OIF Skills
+      case 'oif-stats': {
+        const response = await fetch(`${OIF_AGGREGATOR_URL}/api/stats`);
+        const stats = await response.json();
+        
+        result = {
+          message: `OIF Stats: ${stats.totalIntents} intents, ${stats.activeSolvers} solvers, $${formatVolume(stats.totalVolumeUsd)} volume`,
+          data: stats
+        };
+        break;
+      }
+
+      case 'oif-solver-health': {
+        const response = await fetch(`${OIF_AGGREGATOR_URL}/api/solvers?active=true`);
+        const solvers = await response.json();
+        
+        const healthySolvers = solvers.filter((s: { successRate: number }) => s.successRate >= 95);
+        const avgSuccessRate = solvers.length > 0 
+          ? solvers.reduce((sum: number, s: { successRate: number }) => sum + s.successRate, 0) / solvers.length 
+          : 0;
+        
+        result = {
+          message: `${healthySolvers.length}/${solvers.length} solvers healthy, avg success rate: ${avgSuccessRate.toFixed(1)}%`,
+          data: {
+            totalSolvers: solvers.length,
+            healthySolvers: healthySolvers.length,
+            avgSuccessRate,
+            solvers: solvers.map((s: { address: string; name: string; successRate: number; reputation: number }) => ({
+              address: s.address,
+              name: s.name,
+              successRate: s.successRate,
+              reputation: s.reputation
+            }))
+          }
+        };
+        break;
+      }
+
+      case 'oif-route-stats': {
+        const response = await fetch(`${OIF_AGGREGATOR_URL}/api/routes?active=true`);
+        const routes = await response.json();
+        
+        const totalVolume = routes.reduce((sum: bigint, r: { totalVolume: string }) => sum + BigInt(r.totalVolume), 0n);
+        const avgSuccessRate = routes.length > 0
+          ? routes.reduce((sum: number, r: { successRate: number }) => sum + r.successRate, 0) / routes.length
+          : 0;
+        
+        result = {
+          message: `${routes.length} active routes, ${formatVolume(totalVolume.toString())} ETH volume, ${avgSuccessRate.toFixed(1)}% success`,
+          data: {
+            totalRoutes: routes.length,
+            totalVolume: totalVolume.toString(),
+            avgSuccessRate,
+            routes: routes.map((r: { routeId: string; sourceChainId: number; destinationChainId: number; successRate: number; avgFillTimeSeconds: number }) => ({
+              routeId: r.routeId,
+              source: r.sourceChainId,
+              destination: r.destinationChainId,
+              successRate: r.successRate,
+              avgTime: r.avgFillTimeSeconds
+            }))
+          }
         };
         break;
       }

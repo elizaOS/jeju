@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Concurrent Operations Tests
  * Tests multiple simultaneous transactions and state consistency
  */

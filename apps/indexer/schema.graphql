@@ -823,3 +823,343 @@ type EILChainStats @entity {
   
   lastUpdated: DateTime! @index
 }
+
+# ============ OIF (Open Intents Framework) Entities ============
+
+type OIFIntent @entity {
+  id: ID! # intentId (bytes32)
+  intentId: String! @unique @index
+  user: Account!
+  nonce: BigInt!
+  sourceChainId: Int! @index
+  
+  # Deadlines
+  openDeadline: BigInt!
+  fillDeadline: BigInt!
+  
+  # Input details
+  inputToken: String! @index
+  inputAmount: BigInt!
+  
+  # Output details
+  outputToken: String!
+  outputAmount: BigInt!
+  outputChainId: Int! @index
+  recipient: String! @index
+  
+  # Fee
+  maxFee: BigInt!
+  actualFee: BigInt
+  
+  # Status tracking
+  status: OIFIntentStatus! @index
+  createdAt: DateTime! @index
+  claimedAt: DateTime
+  filledAt: DateTime
+  settledAt: DateTime
+  expiredAt: DateTime
+  
+  # Execution
+  solver: OIFSolver
+  settlement: OIFSettlement
+  
+  # Transaction hashes
+  inputSettlerTx: String!
+  outputSettlerTx: String
+  attestationTx: String
+  claimTx: String
+  
+  createdBlock: BigInt!
+  filledBlock: BigInt
+  
+  # Quote that was accepted
+  acceptedQuote: OIFQuote
+}
+
+enum OIFIntentStatus {
+  OPEN
+  CLAIMED
+  PENDING_FILL
+  FILLED
+  PENDING_SETTLEMENT
+  SETTLED
+  EXPIRED
+  CANCELLED
+  FAILED
+}
+
+type OIFSolver @entity {
+  id: ID! # solver address
+  address: String! @unique @index
+  name: String
+  endpoint: String # A2A endpoint URL
+  
+  # Staking
+  stakedAmount: BigInt!
+  unbondingAmount: BigInt!
+  unbondingStartTime: BigInt
+  slashedAmount: BigInt!
+  
+  # Status
+  isActive: Boolean! @index
+  registeredAt: DateTime! @index
+  lastActiveAt: DateTime! @index
+  
+  # Supported chains
+  supportedChains: [Int!]!
+  
+  # Performance metrics
+  totalFills: Int!
+  successfulFills: Int!
+  failedFills: Int!
+  successRate: Int! # 0-100
+  averageResponseMs: Int!
+  averageFillTimeMs: Int!
+  
+  # Volume
+  totalVolumeUsd: BigInt!
+  totalFeesEarned: BigInt!
+  
+  # Reputation (0-100)
+  reputation: Int! @index
+  
+  # Relations
+  liquidity: [OIFSolverLiquidity!]! @derivedFrom(field: "solver")
+  fills: [OIFIntent!]! @derivedFrom(field: "solver")
+  settlements: [OIFSettlement!]! @derivedFrom(field: "solver")
+  slashEvents: [OIFSlashEvent!]! @derivedFrom(field: "solver")
+}
+
+type OIFSolverLiquidity @entity {
+  id: ID! # solver-chainId-token
+  solver: OIFSolver!
+  chainId: Int! @index
+  token: String! @index
+  amount: BigInt!
+  lockedAmount: BigInt! # In pending fills
+  lastUpdated: DateTime! @index
+}
+
+type OIFRoute @entity {
+  id: ID! # routeId (sourceChain-destChain-oracle)
+  routeId: String! @unique @index
+  
+  sourceChainId: Int! @index
+  destinationChainId: Int! @index
+  
+  inputSettler: String!
+  outputSettler: String!
+  
+  # Oracle configuration
+  oracle: OIFOracleType!
+  oracleAddress: String
+  
+  # Status
+  isActive: Boolean! @index
+  
+  # Metrics
+  totalVolume: BigInt!
+  totalVolumeUsd: BigInt!
+  totalIntents: Int!
+  successfulIntents: Int!
+  failedIntents: Int!
+  averageFeePercent: Int! # basis points
+  averageFillTimeSeconds: Int!
+  successRate: Int! # 0-100
+  
+  # Solvers serving this route
+  activeSolvers: Int!
+  totalLiquidity: BigInt!
+  
+  createdAt: DateTime! @index
+  lastUpdated: DateTime! @index
+}
+
+enum OIFOracleType {
+  HYPERLANE
+  OPTIMISM_NATIVE
+  SUPERCHAIN
+  LAYERZERO
+  SIMPLE
+  CUSTOM
+}
+
+type OIFSettlement @entity {
+  id: ID! # settlementId (bytes32)
+  settlementId: String! @unique @index
+  
+  intent: OIFIntent!
+  solver: OIFSolver!
+  
+  # Details
+  sourceChainId: Int!
+  destinationChainId: Int!
+  inputToken: String!
+  outputToken: String!
+  inputAmount: BigInt!
+  outputAmount: BigInt!
+  fee: BigInt!
+  
+  # Status
+  status: OIFSettlementStatus! @index
+  
+  # Timing
+  createdAt: DateTime! @index
+  attestedAt: DateTime
+  settledAt: DateTime
+  
+  # Transactions
+  inputSettlerTx: String!
+  outputSettlerTx: String!
+  attestationTx: String
+  claimTx: String
+  
+  # Attestation
+  attestation: OIFAttestation
+}
+
+enum OIFSettlementStatus {
+  PENDING
+  ATTESTED
+  SETTLED
+  DISPUTED
+  SLASHED
+}
+
+type OIFAttestation @entity {
+  id: ID! # attestationId (bytes32)
+  attestationId: String! @unique @index
+  
+  intent: OIFIntent!
+  orderId: String! @index
+  
+  # Oracle info
+  oracleType: OIFOracleType!
+  sourceChainId: Int!
+  destinationChainId: Int!
+  
+  # Proof
+  proof: String!
+  proofBlockNumber: BigInt!
+  proofTimestamp: DateTime!
+  
+  # Verification
+  verified: Boolean!
+  verifiedAt: DateTime
+  verificationTx: String
+  
+  settlement: OIFSettlement
+}
+
+type OIFQuote @entity {
+  id: ID! # quoteId
+  quoteId: String! @unique @index
+  
+  # Route
+  sourceChainId: Int! @index
+  destinationChainId: Int! @index
+  sourceToken: String!
+  destinationToken: String!
+  
+  # Amounts
+  inputAmount: BigInt!
+  outputAmount: BigInt!
+  
+  # Pricing
+  fee: BigInt!
+  feePercent: Int! # basis points
+  priceImpact: Int! # basis points
+  
+  # Timing
+  estimatedFillTimeSeconds: Int!
+  validUntil: DateTime!
+  
+  # Solver
+  solver: OIFSolver!
+  solverReputation: Int!
+  
+  # Status
+  accepted: Boolean!
+  expired: Boolean!
+  
+  createdAt: DateTime! @index
+}
+
+type OIFSlashEvent @entity {
+  id: ID!
+  solver: OIFSolver!
+  intentId: String! @index
+  orderId: String!
+  chainId: Int!
+  amount: BigInt!
+  victim: String!
+  reason: String!
+  timestamp: DateTime! @index
+  disputed: Boolean!
+  txHash: String!
+}
+
+type OIFStats @entity {
+  id: ID! # "global" or date string for daily stats
+  date: DateTime @index
+  
+  # Intent counts
+  totalIntents: BigInt!
+  openIntents: Int!
+  pendingIntents: Int!
+  filledIntents: Int!
+  expiredIntents: Int!
+  
+  # Volume
+  totalVolume: BigInt!
+  totalVolumeUsd: BigInt!
+  totalFees: BigInt!
+  totalFeesUsd: BigInt!
+  
+  # Solvers
+  totalSolvers: Int!
+  activeSolvers: Int!
+  totalSolverStake: BigInt!
+  
+  # Routes
+  totalRoutes: Int!
+  activeRoutes: Int!
+  
+  # Performance
+  averageFillTimeSeconds: Int!
+  successRate: Int! # 0-100
+  
+  # 24h metrics
+  last24hIntents: Int!
+  last24hVolume: BigInt!
+  last24hFees: BigInt!
+  
+  lastUpdated: DateTime!
+}
+
+type OIFChainStats @entity {
+  id: ID! # chainId
+  chainId: Int! @unique @index
+  chainName: String!
+  
+  inputSettlerAddress: String!
+  outputSettlerAddress: String!
+  solverRegistryAddress: String
+  
+  # Metrics
+  totalIntents: Int!
+  totalVolume: BigInt!
+  totalVolumeUsd: BigInt!
+  activeSolvers: Int!
+  totalLiquidity: BigInt!
+  
+  # As source
+  outboundIntents: Int!
+  outboundVolume: BigInt!
+  
+  # As destination
+  inboundIntents: Int!
+  inboundVolume: BigInt!
+  
+  lastUpdated: DateTime! @index
+}

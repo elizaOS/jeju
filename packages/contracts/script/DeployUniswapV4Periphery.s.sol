@@ -91,7 +91,7 @@ contract DeployUniswapV4Periphery is Script {
         console.log("QuoterV4:         ", quoterV4);
         console.log("StateView:        ", stateView);
         console.log("");
-        console.log("Update contracts/deployments/uniswap-v4-1337.json with these addresses");
+        console.log("Update packages/contracts/deployments/uniswap-v4-1337.json with these addresses");
         console.log("============================================================");
     }
 }

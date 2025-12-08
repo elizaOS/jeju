@@ -30,20 +30,29 @@ export type {
   ChatCompletionRequest,
   ChatCompletionResponse,
   ChatMessage,
+  ComputeResources,
+  CreateRentalParams,
+  GPUType,
   HardwareInfo,
   InferenceRequest,
   InferenceResponse,
   Ledger,
   ModelConfig,
   ModerationSDKConfig,
+  NodeMetrics,
   Provider,
   ProviderConfig,
+  ProviderResourcesInfo,
   ProviderSubAccount,
+  Rental,
+  RentalStatus,
+  ResourcePricing,
   SDKConfig,
   Service,
   Settlement,
   Stake,
 } from './compute/index.js';
+
 // Compute Marketplace (Jeju integrated)
 export {
   // SDK
@@ -56,6 +65,7 @@ export {
   createModerationSDK,
   createSDK,
   detectHardware,
+  formatHardwareInfo,
   generateHardwareHash,
   generateSimulatedAttestation,
   getAttestationHash,
@@ -63,10 +73,13 @@ export {
   MockInferenceEngine,
   ModerationSDK,
   OllamaInferenceEngine,
+  GPUTypeEnum,
+  RentalStatusEnum,
   StakeType,
   startComputeNode,
   verifyAttestation,
 } from './compute/index.js';
+
 // Contract types
 export type {
   ContractEvent,
@@ -80,8 +93,10 @@ export type {
   StakeInfo,
   StakingState,
 } from './contracts/index.js';
+
 // Cryptography (real, Web Crypto API)
 export * from './crypto/index.js';
+
 // Game logic
 export {
   type AgentConfig,
@@ -98,6 +113,7 @@ export {
   type TrainingCycleResult,
   type TrainingSample,
 } from './game/index.js';
+
 // Infrastructure (real blockchain clients)
 export {
   AttestationClient,
@@ -107,23 +123,22 @@ export {
   type BootstrappedGame,
   bootstrap,
   type ChainId,
+  createPhalaGateway,
+  type DeploymentConfig,
   DStackClient,
   ENSDeployer,
   ENSRegistrar,
   type GameStatus,
-  generateBabylonWorkerCode,
-  MARLIN_CLI_COMMANDS,
-  MARLIN_CONTRACTS,
-  type MarlinDeployResult,
-  type MarlinJobResult,
-  MarlinOysterClient,
-  type MarlinSubscriptionResult,
+  type GatewayConfig,
   OnChainAttestationClient,
   type OperatorInfo,
+  PhalaGateway,
+  type PhalaNode,
   ProductionTEEEnclave,
-  printDeploymentInstructions,
+  type ProvisionRequest,
   type RegistrationResult,
 } from './infra/index.js';
+
 // Protocol (PBTS-aligned)
 export {
   type AggregatedReceipts,
@@ -141,6 +156,7 @@ export {
   VerifierClient,
   verifyReceipt,
 } from './protocol/index.js';
+
 // Storage (100% permissionless - wallet signatures only)
 export {
   ArweaveStorage,
@@ -167,7 +183,8 @@ export {
   type UploadOptions,
   type UploadResult,
 } from './storage/index.js';
-// TEE (simulated locally, real via Marlin Oyster)
+
+// TEE (simulated locally, real via Phala dstack)
 export {
   type AttestationQuote,
   type EnclaveConfig,

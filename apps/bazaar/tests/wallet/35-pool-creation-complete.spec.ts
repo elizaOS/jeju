@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Pool Creation - Complete Flow with Real Blockchain Interactions
  * Tests creating new Uniswap V4 pools with MetaMask transaction signing
  */

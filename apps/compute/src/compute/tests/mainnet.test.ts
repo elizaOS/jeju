@@ -1,5 +1,5 @@
 /**
- * Mainnet Integration Test for Babylon Compute Marketplace
+ * Mainnet Integration Test for Jeju Compute Marketplace
  *
  * This test validates the deployed contracts on Base Sepolia or Mainnet.
  *
@@ -356,13 +356,13 @@ describe('Mainnet Integration Test', () => {
       }
 
       const attestationHash = keccak256(
-        toUtf8Bytes(`babylon-test-${Date.now()}`)
+        toUtf8Bytes(`jeju-test-${Date.now()}`)
       );
 
       const fn = registry.getFunction('register');
       const tx = await fn(
         'Test Provider',
-        'https://test.babylon.network/v1',
+        'https://compute.jeju.network/v1',
         attestationHash,
         { value: parseEther('0.1') }
       );

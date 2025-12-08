@@ -4,31 +4,37 @@ import { privateKeyToAccount } from "viem/accounts";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { ChainConfig } from "../../types";
+import { rawDeployments, getContractAddresses } from "@jeju/contracts";
 
-const DEPLOYMENT_PATH = join(process.cwd(), "contracts", "deployments", "localnet", "deployment.json");
 const CONFIG_PATH = join(process.cwd(), "config", "chain", "localnet.json");
 
 describe("DeFi E2E Tests", () => {
   let publicClient: ReturnType<typeof createPublicClient>;
   let account: ReturnType<typeof privateKeyToAccount>;
-  let deployment: any;
+  let deployment: {
+    uniswapV4: { PoolManager?: string; SwapRouter?: string };
+    synthetixV3: Record<string, string>;
+    compoundV3: Record<string, string>;
+    chainlink: Record<string, string>;
+  };
   let config: ChainConfig;
 
   beforeAll(() => {
-    if (!existsSync(DEPLOYMENT_PATH)) {
-      // Create a placeholder if it doesn't exist
-      deployment = {
-        uniswapV4: {},
-        synthetixV3: {},
-        compoundV3: {},
-        chainlink: {}
-      };
-      console.warn("Deployment file not found, using placeholder data. Run contract deployment for full tests.");
-    } else {
-      const deploymentData = JSON.parse(readFileSync(DEPLOYMENT_PATH, "utf-8"));
-      deployment = deploymentData;
-    }
+    // Load from @jeju/contracts
+    const addresses = getContractAddresses(1337);
+    deployment = {
+      uniswapV4: {
+        PoolManager: addresses.poolManager,
+        SwapRouter: addresses.swapRouter,
+      },
+      synthetixV3: {},
+      compoundV3: {},
+      chainlink: {}
+    };
 
+    if (!existsSync(CONFIG_PATH)) {
+      throw new Error("Config file not found");
+    }
     config = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
 
     account = privateKeyToAccount(

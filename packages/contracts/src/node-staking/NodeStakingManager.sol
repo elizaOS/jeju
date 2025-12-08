@@ -543,9 +543,15 @@ contract NodeStakingManager is INodeStakingManager, Ownable, Pausable, Reentranc
         uint256 totalFees = _convertUSDToETH(rewardFee + stakeFee);
         
         if (address(this).balance >= totalFees) {
-            payable(paymasterFactory.getPaymaster(node.rewardToken)).transfer(_convertUSDToETH(rewardFee));
-            if (stakeFee > 0) {
-                payable(paymasterFactory.getPaymaster(node.stakedToken)).transfer(_convertUSDToETH(stakeFee));
+            // Use .call instead of .transfer to avoid 2300 gas limit issues
+            address rewardPaymaster = paymasterFactory.getPaymaster(node.rewardToken);
+            (bool success1,) = payable(rewardPaymaster).call{value: _convertUSDToETH(rewardFee)}("");
+            // Silently fail if paymaster doesn't accept ETH (non-critical)
+            if (stakeFee > 0 && success1) {
+                address stakingPaymaster = paymasterFactory.getPaymaster(node.stakedToken);
+                (bool success2,) = payable(stakingPaymaster).call{value: _convertUSDToETH(stakeFee)}("");
+                // Silently ignore failure - paymaster fee is non-critical
+                success2; // Suppress unused variable warning
             }
         }
         

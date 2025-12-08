@@ -9,6 +9,7 @@ import {
 } from './shared/cloud-integration';
 import fs from 'fs';
 import path from 'path';
+import { rawDeployments, getContractAddresses } from '@jeju/contracts';
 
 const logger = new Logger('deploy-cloud-integration');
 
@@ -131,17 +132,19 @@ async function setupCloudIntegration(
 async function main() {
   logger.info('=== Cloud Integration Deployment ===\n');
   
-  // Load deployment addresses
-  const addressesPath = process.env.ADDRESSES_FILE || 
-    path.join(__dirname, '../packages/contracts/deployments/localnet-addresses.json');
+  // Load deployment addresses from @jeju/contracts
+  const contractAddrs = getContractAddresses(1337);
+  const localnetAddrs = rawDeployments.localnetAddresses as Record<string, string>;
   
-  if (!fs.existsSync(addressesPath)) {
-    throw new Error(`Deployment addresses not found at: ${addressesPath}`);
-  }
-  
-  const addresses: DeploymentAddresses = JSON.parse(
-    fs.readFileSync(addressesPath, 'utf-8')
-  );
+  const addresses: DeploymentAddresses = {
+    identityRegistry: contractAddrs.identityRegistry || localnetAddrs.identityRegistry,
+    reputationRegistry: contractAddrs.reputationRegistry || localnetAddrs.reputationRegistry,
+    serviceRegistry: contractAddrs.serviceRegistry || localnetAddrs.serviceRegistry,
+    creditManager: localnetAddrs.creditManager,
+    cloudReputationProvider: localnetAddrs.cloudReputationProvider,
+    usdc: contractAddrs.usdc || localnetAddrs.usdc,
+    elizaOS: contractAddrs.elizaOS || localnetAddrs.elizaOS,
+  };
   
   logger.info('Loaded deployment addresses:');
   logger.info(`  IdentityRegistry: ${addresses.identityRegistry}`);

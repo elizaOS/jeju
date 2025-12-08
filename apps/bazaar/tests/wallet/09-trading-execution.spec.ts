@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Trading Execution with Real MetaMask Transactions
  * 
  * ⚠️ REQUIRES DEPLOYED CONTRACTS:

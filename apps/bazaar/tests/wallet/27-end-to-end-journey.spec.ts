@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * End-to-End Complete Journey
  * Tests FULL user journey across all features in sequence
  */

@@ -1,24 +1,44 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { getJejuTokens, getTokenTransfers, getTokenHolders } from '../indexer-client';
 
-const SKIP_INDEXER_TESTS = process.env.SKIP_INDEXER_TESTS === 'true';
+// Check if indexer is available
+let indexerAvailable = false;
 
 describe('Indexer Client', () => {
-  beforeAll(() => {
-    if (SKIP_INDEXER_TESTS) {
-      console.log('   ⚠️ Skipping indexer tests (SKIP_INDEXER_TESTS=true)');
+  beforeAll(async () => {
+    // Try to connect to indexer
+    const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL || 'http://localhost:4350/graphql';
+    try {
+      const response = await fetch(indexerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '{ __typename }' }),
+      });
+      indexerAvailable = response.ok;
+    } catch {
+      indexerAvailable = false;
+    }
+    
+    if (!indexerAvailable) {
+      console.log('   ⚠️ Indexer not available at ' + indexerUrl + '. Live tests will be skipped.');
     }
   });
 
   test('should fetch Jeju tokens', async () => {
-    if (SKIP_INDEXER_TESTS) return;
+    if (!indexerAvailable) {
+      console.log('⏭️ Skipping: Indexer not available');
+      return;
+    }
     const tokens = await getJejuTokens({ limit: 10 });
     expect(tokens).toBeDefined();
     expect(Array.isArray(tokens)).toBe(true);
   });
 
   test('should filter tokens with limit', async () => {
-    if (SKIP_INDEXER_TESTS) return;
+    if (!indexerAvailable) {
+      console.log('⏭️ Skipping: Indexer not available');
+      return;
+    }
     const tokens = await getJejuTokens({ limit: 5 });
     expect(Array.isArray(tokens)).toBe(true);
     if (tokens.length > 0) {
@@ -27,7 +47,10 @@ describe('Indexer Client', () => {
   });
 
   test('should fetch token transfers', async () => {
-    if (SKIP_INDEXER_TESTS) return;
+    if (!indexerAvailable) {
+      console.log('⏭️ Skipping: Indexer not available');
+      return;
+    }
     const mockAddress = '0x0000000000000000000000000000000000000001';
     const transfers = await getTokenTransfers(mockAddress, 10);
     expect(transfers).toBeDefined();
@@ -35,7 +58,10 @@ describe('Indexer Client', () => {
   });
 
   test('should fetch token holders', async () => {
-    if (SKIP_INDEXER_TESTS) return;
+    if (!indexerAvailable) {
+      console.log('⏭️ Skipping: Indexer not available');
+      return;
+    }
     const mockAddress = '0x0000000000000000000000000000000000000001';
     const holders = await getTokenHolders(mockAddress, 10);
     expect(holders).toBeDefined();
@@ -43,7 +69,10 @@ describe('Indexer Client', () => {
   });
 
   test('should throw on invalid address format', async () => {
-    if (SKIP_INDEXER_TESTS) return;
+    if (!indexerAvailable) {
+      console.log('⏭️ Skipping: Indexer not available');
+      return;
+    }
     await expect(getTokenTransfers('invalid-address', 10)).rejects.toThrow();
   });
   

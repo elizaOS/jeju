@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Network Switching Tests
  * Tests switching between different networks and verifying contract updates
  */

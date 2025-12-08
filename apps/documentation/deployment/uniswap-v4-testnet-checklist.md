@@ -26,7 +26,7 @@ export JEJU_NETWORK="testnet"
 bun run scripts/deploy-uniswap-v4.ts
 ```
 
-Output: PoolManager address saved to `contracts/deployments/uniswap-v4-420690.json`
+Output: PoolManager address saved to `packages/contracts/deployments/uniswap-v4-420690.json`
 
 ## Verify
 

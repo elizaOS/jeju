@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * LOCALNET E2E TESTS WITH SYNPRESS
  * 
  * Full end-to-end tests with real wallet interactions on localnet.

@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Portfolio Management - Complete Flow
  * Tests REAL position tracking, P&L calculation, and claims
  */

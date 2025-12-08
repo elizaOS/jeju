@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Wallet Disconnect Flow - Complete connection lifecycle
  */
 

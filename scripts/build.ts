@@ -30,7 +30,7 @@ let failed = false;
 
 // Step 1: Build Smart Contracts
 console.log("1️⃣  Building Smart Contracts (Foundry)...\n");
-const contractsResult = await $`cd contracts && forge build`.nothrow();
+const contractsResult = await $`cd packages/contracts && forge build`.nothrow();
 
 if (contractsResult.exitCode !== 0) {
   console.error("❌ Contracts build failed\n");

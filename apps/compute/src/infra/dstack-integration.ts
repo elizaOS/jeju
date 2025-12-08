@@ -1,15 +1,19 @@
 /**
  * DStack Integration (Phala TEE SDK)
  *
- * NOTE: Phala Cloud requires API key login for deployment management.
- * For 100% permissionless TEE, use Marlin Oyster instead.
+ * Phala Network provides Intel TDX-based TEE compute through dstack.
+ * 
+ * Features:
+ * - Hardware-derived cryptographic keys
+ * - Remote attestation (Intel TDX quotes)
+ * - Sealed storage (encrypted with hardware keys)
+ * - ERC-8004 agent identity integration
  *
- * @see src/infra/marlin-oyster.ts - Wallet-only TEE deployment
- *
- * This file is kept for:
- * 1. Running inside existing Phala TEE deployments
- * 2. Reference implementation of hardware-derived keys
+ * This module provides:
+ * 1. Running inside Phala TEE deployments
+ * 2. Hardware-derived key derivation
  * 3. Production enclave abstraction
+ * 4. Gateway integration for node discovery
  */
 
 // NOTE: These imports will work when running inside Phala TEE
@@ -87,7 +91,7 @@ export class DStackClient {
    */
   async getWallet(): Promise<{ address: Address; privateKey: Hex }> {
     const keyBytes = await this.deriveKey(
-      '/babylon/game/v1',
+      '/jeju/compute/v1',
       'ethereum-wallet'
     );
     const privateKey = toHex(keyBytes) as Hex;
@@ -145,7 +149,7 @@ export class DStackClient {
    * Encrypt data that can only be decrypted by this TEE
    */
   async seal(data: Uint8Array): Promise<Uint8Array> {
-    const key = await this.deriveKey('/babylon/game/v1', 'sealing-key');
+    const key = await this.deriveKey('/jeju/compute/v1', 'sealing-key');
 
     // Use the derived key for AES-GCM encryption
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -175,7 +179,7 @@ export class DStackClient {
    * Decrypt data sealed by this TEE
    */
   async unseal(sealed: Uint8Array): Promise<Uint8Array> {
-    const key = await this.deriveKey('/babylon/game/v1', 'sealing-key');
+    const key = await this.deriveKey('/jeju/compute/v1', 'sealing-key');
 
     const iv = sealed.slice(0, 12);
     const ciphertext = sealed.slice(12);

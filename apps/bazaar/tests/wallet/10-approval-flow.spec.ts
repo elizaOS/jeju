@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Token Approval Flow with Real MetaMask Transactions
  * 
  * ⚠️ REQUIRES DEPLOYED CONTRACTS:

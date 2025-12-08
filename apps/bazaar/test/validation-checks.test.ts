@@ -74,9 +74,9 @@ describe('NFT Validation - Code Analysis', () => {
   })
 
   test('NFT Marketplace ABI has all query functions', () => {
-    const abi = JSON.parse(readFileSync(join(process.cwd(), 'lib/abis/NFTMarketplace.json'), 'utf-8'))
+    const abi = JSON.parse(readFileSync(join(process.cwd(), 'lib/abis/NFTMarketplace.json'), 'utf-8')) as { name?: string }[];
     
-    const functionNames = abi.map((item: any) => item.name)
+    const functionNames = abi.map((item) => item.name)
     
     // Check for required read functions
     expect(functionNames).toContain('getListing')

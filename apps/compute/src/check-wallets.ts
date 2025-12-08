@@ -1,33 +1,30 @@
 #!/usr/bin/env bun
 
 /**
- * Check wallet balances on Arbitrum
+ * Check wallet balances for Jeju Compute (Base network)
  */
 
 import type { Hex } from 'viem';
-import { createPublicClient, formatEther, formatUnits, http } from 'viem';
+import { createPublicClient, formatEther, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { arbitrum } from 'viem/chains';
-
-const USDC = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
-
-const publicClient = createPublicClient({
-  chain: arbitrum,
-  transport: http('https://arb1.arbitrum.io/rpc'),
-});
+import { base, baseSepolia } from 'viem/chains';
 
 interface WalletResult {
   name: string;
   address: string;
-  eth: number;
-  usdc: number;
+  balance: number;
   funded: boolean;
   key: string;
 }
 
+interface PublicClient {
+  getBalance: (params: { address: Hex }) => Promise<bigint>;
+}
+
 async function checkWallet(
   name: string,
-  privateKey: string
+  privateKey: string,
+  client: PublicClient
 ): Promise<WalletResult | null> {
   const key = (
     privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`
@@ -35,66 +32,77 @@ async function checkWallet(
   if (key.length !== 66) return null;
 
   const account = privateKeyToAccount(key);
-
-  const [ethBalance, usdcBalance] = await Promise.all([
-    publicClient.getBalance({ address: account.address }),
-    publicClient.readContract({
-      address: USDC,
-      abi: [
-        {
-          name: 'balanceOf',
-          type: 'function',
-          inputs: [{ name: 'account', type: 'address' }],
-          outputs: [{ type: 'uint256' }],
-        },
-      ],
-      functionName: 'balanceOf',
-      args: [account.address],
-    }) as Promise<bigint>,
-  ]);
-
-  const eth = Number(formatEther(ethBalance));
-  const usdc = Number(formatUnits(usdcBalance, 6));
-  const funded = eth >= 0.001 && usdc >= 1;
+  const balance = await client.getBalance({ address: account.address });
+  const eth = Number(formatEther(balance));
+  const funded = eth >= 0.001;
 
   console.log(`${funded ? '✓' : '✗'} ${name}`);
   console.log(`  ${account.address}`);
-  console.log(`  ${eth.toFixed(6)} ETH, ${usdc.toFixed(2)} USDC`);
+  console.log(`  ${eth.toFixed(6)} ETH`);
 
-  return { name, address: account.address, eth, usdc, funded, key };
+  return { name, address: account.address, balance: eth, funded, key };
 }
 
 async function main() {
-  console.log('\nWallet Balances (Arbitrum)\n');
+  console.log('\nJeju Compute Wallet Check\n');
 
   const wallets = [
     { name: 'ORACLE_PRIVATE_KEY', key: process.env.ORACLE_PRIVATE_KEY },
     { name: 'DEPLOYER_PRIVATE_KEY', key: process.env.DEPLOYER_PRIVATE_KEY },
-    {
-      name: 'BABYLON_GAME_PRIVATE_KEY',
-      key: process.env.BABYLON_GAME_PRIVATE_KEY,
-    },
+    { name: 'JEJU_GAME_PRIVATE_KEY', key: process.env.JEJU_GAME_PRIVATE_KEY },
     { name: 'PRIVATE_KEY', key: process.env.PRIVATE_KEY },
   ].filter((w) => w.key);
 
-  const results: WalletResult[] = [];
+  // Check Base Sepolia (Testnet)
+  console.log('─── Base Sepolia (Testnet) ───\n');
+  const sepoliaClient = createPublicClient({
+    chain: baseSepolia,
+    transport: http(),
+  });
+
+  const sepoliaResults: WalletResult[] = [];
   for (const w of wallets) {
     if (w.key) {
-      const result = await checkWallet(w.name, w.key);
-      if (result) results.push(result);
+      const result = await checkWallet(w.name, w.key, sepoliaClient);
+      if (result) sepoliaResults.push(result);
     }
   }
 
-  const funded = results.find((r) => r.funded);
+  // Check Base Mainnet
+  console.log('\n─── Base Mainnet ───\n');
+  const mainnetClient = createPublicClient({
+    chain: base,
+    transport: http(),
+  });
 
-  console.log('\n─────────────────────────────────────');
-  if (funded) {
-    console.log(`✓ Funded wallet: ${funded.name}`);
-    console.log(`  PRIVATE_KEY=${funded.key} bun run demo:bun`);
-  } else {
-    console.log('✗ No funded wallets');
-    console.log('  Need: ~0.01 ETH + ~10 USDC on Arbitrum');
+  const mainnetResults: WalletResult[] = [];
+  for (const w of wallets) {
+    if (w.key) {
+      const result = await checkWallet(w.name, w.key, mainnetClient);
+      if (result) mainnetResults.push(result);
+    }
   }
+
+  // Summary
+  console.log('\n─────────────────────────────────────');
+  
+  const sepoliaFunded = sepoliaResults.find((r) => r.funded);
+  const mainnetFunded = mainnetResults.find((r) => r.funded);
+
+  if (sepoliaFunded) {
+    console.log(`✓ Testnet wallet: ${sepoliaFunded.name}`);
+    console.log(`  PRIVATE_KEY=${sepoliaFunded.key} bun run demo`);
+  }
+  
+  if (mainnetFunded) {
+    console.log(`✓ Mainnet wallet: ${mainnetFunded.name}`);
+  }
+
+  if (!sepoliaFunded && !mainnetFunded) {
+    console.log('✗ No funded wallets found');
+    console.log('  Need: ~0.01 ETH on Base Sepolia or Base Mainnet');
+  }
+  
   console.log('─────────────────────────────────────\n');
 }
 

@@ -194,7 +194,7 @@ export class PermissionlessStorage implements Storage {
 
     // Build tags
     const tags: { name: string; value: string }[] = [
-      { name: 'App-Name', value: 'babylon-experimental' },
+      { name: 'App-Name', value: 'jeju-compute' },
       { name: 'Timestamp', value: Date.now().toString() },
     ];
 

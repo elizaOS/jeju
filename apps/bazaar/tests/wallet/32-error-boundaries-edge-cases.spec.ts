@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Error Boundaries & Edge Cases
  * Tests error handling, recovery, and edge cases throughout the app
  */

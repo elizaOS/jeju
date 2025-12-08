@@ -11,8 +11,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { createPublicClient, createWalletClient, http, parseEther, formatEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { rawDeployments } from '@jeju/contracts';
 import { getLocalnetRpcUrl } from '../../scripts/shared/get-localnet-rpc';
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -62,20 +61,17 @@ describe('Uniswap V4 Integration Tests', () => {
             transport: http(rpcUrl),
         });
 
-        // Load deployments
-        const v4Path = join(process.cwd(), 'deployments', 'uniswap-v4-1337.json');
-        const tokenPath = join(process.cwd(), 'deployments', 'eliza-token-1337.json');
-
-        if (!existsSync(v4Path)) {
+        // Load deployments from @jeju/contracts
+        v4Deployment = rawDeployments.uniswapV4_1337 as V4Deployment;
+        tokenDeployment = rawDeployments.elizaToken1337 as TokenDeployment;
+        
+        if (!v4Deployment?.poolManager) {
             throw new Error('V4 deployment not found. Run: bun run scripts/deploy-uniswap-v4.ts');
         }
 
-        if (!existsSync(tokenPath)) {
+        if (!tokenDeployment?.address && !tokenDeployment?.token) {
             throw new Error('Token deployment not found. Run: bun run scripts/deploy-eliza-token.ts');
         }
-
-        v4Deployment = JSON.parse(readFileSync(v4Path, 'utf-8'));
-        tokenDeployment = JSON.parse(readFileSync(tokenPath, 'utf-8'));
 
         console.log(`✅ PoolManager: ${v4Deployment.poolManager}`);
         console.log(`✅ elizaOS Token: ${tokenDeployment.address}`);

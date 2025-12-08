@@ -38,6 +38,7 @@ interface ICrossChainPaymaster {
         uint256 expiresBlock;
         bool fulfilled;
         bool slashed;
+        bool claimed;
     }
     
     function createVoucherRequest(

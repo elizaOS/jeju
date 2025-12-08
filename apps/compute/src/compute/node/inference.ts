@@ -208,7 +208,11 @@ export class OllamaInferenceEngine implements InferenceEngine {
       );
     }
 
-    const data = await response.json();
+    const data = await response.json() as {
+      message: { content: string };
+      prompt_eval_count?: number;
+      eval_count?: number;
+    };
 
     return {
       id: `chatcmpl-${Date.now()}`,

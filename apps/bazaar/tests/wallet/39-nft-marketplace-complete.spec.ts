@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * NFT Marketplace - Complete Flow Tests
  * Tests minting, listing, buying, auctions, and offers
  */

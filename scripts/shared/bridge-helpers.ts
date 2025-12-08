@@ -183,15 +183,28 @@ export function encodeBridgeData(params: BridgeParams): `0x${string}` {
 }
 
 /**
- * Parse bridge event logs
+ * Bridge event log structure
  */
-export function parseBridgeEvent(log: any): {
+export interface BridgeEventLog {
+  topics: readonly string[];
+  data: string;
+}
+
+/**
+ * Parsed bridge event result
+ */
+export interface ParsedBridgeEvent {
   event: string;
   from: Address;
   to: Address;
   amount: bigint;
   token?: Address;
-} | null {
+}
+
+/**
+ * Parse bridge event logs
+ */
+export function parseBridgeEvent(log: BridgeEventLog): ParsedBridgeEvent | null {
   // Parse based on event signature
   if (!log.topics || log.topics.length < 2) return null;
 

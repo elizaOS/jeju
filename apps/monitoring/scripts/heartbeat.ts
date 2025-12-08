@@ -47,7 +47,7 @@ async function sendHeartbeat() {
     });
     
     if (response.ok) {
-      const data = await response.json() as any;
+      const data = await response.json() as { uptime_score: number };
       console.log(`💓 Heartbeat sent (uptime: ${(data.uptime_score * 100).toFixed(2)}%)`);
     } else {
       console.error('❌ Heartbeat failed:', response.statusText);

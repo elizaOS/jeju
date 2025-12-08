@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Comprehensive Wallet Connection & Network Tests
  * Tests ALL wallet connection scenarios with real blockchain
  */

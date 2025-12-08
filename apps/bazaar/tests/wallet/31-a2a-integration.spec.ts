@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * A2A (Agent-to-Agent) Integration Tests
  * Tests agent card discovery and skill execution
  */

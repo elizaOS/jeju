@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Paymaster Integration Tests
  * Tests paying gas with alternative ERC20 tokens
  */

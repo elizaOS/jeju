@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * ON-CHAIN VALIDATION TESTS
  * 
  * These tests verify that UI actions result in REAL on-chain state changes
@@ -52,7 +53,7 @@ const PREDIMARKET_ABI = parseAbi([
 ])
 
 // Helper to connect wallet
-async function connectWallet(page: any, metamask: MetaMask) {
+async function connectWallet(page: Page, metamask: MetaMask) {
   await page.goto('/')
   const connectBtn = page.getByRole('button', { name: /Connect Wallet/i })
   if (await connectBtn.isVisible()) {

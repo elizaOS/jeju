@@ -15,48 +15,72 @@ import {
 import type {
   AuthHeaders,
   Capability,
+  CreateDisputeParams,
+  CreateRentalParams,
+  Dispute,
+  DisputeReason,
+  GPUType,
   InferenceRequest,
   InferenceResponse,
   Ledger,
   Provider,
+  ProviderRecord,
+  ProviderResourcesInfo,
   ProviderSubAccount,
+  Rental,
+  RentalRating,
+  RentalStatus,
+  ReportAbuseParams,
   SDKConfig,
   Service,
+  UserRecord,
 } from './types';
 
-// ABI fragments for the contracts
+// ABI fragments for the contracts - must match packages/contracts/src/compute/*.sol
 const REGISTRY_ABI = [
-  'function register(string name, string endpoint, bytes32 attestationHash) payable returns (address)',
+  // Registration
+  'function register(string name, string endpoint, bytes32 attestationHash) payable',
+  'function registerWithAgent(string name, string endpoint, bytes32 attestationHash, uint256 agentId) payable',
+  // Updates
   'function updateEndpoint(string endpoint)',
   'function updateAttestation(bytes32 attestationHash)',
   'function deactivate()',
+  'function reactivate()',
+  // Staking
   'function addStake() payable',
-  'function withdraw(uint256 amount)',
+  'function withdrawStake(uint256 amount)',
+  // Capabilities
   'function addCapability(string model, uint256 pricePerInputToken, uint256 pricePerOutputToken, uint256 maxContextLength)',
-  'function getProvider(address provider) view returns (tuple(address owner, string name, string endpoint, bytes32 attestationHash, uint256 stake, uint256 registeredAt, bool active))',
-  'function getCapabilities(address provider) view returns (tuple(string model, uint256 pricePerInputToken, uint256 pricePerOutputToken, uint256 maxContextLength)[])',
+  'function updateCapability(uint256 index, bool active)',
+  // View functions - Provider includes agentId, Capability includes active
+  'function getProvider(address provider) view returns (tuple(address owner, string name, string endpoint, bytes32 attestationHash, uint256 stake, uint256 registeredAt, uint256 agentId, bool active))',
+  'function getCapabilities(address provider) view returns (tuple(string model, uint256 pricePerInputToken, uint256 pricePerOutputToken, uint256 maxContextLength, bool active)[])',
   'function isActive(address provider) view returns (bool)',
   'function getActiveProviders() view returns (address[])',
   'function getProviderStake(address provider) view returns (uint256)',
-  'function MIN_PROVIDER_STAKE() view returns (uint256)',
+  'function getProviderCount() view returns (uint256)',
+  'function getProviderByAgent(uint256 agentId) view returns (address)',
+  'function minProviderStake() view returns (uint256)',
 ];
 
 const LEDGER_ABI = [
+  // User functions
   'function createLedger() payable',
   'function deposit() payable',
   'function withdraw(uint256 amount)',
   'function transferToProvider(address provider, uint256 amount)',
-  'function acknowledgeProvider(address provider)',
   'function requestRefund(address provider, uint256 amount)',
   'function completeRefund(address provider)',
-  'function setInferenceContract(address inference)',
+  'function cancelRefund(address provider)',
+  // Provider functions - provider calls to acknowledge user
+  'function acknowledgeUser(address user)',
+  // View functions
   'function getLedger(address user) view returns (tuple(uint256 totalBalance, uint256 availableBalance, uint256 lockedBalance, uint256 createdAt))',
   'function getSubAccount(address user, address provider) view returns (tuple(uint256 balance, uint256 pendingRefund, uint256 refundUnlockTime, bool acknowledged))',
   'function getAvailableBalance(address user) view returns (uint256)',
   'function getProviderBalance(address user, address provider) view returns (uint256)',
   'function isAcknowledged(address user, address provider) view returns (bool)',
   'function ledgerExists(address user) view returns (bool)',
-  'function inferenceContract() view returns (address)',
   'function MIN_DEPOSIT() view returns (uint256)',
 ];
 
@@ -70,6 +94,45 @@ const INFERENCE_ABI = [
   'function getNonce(address user, address provider) view returns (uint256)',
   'function getSigner(address provider) view returns (address)',
   'function calculateFee(address provider, uint256 inputTokens, uint256 outputTokens) view returns (uint256)',
+];
+
+// Rental contract ABI - for hourly/session-based compute rentals with SSH/Docker
+const RENTAL_ABI = [
+  // Provider management
+  'function setProviderResources(tuple(uint8 gpuType, uint8 gpuCount, uint16 gpuVram, uint16 cpuCores, uint32 memory, uint32 storage, uint32 bandwidth, bool teeCapable) resources, tuple(uint256 pricePerHour, uint256 pricePerGpuHour, uint256 minimumRentalHours, uint256 maximumRentalHours) pricing, uint256 maxConcurrent, string[] supportedImages, bool sshEnabled, bool dockerEnabled)',
+  'function linkProviderAgent(uint256 agentId)',
+  // Rental creation
+  'function createRental(address provider, uint256 durationHours, string sshPublicKey, string containerImage, string startupScript) payable returns (bytes32)',
+  // Provider actions
+  'function startRental(bytes32 rentalId, string sshHost, uint16 sshPort, string containerId)',
+  'function completeRental(bytes32 rentalId)',
+  // User actions
+  'function cancelRental(bytes32 rentalId)',
+  'function extendRental(bytes32 rentalId, uint256 additionalHours) payable',
+  // Rating
+  'function rateRental(bytes32 rentalId, uint8 score, string comment)',
+  // Disputes
+  'function createDispute(bytes32 rentalId, uint8 reason, string evidenceUri) payable returns (bytes32)',
+  'function resolveDispute(bytes32 disputeId, bool inFavorOfInitiator, uint256 slashAmount)',
+  // Abuse reporting
+  'function reportAbuse(bytes32 rentalId, uint8 reason, string evidenceUri)',
+  // View functions
+  'function getRental(bytes32 rentalId) view returns (tuple(bytes32 rentalId, address user, address provider, uint8 status, uint256 startTime, uint256 endTime, uint256 totalCost, uint256 paidAmount, uint256 refundedAmount, string sshPublicKey, string containerImage, string startupScript, string sshHost, uint16 sshPort))',
+  'function getProviderResources(address provider) view returns (tuple(uint8 gpuType, uint8 gpuCount, uint16 gpuVram, uint16 cpuCores, uint32 memory, uint32 storage, uint32 bandwidth, bool teeCapable), tuple(uint256 pricePerHour, uint256 pricePerGpuHour, uint256 minimumRentalHours, uint256 maximumRentalHours), uint256 maxConcurrent, uint256 active, bool sshEnabled, bool dockerEnabled)',
+  'function getUserRentals(address user) view returns (bytes32[])',
+  'function getProviderRentals(address provider) view returns (bytes32[])',
+  'function calculateRentalCost(address provider, uint256 durationHours) view returns (uint256)',
+  'function isRentalActive(bytes32 rentalId) view returns (bool)',
+  'function getRemainingTime(bytes32 rentalId) view returns (uint256)',
+  // Reputation view functions
+  'function getUserRecord(address user) view returns (tuple(uint256 totalRentals, uint256 completedRentals, uint256 cancelledRentals, uint256 disputedRentals, uint256 abuseReports, bool banned, uint256 bannedAt, string banReason))',
+  'function getProviderRecord(address provider) view returns (tuple(uint256 totalRentals, uint256 completedRentals, uint256 failedRentals, uint256 totalEarnings, uint256 avgRating, uint256 ratingCount, bool banned))',
+  'function getDispute(bytes32 disputeId) view returns (tuple(bytes32 disputeId, bytes32 rentalId, address initiator, address defendant, uint8 reason, string evidenceUri, uint256 createdAt, uint256 resolvedAt, bool resolved, bool inFavorOfInitiator, uint256 slashAmount))',
+  'function getRentalRating(bytes32 rentalId) view returns (tuple(uint8 score, string comment, uint256 ratedAt))',
+  'function isUserBanned(address user) view returns (bool)',
+  'function isProviderBanned(address provider) view returns (bool)',
+  'function getProviderByAgent(uint256 agentId) view returns (address)',
+  'function disputeBond() view returns (uint256)',
 ];
 
 // Helper to call contract methods safely
@@ -100,6 +163,7 @@ export class JejuComputeSDK {
   private registry: Contract;
   private ledger: Contract;
   private inferenceContract: Contract;
+  private rentalContract: Contract | null;
 
   constructor(config: SDKConfig) {
     this.rpcProvider = new JsonRpcProvider(config.rpcUrl);
@@ -124,6 +188,11 @@ export class JejuComputeSDK {
       INFERENCE_ABI,
       signerOrProvider
     );
+    
+    // Optional rental contract
+    this.rentalContract = config.contracts.rental
+      ? new Contract(config.contracts.rental, RENTAL_ABI, signerOrProvider)
+      : null;
   }
 
   // ============ Registry Functions ============
@@ -151,6 +220,65 @@ export class JejuComputeSDK {
   }
 
   /**
+   * Register as a compute provider with ERC-8004 agent ID
+   * 
+   * This links the compute provider to an existing ERC-8004 agent identity,
+   * enabling cross-protocol discovery and reputation tracking.
+   * 
+   * Prerequisites:
+   * - Caller must own the agentId (registered via IdentityRegistry)
+   * - agentId must not already be linked to another provider
+   * 
+   * @param name Provider display name
+   * @param endpoint API endpoint URL
+   * @param attestationHash TEE attestation hash (or zero bytes for permissionless)
+   * @param stakeAmount Amount to stake (in wei)
+   * @param agentId ERC-8004 agent ID from IdentityRegistry
+   * @returns Provider address
+   */
+  async registerWithAgent(
+    name: string,
+    endpoint: string,
+    attestationHash: string,
+    stakeAmount: bigint,
+    agentId: bigint
+  ): Promise<string> {
+    const signer = this.requireSigner();
+    const tx = await sendContract(
+      this.registry,
+      'registerWithAgent',
+      name,
+      endpoint,
+      attestationHash,
+      agentId,
+      { value: stakeAmount }
+    );
+    await tx.wait();
+    return signer.address;
+  }
+
+  /**
+   * Get provider address by ERC-8004 agent ID
+   * 
+   * @param agentId ERC-8004 agent ID
+   * @returns Provider address or zero address if not linked
+   */
+  async getProviderByAgent(agentId: bigint): Promise<string> {
+    return callContract<string>(this.registry, 'getProviderByAgent', agentId);
+  }
+
+  /**
+   * Get the ERC-8004 agent ID linked to a provider
+   * 
+   * @param address Provider address
+   * @returns Agent ID (0 if not linked to an agent)
+   */
+  async getProviderAgentId(address: string): Promise<bigint> {
+    const provider = await this.getProvider(address);
+    return BigInt(provider.agentId);
+  }
+
+  /**
    * Get provider info
    */
   async getProvider(address: string): Promise<Provider> {
@@ -161,6 +289,7 @@ export class JejuComputeSDK {
       attestationHash: string;
       stake: bigint;
       registeredAt: bigint;
+      agentId: bigint;
       active: boolean;
     }>(this.registry, 'getProvider', address);
     return {
@@ -170,6 +299,7 @@ export class JejuComputeSDK {
       attestationHash: result.attestationHash,
       stake: result.stake,
       registeredAt: Number(result.registeredAt),
+      agentId: Number(result.agentId),
       active: result.active,
     };
   }
@@ -178,7 +308,13 @@ export class JejuComputeSDK {
    * Get provider capabilities
    */
   async getCapabilities(address: string): Promise<Capability[]> {
-    const result = await callContract<Capability[]>(
+    const result = await callContract<Array<{
+      model: string;
+      pricePerInputToken: bigint;
+      pricePerOutputToken: bigint;
+      maxContextLength: bigint;
+      active: boolean;
+    }>>(
       this.registry,
       'getCapabilities',
       address
@@ -188,6 +324,7 @@ export class JejuComputeSDK {
       pricePerInputToken: c.pricePerInputToken,
       pricePerOutputToken: c.pricePerOutputToken,
       maxContextLength: Number(c.maxContextLength),
+      active: c.active,
     }));
   }
 
@@ -403,11 +540,16 @@ export class JejuComputeSDK {
   }
 
   /**
-   * Acknowledge provider signer
+   * Provider acknowledges a user (enables settlements for that user)
+   * 
+   * This must be called BY THE PROVIDER after a user transfers funds to their sub-account.
+   * Once acknowledged, the provider can sign settlements for this user.
+   * 
+   * @param user The user address to acknowledge
    */
-  async acknowledgeProvider(provider: string): Promise<void> {
+  async acknowledgeUser(user: string): Promise<void> {
     this.requireSigner();
-    const tx = await sendContract(this.ledger, 'acknowledgeProvider', provider);
+    const tx = await sendContract(this.ledger, 'acknowledgeUser', user);
     await tx.wait();
   }
 
@@ -571,7 +713,7 @@ export class JejuComputeSDK {
       throw new Error(`Inference failed: ${error}`);
     }
 
-    return response.json();
+    return response.json() as Promise<InferenceResponse>;
   }
 
   /**
@@ -670,6 +812,489 @@ export class JejuComputeSDK {
   parseEther(eth: string): bigint {
     return parseEther(eth);
   }
+
+  // ============ Rental Functions ============
+
+  private requireRentalContract(): Contract {
+    if (!this.rentalContract) {
+      throw new Error('Rental contract not configured');
+    }
+    return this.rentalContract;
+  }
+
+  /**
+   * Create a new compute rental
+   * Returns the rental ID
+   */
+  async createRental(params: CreateRentalParams): Promise<string> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+
+    // Calculate cost
+    const cost = await this.calculateRentalCost(params.provider, params.durationHours);
+
+    const tx = await sendContract(
+      rental,
+      'createRental',
+      params.provider,
+      params.durationHours,
+      params.sshPublicKey,
+      params.containerImage ?? '',
+      params.startupScript ?? '',
+      { value: cost }
+    );
+    
+    const receipt = await tx.wait();
+    
+    // Extract rental ID from event
+    const event = receipt?.logs.find((log) => {
+      const parsed = rental.interface.parseLog({ 
+        topics: log.topics as string[], 
+        data: log.data 
+      });
+      return parsed?.name === 'RentalCreated';
+    });
+    
+    if (event) {
+      const parsed = rental.interface.parseLog({ 
+        topics: event.topics as string[], 
+        data: event.data 
+      });
+      return parsed?.args[0] as string;
+    }
+    
+    throw new Error('Failed to get rental ID from transaction');
+  }
+
+  /**
+   * Get rental details
+   */
+  async getRental(rentalId: string): Promise<Rental> {
+    const rental = this.requireRentalContract();
+    const data = await callContract<{
+      rentalId: string;
+      user: string;
+      provider: string;
+      status: number;
+      startTime: bigint;
+      endTime: bigint;
+      totalCost: bigint;
+      paidAmount: bigint;
+      refundedAmount: bigint;
+      sshPublicKey: string;
+      containerImage: string;
+      startupScript: string;
+      sshHost: string;
+      sshPort: number;
+    }>(rental, 'getRental', rentalId);
+
+    return {
+      rentalId: data.rentalId,
+      user: data.user,
+      provider: data.provider,
+      status: data.status as RentalStatus,
+      startTime: Number(data.startTime),
+      endTime: Number(data.endTime),
+      totalCost: data.totalCost,
+      paidAmount: data.paidAmount,
+      refundedAmount: data.refundedAmount,
+      sshPublicKey: data.sshPublicKey,
+      containerImage: data.containerImage,
+      startupScript: data.startupScript,
+      sshHost: data.sshHost,
+      sshPort: data.sshPort,
+    };
+  }
+
+  /**
+   * Get provider resources and pricing
+   */
+  async getProviderResources(provider: string): Promise<ProviderResourcesInfo> {
+    const rental = this.requireRentalContract();
+    const data = await callContract<{
+      resources: {
+        gpuType: number;
+        gpuCount: number;
+        gpuVram: number;
+        cpuCores: number;
+        memory: number;
+        storage: number;
+        bandwidth: number;
+        teeCapable: boolean;
+      };
+      pricing: {
+        pricePerHour: bigint;
+        pricePerGpuHour: bigint;
+        minimumRentalHours: bigint;
+        maximumRentalHours: bigint;
+      };
+      maxConcurrent: bigint;
+      active: bigint;
+      sshEnabled: boolean;
+      dockerEnabled: boolean;
+    }>(rental, 'getProviderResources', provider);
+
+    return {
+      resources: {
+        gpuType: data.resources.gpuType as GPUType,
+        gpuCount: data.resources.gpuCount,
+        gpuVram: data.resources.gpuVram,
+        cpuCores: data.resources.cpuCores,
+        memory: data.resources.memory,
+        storage: data.resources.storage,
+        bandwidth: data.resources.bandwidth,
+        teeCapable: data.resources.teeCapable,
+      },
+      pricing: {
+        pricePerHour: data.pricing.pricePerHour,
+        pricePerGpuHour: data.pricing.pricePerGpuHour,
+        minimumRentalHours: Number(data.pricing.minimumRentalHours),
+        maximumRentalHours: Number(data.pricing.maximumRentalHours),
+      },
+      maxConcurrentRentals: Number(data.maxConcurrent),
+      activeRentals: Number(data.active),
+      sshEnabled: data.sshEnabled,
+      dockerEnabled: data.dockerEnabled,
+    };
+  }
+
+  /**
+   * Calculate rental cost for given duration
+   */
+  async calculateRentalCost(provider: string, durationHours: number): Promise<bigint> {
+    const rental = this.requireRentalContract();
+    return callContract<bigint>(rental, 'calculateRentalCost', provider, durationHours);
+  }
+
+  /**
+   * Get user's rental IDs
+   */
+  async getUserRentals(user: string): Promise<string[]> {
+    const rental = this.requireRentalContract();
+    return callContract<string[]>(rental, 'getUserRentals', user);
+  }
+
+  /**
+   * Get provider's rental IDs
+   */
+  async getProviderRentals(provider: string): Promise<string[]> {
+    const rental = this.requireRentalContract();
+    return callContract<string[]>(rental, 'getProviderRentals', provider);
+  }
+
+  /**
+   * Check if rental is currently active
+   */
+  async isRentalActive(rentalId: string): Promise<boolean> {
+    const rental = this.requireRentalContract();
+    return callContract<boolean>(rental, 'isRentalActive', rentalId);
+  }
+
+  /**
+   * Get remaining time on rental (seconds)
+   */
+  async getRemainingTime(rentalId: string): Promise<number> {
+    const rental = this.requireRentalContract();
+    const time = await callContract<bigint>(rental, 'getRemainingTime', rentalId);
+    return Number(time);
+  }
+
+  /**
+   * Cancel a pending rental (user only, full refund)
+   */
+  async cancelRental(rentalId: string): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    const tx = await sendContract(rental, 'cancelRental', rentalId);
+    await tx.wait();
+  }
+
+  /**
+   * Extend an active rental
+   */
+  async extendRental(rentalId: string, additionalHours: number): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    
+    // Get current rental to know provider
+    const rentalData = await this.getRental(rentalId);
+    const additionalCost = await this.calculateRentalCost(rentalData.provider, additionalHours);
+    
+    const tx = await sendContract(
+      rental,
+      'extendRental',
+      rentalId,
+      additionalHours,
+      { value: additionalCost }
+    );
+    await tx.wait();
+  }
+
+  /**
+   * Provider: Start a rental with connection details
+   */
+  async startRental(
+    rentalId: string,
+    sshHost: string,
+    sshPort: number,
+    containerId?: string
+  ): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    const tx = await sendContract(
+      rental,
+      'startRental',
+      rentalId,
+      sshHost,
+      sshPort,
+      containerId ?? ''
+    );
+    await tx.wait();
+  }
+
+  /**
+   * Provider: Complete a rental
+   */
+  async completeRental(rentalId: string): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    const tx = await sendContract(rental, 'completeRental', rentalId);
+    await tx.wait();
+  }
+
+  // ============ Rating Functions ============
+
+  /**
+   * Rate a completed rental
+   * @param rentalId The rental to rate
+   * @param score Score from 0-100
+   * @param comment Optional comment
+   */
+  async rateRental(rentalId: string, score: number, comment?: string): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    const tx = await sendContract(rental, 'rateRental', rentalId, score, comment ?? '');
+    await tx.wait();
+  }
+
+  /**
+   * Get rating for a rental
+   */
+  async getRentalRating(rentalId: string): Promise<RentalRating> {
+    const rental = this.requireRentalContract();
+    const data = await callContract<{
+      score: number;
+      comment: string;
+      ratedAt: bigint;
+    }>(rental, 'getRentalRating', rentalId);
+
+    return {
+      score: data.score,
+      comment: data.comment,
+      ratedAt: Number(data.ratedAt),
+    };
+  }
+
+  // ============ Dispute Functions ============
+
+  /**
+   * Create a dispute for a rental
+   * Requires disputeBond to be sent with the transaction
+   */
+  async createDispute(params: CreateDisputeParams): Promise<string> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    
+    const bond = await this.getDisputeBond();
+    
+    const tx = await sendContract(
+      rental,
+      'createDispute',
+      params.rentalId,
+      params.reason,
+      params.evidenceUri,
+      { value: bond }
+    );
+    
+    const receipt = await tx.wait();
+    
+    // Extract dispute ID from event
+    const event = receipt?.logs.find((log) => {
+      const parsed = rental.interface.parseLog({ 
+        topics: log.topics as string[], 
+        data: log.data 
+      });
+      return parsed?.name === 'DisputeCreated';
+    });
+    
+    if (event) {
+      const parsed = rental.interface.parseLog({ 
+        topics: event.topics as string[], 
+        data: event.data 
+      });
+      return parsed?.args[0] as string;
+    }
+    
+    throw new Error('Failed to get dispute ID from transaction');
+  }
+
+  /**
+   * Get dispute details
+   */
+  async getDispute(disputeId: string): Promise<Dispute> {
+    const rental = this.requireRentalContract();
+    const data = await callContract<{
+      disputeId: string;
+      rentalId: string;
+      initiator: string;
+      defendant: string;
+      reason: number;
+      evidenceUri: string;
+      createdAt: bigint;
+      resolvedAt: bigint;
+      resolved: boolean;
+      inFavorOfInitiator: boolean;
+      slashAmount: bigint;
+    }>(rental, 'getDispute', disputeId);
+
+    return {
+      disputeId: data.disputeId,
+      rentalId: data.rentalId,
+      initiator: data.initiator,
+      defendant: data.defendant,
+      reason: data.reason as DisputeReason,
+      evidenceUri: data.evidenceUri,
+      createdAt: Number(data.createdAt),
+      resolvedAt: Number(data.resolvedAt),
+      resolved: data.resolved,
+      inFavorOfInitiator: data.inFavorOfInitiator,
+      slashAmount: data.slashAmount,
+    };
+  }
+
+  /**
+   * Get the current dispute bond amount
+   */
+  async getDisputeBond(): Promise<bigint> {
+    const rental = this.requireRentalContract();
+    return callContract<bigint>(rental, 'disputeBond');
+  }
+
+  // ============ Abuse Reporting ============
+
+  /**
+   * Report user abuse (providers only)
+   * @param params The abuse report parameters
+   */
+  async reportAbuse(params: ReportAbuseParams): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    const tx = await sendContract(
+      rental,
+      'reportAbuse',
+      params.rentalId,
+      params.reason,
+      params.evidenceUri
+    );
+    await tx.wait();
+  }
+
+  // ============ Reputation Functions ============
+
+  /**
+   * Get user reputation record
+   */
+  async getUserRecord(user: string): Promise<UserRecord> {
+    const rental = this.requireRentalContract();
+    const data = await callContract<{
+      totalRentals: bigint;
+      completedRentals: bigint;
+      cancelledRentals: bigint;
+      disputedRentals: bigint;
+      abuseReports: bigint;
+      banned: boolean;
+      bannedAt: bigint;
+      banReason: string;
+    }>(rental, 'getUserRecord', user);
+
+    return {
+      totalRentals: Number(data.totalRentals),
+      completedRentals: Number(data.completedRentals),
+      cancelledRentals: Number(data.cancelledRentals),
+      disputedRentals: Number(data.disputedRentals),
+      abuseReports: Number(data.abuseReports),
+      banned: data.banned,
+      bannedAt: Number(data.bannedAt),
+      banReason: data.banReason,
+    };
+  }
+
+  /**
+   * Get provider reputation record
+   */
+  async getProviderRecord(provider: string): Promise<ProviderRecord> {
+    const rental = this.requireRentalContract();
+    const data = await callContract<{
+      totalRentals: bigint;
+      completedRentals: bigint;
+      failedRentals: bigint;
+      totalEarnings: bigint;
+      avgRating: bigint;
+      ratingCount: bigint;
+      banned: boolean;
+    }>(rental, 'getProviderRecord', provider);
+
+    return {
+      totalRentals: Number(data.totalRentals),
+      completedRentals: Number(data.completedRentals),
+      failedRentals: Number(data.failedRentals),
+      totalEarnings: data.totalEarnings,
+      avgRating: Number(data.avgRating),
+      ratingCount: Number(data.ratingCount),
+      banned: data.banned,
+    };
+  }
+
+  /**
+   * Check if a user is banned
+   */
+  async isUserBanned(user: string): Promise<boolean> {
+    const rental = this.requireRentalContract();
+    return callContract<boolean>(rental, 'isUserBanned', user);
+  }
+
+  /**
+   * Check if a provider is banned
+   */
+  async isProviderBanned(provider: string): Promise<boolean> {
+    const rental = this.requireRentalContract();
+    return callContract<boolean>(rental, 'isProviderBanned', provider);
+  }
+
+  /**
+   * Get provider address by ERC-8004 agent ID (from rental contract)
+   */
+  async getProviderByAgentRental(agentId: bigint): Promise<string> {
+    const rental = this.requireRentalContract();
+    return callContract<string>(rental, 'getProviderByAgent', agentId);
+  }
+
+  /**
+   * Link provider to ERC-8004 agent
+   */
+  async linkProviderAgent(agentId: bigint): Promise<void> {
+    this.requireSigner();
+    const rental = this.requireRentalContract();
+    const tx = await sendContract(rental, 'linkProviderAgent', agentId);
+    await tx.wait();
+  }
+
+  /**
+   * Check if rental contract is available
+   */
+  hasRentalContract(): boolean {
+    return this.rentalContract !== null;
+  }
 }
 
 /**
@@ -681,6 +1306,7 @@ export function createSDK(config: {
   registryAddress: string;
   ledgerAddress: string;
   inferenceAddress: string;
+  rentalAddress?: string;
 }): JejuComputeSDK {
   return new JejuComputeSDK({
     rpcUrl: config.rpcUrl,
@@ -689,6 +1315,7 @@ export function createSDK(config: {
       registry: config.registryAddress,
       ledger: config.ledgerAddress,
       inference: config.inferenceAddress,
+      rental: config.rentalAddress,
     },
   });
 }

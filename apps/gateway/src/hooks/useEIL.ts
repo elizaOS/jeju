@@ -19,7 +19,7 @@ const CROSS_CHAIN_PAYMASTER_ABI = [
       { name: 'feeIncrement', type: 'uint256' }
     ],
     outputs: [{ type: 'bytes32' }],
-    stateMutability: 'nonpayable'
+    stateMutability: 'payable'
   },
   {
     type: 'function',
@@ -272,6 +272,10 @@ export function useCrossChainTransfer(paymasterAddress: Address | undefined) {
     const maxFee = params.maxFee || parseEther('0.01');
     const feeIncrement = params.feeIncrement || parseEther('0.0001');
 
+    // For ETH transfers, value = amount + maxFee. For ERC20, value = maxFee (for fee payment)
+    const isETH = params.sourceToken === '0x0000000000000000000000000000000000000000';
+    const txValue = isETH ? params.amount + maxFee : maxFee;
+
     writeContract({
       address: paymasterAddress,
       abi: CROSS_CHAIN_PAYMASTER_ABI,
@@ -285,7 +289,8 @@ export function useCrossChainTransfer(paymasterAddress: Address | undefined) {
         gasOnDestination,
         maxFee,
         feeIncrement
-      ]
+      ],
+      value: txValue
     });
   }, [paymasterAddress, userAddress, writeContract]);
 

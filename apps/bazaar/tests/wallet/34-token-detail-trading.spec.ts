@@ -1,4 +1,5 @@
 /**
+import type { Page } from "@playwright/test";
  * Token Detail Page - Complete Trading Flow
  * Tests viewing token details and executing buy/sell transactions
  */

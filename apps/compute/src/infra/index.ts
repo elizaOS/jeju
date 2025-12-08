@@ -25,6 +25,15 @@ export {
 } from './dstack-integration.js';
 
 export {
+  createPhalaGateway,
+  type DeploymentConfig,
+  type GatewayConfig,
+  PhalaGateway,
+  type PhalaNode,
+  type ProvisionRequest,
+} from './phala-gateway.js';
+
+export {
   type DeploymentResult,
   decodeIPFSContenthash,
   type ENSConfig,
@@ -41,16 +50,7 @@ export {
   encodeIPFSContenthash as encodeENSIPFSContenthash,
   type RegistrationResult,
 } from './ens-registrar.js';
-export {
-  generateBabylonWorkerCode,
-  MARLIN_CLI_COMMANDS,
-  MARLIN_CONTRACTS,
-  type MarlinDeployResult,
-  type MarlinJobResult,
-  MarlinOysterClient,
-  type MarlinSubscriptionResult,
-  printDeploymentInstructions,
-} from './marlin-oyster.js';
+
 export {
   AttestationABI,
   AttestationClient,
@@ -60,6 +60,7 @@ export {
   type TEEAttestation,
   verifyAttestationLocally,
 } from './onchain-attestation.js';
+
 export {
   checkGatewayHealth,
   isLocalIPFSAvailable,

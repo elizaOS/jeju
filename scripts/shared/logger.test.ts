@@ -26,14 +26,14 @@ describe('Logger - AGGRESSIVE BEHAVIORAL TESTS', () => {
     warnedMessages = [];
     erroredMessages = [];
     
-    console.log = mock((...args: any[]) => {
-      loggedMessages.push(args.join(' '));
+    console.log = mock((...args: unknown[]) => {
+      loggedMessages.push(args.map(String).join(' '));
     });
-    console.warn = mock((...args: any[]) => {
-      warnedMessages.push(args.join(' '));
+    console.warn = mock((...args: unknown[]) => {
+      warnedMessages.push(args.map(String).join(' '));
     });
-    console.error = mock((...args: any[]) => {
-      erroredMessages.push(args.join(' '));
+    console.error = mock((...args: unknown[]) => {
+      erroredMessages.push(args.map(String).join(' '));
     });
   });
 
@@ -215,8 +215,9 @@ describe('Logger - AGGRESSIVE BEHAVIORAL TESTS', () => {
       
       // ASSERT: Called with multiple arguments
       expect(console.log).toHaveBeenCalled();
-      const calls = (console.log as any).mock.calls;
-      expect(calls[0].length).toBeGreaterThan(1);
+      type MockCall = { mock: { calls: unknown[][] } };
+      const mockLog = console.log as unknown as MockCall;
+      expect(mockLog.mock.calls[0].length).toBeGreaterThan(1);
     });
   });
 

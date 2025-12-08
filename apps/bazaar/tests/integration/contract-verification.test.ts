@@ -18,8 +18,7 @@ import {
   type WalletClient,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { rawDeployments } from '@jeju/contracts'
 
 // =============================================================================
 // CONFIGURATION
@@ -114,11 +113,13 @@ let deployments: Deployments
 let skipTests = false
 
 function loadDeployment(filename: string): Record<string, string> {
-  const path = join(process.cwd(), '../../contracts/deployments', filename)
-  if (existsSync(path)) {
-    return JSON.parse(readFileSync(path, 'utf-8'))
+  const deploymentMap: Record<string, Record<string, string>> = {
+    'uniswap-v4-1337.json': rawDeployments.uniswapV4_1337 as Record<string, string>,
+    'bazaar-marketplace-1337.json': rawDeployments.bazaarMarketplace1337 as Record<string, string>,
+    'erc20-factory-1337.json': rawDeployments.erc20Factory1337 as Record<string, string>,
+    'multi-token-system-1337.json': rawDeployments.multiTokenSystem1337 as Record<string, string>,
   }
-  return {}
+  return deploymentMap[filename] || {}
 }
 
 beforeAll(async () => {
@@ -496,6 +497,11 @@ describe('Created Token Verification', () => {
 
 describe('Contract Verification Summary', () => {
   test('print summary', async () => {
+    if (skipTests || !deployments) {
+      console.log('   ⚠️ Skipped: Localnet not running')
+      return
+    }
+    
     console.log('')
     console.log('═══════════════════════════════════════════════════════')
     console.log('       CONTRACT VERIFICATION SUMMARY')

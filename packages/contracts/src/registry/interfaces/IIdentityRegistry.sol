@@ -128,4 +128,28 @@ interface IIdentityRegistry is IERC721, IERC721Metadata {
      * @return exists True if the agent exists
      */
     function agentExists(uint256 agentId) external view returns (bool exists);
+
+    // ============ Tag Functions ============
+    
+    /**
+     * @notice Update tags for an agent (for discovery)
+     * @dev Only the owner or approved operator can update tags
+     * @param agentId The agent ID
+     * @param tags_ Array of tag strings to set
+     */
+    function updateTags(uint256 agentId, string[] calldata tags_) external;
+    
+    /**
+     * @notice Get all agents with a specific tag
+     * @param tag The tag to search for
+     * @return agentIds Array of agent IDs with this tag
+     */
+    function getAgentsByTag(string calldata tag) external view returns (uint256[] memory agentIds);
+    
+    /**
+     * @notice Get all tags for an agent
+     * @param agentId The agent ID
+     * @return tags Array of tag strings
+     */
+    function getAgentTags(uint256 agentId) external view returns (string[] memory tags);
 }
