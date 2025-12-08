@@ -1,32 +1,24 @@
 # Mainnet Deployment
 
-Deploy Jeju mainnet on Base.
+Deploy Jeju on Base mainnet.
 
 ## Overview
 
-- **Settlement**: Base Mainnet (Chain ID: 8453)
-- **Jeju Mainnet**: Chain ID 420691
-- **Time**: 1-2 days
-- **Requirements**: Significant infrastructure budget
+- Settlement: Base (8453)
+- Jeju Mainnet: Chain ID 420691
+- Time: 1-2 days
 
-## Prerequisites
+## Pre-requisites
 
 - Full security audit
-- Insurance coverage
-- Legal entity established
-- 24/7 operations team
-- See [Prerequisites](./prerequisites.md)
+- Bug bounty live
+- Insurance
+- 24/7 ops team
+- See [Prerequisites](./prerequisites)
 
-## Deployment Steps
+## Steps
 
-### 1. Security Audit
-
-**Required before mainnet**:
-- Full audit by reputable firm ($50k-200k)
-- Bug bounty program live
-- All findings addressed
-
-### 2. Deploy Infrastructure
+### 1. Deploy Infrastructure
 
 ```bash
 cd terraform/environments/mainnet
@@ -34,50 +26,46 @@ terraform init
 terraform apply
 ```
 
-### 3. Deploy Contracts to Base
+### 2. Deploy Contracts
 
 ```bash
 cd contracts
 forge script script/Deploy.s.sol \
   --rpc-url https://mainnet.base.org \
   --private-key $DEPLOYER_KEY \
-  --broadcast \
-  --verify
+  --broadcast --verify
 ```
 
-### 4. Update Configuration
+### 3. Update Config
 
-Update `config/chain/mainnet.json` with deployed addresses.
+Update `packages/config/chain/mainnet.json` with deployed addresses.
 
-### 5. Deploy Kubernetes
+### 4. Deploy Services
 
 ```bash
 cd kubernetes/helmfile
 helmfile -e mainnet sync
 ```
 
-### 6. Monitor for 24 Hours
+### 5. Monitor 24h
 
 Before announcing:
 - [ ] Block production stable
-- [ ] No errors in logs
-- [ ] Settlement to Base working
-- [ ] RPC endpoints responsive
+- [ ] Settlement working
+- [ ] RPC responsive
 - [ ] Monitoring active
+- [ ] No errors in logs
 
 ## Security Checklist
 
 - [ ] Audit complete
 - [ ] Bug bounty active
 - [ ] Multisig configured
-- [ ] Emergency procedures documented
-- [ ] Insurance obtained
+- [ ] Emergency runbooks ready
 - [ ] 24/7 on-call ready
 
 ## Resources
 
-- [Deployment Overview](./overview.md)
-- [Prerequisites](./prerequisites.md)
-- [Monitoring](./monitoring.md)
-- [Runbooks](./runbooks.md)
-
+- [Prerequisites](./prerequisites)
+- [Monitoring](./monitoring)
+- [Runbooks](./runbooks)

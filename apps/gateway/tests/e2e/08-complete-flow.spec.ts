@@ -102,7 +102,7 @@ test.describe('Gateway Complete Protocol Flow', () => {
       
       const balanceElement = page.locator('[data-balance], text=/Balance/i').first();
       
-      if (await balanceElement.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await balanceElement.isVisible({ timeout: 5000 })) {
         console.log(`Balance shown on ${tab}`);
       }
     }

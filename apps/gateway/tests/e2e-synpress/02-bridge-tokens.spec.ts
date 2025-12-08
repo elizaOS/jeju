@@ -5,7 +5,7 @@
 
 import { testWithSynpress } from '@synthetixio/synpress';
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
-import basicSetup from '../fixtures/synpress-wallet';
+import { basicSetup } from '../fixtures/synpress-wallet';
 import { connectWallet, approveTransaction } from '../helpers/wallet-helpers';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
@@ -50,7 +50,7 @@ test.describe('Bridge from Base Flow', () => {
     
     // Should NOT show elizaOS
     const dropdown = page.locator('[style*="position: absolute"]').filter({ hasText: 'CLANKER' });
-    const hasElizaOS = await dropdown.getByText('elizaOS').isVisible().catch(() => false);
+    const hasElizaOS = await dropdown.getByText('elizaOS').isVisible();
     expect(hasElizaOS).toBe(false);
     
     console.log('✅ Only bridgeable tokens shown');

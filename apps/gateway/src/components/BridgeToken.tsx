@@ -45,7 +45,6 @@ export default function BridgeToken() {
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Only show bridgeable tokens (from Base) - excludes native Jeju tokens like elizaOS
   const { bridgeableTokens } = useProtocolTokens();
   const tokens = bridgeableTokens.map(t => ({
     symbol: t.symbol,
@@ -64,7 +63,6 @@ export default function BridgeToken() {
     const amountBigInt = parseTokenAmount(amount, selectedToken.decimals);
     const recipientAddress = (recipient || userAddress) as `0x${string}`;
 
-    // First approve bridge
     writeContract({
       address: selectedToken.address as `0x${string}`,
       abi: STANDARD_BRIDGE_ABI,
@@ -72,8 +70,6 @@ export default function BridgeToken() {
       args: [STANDARD_BRIDGE_ADDRESS, amountBigInt],
     });
 
-    // Then bridge (would need sequential tx handling)
-    // For simplicity, assuming approval succeeds
     setTimeout(() => {
       writeContract({
         address: STANDARD_BRIDGE_ADDRESS,
@@ -99,13 +95,6 @@ export default function BridgeToken() {
     <div className="card">
       <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Bridge from Base to Jeju</h2>
       
-      <div style={{ padding: '1rem', background: '#fef3c7', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid #fbbf24' }}>
-        <p style={{ fontSize: '0.875rem', margin: 0, color: '#92400e' }}>
-          <strong>ℹ️ Note:</strong> elizaOS is a native Jeju token and cannot be bridged from Base.
-          Only Base network tokens (CLANKER, VIRTUAL, CLANKERMON, etc.) can be bridged.
-        </p>
-      </div>
-
       <form onSubmit={handleBridge}>
         <div style={{ marginBottom: '1rem' }}>
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>

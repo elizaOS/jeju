@@ -5,7 +5,7 @@
 
 import { testWithSynpress } from '@synthetixio/synpress';
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
-import basicSetup from '../fixtures/synpress-wallet';
+import { basicSetup } from '../fixtures/synpress-wallet';
 import { connectWallet, approveTransaction } from '../helpers/wallet-helpers';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
@@ -60,7 +60,7 @@ test.describe('Add Liquidity Flow', () => {
     
     // ETH amount input should appear
     const amountInput = page.getByPlaceholder('1.0');
-    const inputVisible = await amountInput.isVisible().catch(() => false);
+    const inputVisible = await amountInput.isVisible();
     
     if (inputVisible) {
       await amountInput.fill('2.5');
@@ -80,7 +80,7 @@ test.describe('Add Liquidity Flow', () => {
     
     // Check for warning
     const warning = page.getByText(/No paymaster deployed/i);
-    const hasWarning = await warning.isVisible().catch(() => false);
+    const hasWarning = await warning.isVisible();
     
     if (hasWarning) {
       await expect(page.getByText(/Deploy one first/i)).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('Add Liquidity Flow', () => {
     
     // Check for LP position card
     const lpCard = page.getByText(/Your elizaOS LP Position/i);
-    const hasPosition = await lpCard.isVisible().catch(() => false);
+    const hasPosition = await lpCard.isVisible();
     
     if (hasPosition) {
       await expect(page.getByText('ETH Shares')).toBeVisible();
@@ -160,7 +160,7 @@ test.describe('LP Dashboard', () => {
     const emptyState = page.getByText(/No LP Positions/i);
     const positionCards = page.locator('.card').filter({ hasText: /Position/i });
     
-    const isEmpty = await emptyState.isVisible().catch(() => false);
+    const isEmpty = await emptyState.isVisible();
     const hasPositions = await positionCards.count() > 0;
     
     expect(isEmpty || hasPositions).toBe(true);

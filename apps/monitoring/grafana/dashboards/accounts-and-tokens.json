@@ -436,7 +436,7 @@
     },
     {
       "id": 13,
-      "title": "NFT Ownership Distribution",
+      "title": "NFT Transfer Distribution (by contract)",
       "type": "barchart",
       "gridPos": {
         "h": 10,
@@ -450,7 +450,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  LEFT(c.address, 10) || '...' as metric,\n  COUNT(*) as value\nFROM nft_ownership no\nJOIN contract c ON no.token_id = c.id\nGROUP BY c.address\nORDER BY value DESC\nLIMIT 15",
+          "rawSql": "SELECT \n  LEFT(c.address, 10) || '...' as metric,\n  COUNT(*) as value\nFROM token_transfer tt\nJOIN contract c ON tt.token_id = c.id\nWHERE tt.token_standard IN ('ERC721', 'ERC1155')\nGROUP BY c.address\nORDER BY value DESC\nLIMIT 15",
           "format": "table"
         }
       ],
@@ -471,7 +471,7 @@
     },
     {
       "id": 14,
-      "title": "Account Relationships",
+      "title": "Account Transaction Pairs",
       "type": "table",
       "gridPos": {
         "h": 10,
@@ -485,7 +485,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  r.relationship_type as \"Type\",\n  r.from_entity_type as \"From Type\",\n  LEFT(r.from_entity_id, 10) || '...' as \"From\",\n  r.to_entity_type as \"To Type\",\n  LEFT(r.to_entity_id, 10) || '...' as \"To\",\n  r.weight as \"Weight\",\n  r.last_seen_at as \"Last Seen\"\nFROM relationship r\nORDER BY r.last_seen_at DESC\nLIMIT 30",
+          "rawSql": "SELECT \n  LEFT(t.from_id, 10) || '...' as \"From\",\n  LEFT(t.to_id, 10) || '...' as \"To\",\n  COUNT(*) as \"Tx Count\",\n  SUM(t.value::numeric / 1e18) as \"Total Value (ETH)\",\n  MAX(b.timestamp) as \"Last Seen\"\nFROM transaction t\nJOIN block b ON t.block_id = b.id\nWHERE t.to_id IS NOT NULL\nGROUP BY t.from_id, t.to_id\nORDER BY \"Tx Count\" DESC\nLIMIT 30",
           "format": "table"
         }
       ],
@@ -567,7 +567,7 @@
     },
     {
       "id": 17,
-      "title": "Top NFT Collectors",
+      "title": "Top NFT Receivers",
       "type": "table",
       "gridPos": {
         "h": 10,
@@ -581,7 +581,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  LEFT(owner_id, 10) || '...' as \"Owner\",\n  COUNT(DISTINCT token_id) as \"Collections\",\n  COUNT(*) as \"Total NFTs\",\n  MAX(acquired_at) as \"Last Acquired\"\nFROM nft_ownership\nGROUP BY owner_id\nORDER BY \"Total NFTs\" DESC\nLIMIT 30",
+          "rawSql": "SELECT \n  LEFT(tt.to_id, 10) || '...' as \"Receiver\",\n  COUNT(DISTINCT tt.token_id) as \"Unique Tokens\",\n  COUNT(*) as \"Total Transfers\",\n  MAX(tt.timestamp) as \"Last Received\"\nFROM token_transfer tt\nWHERE tt.token_standard IN ('ERC721', 'ERC1155')\nGROUP BY tt.to_id\nORDER BY \"Total Transfers\" DESC\nLIMIT 30",
           "format": "table"
         }
       ],

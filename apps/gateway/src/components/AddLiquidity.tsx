@@ -20,7 +20,6 @@ export default function AddLiquidity({ vaultAddress: propVaultAddress }: { vault
     logoUrl: t.logoUrl,
   }));
 
-  // Get vault address from selected token's deployment
   const { deployment } = usePaymasterDeployment(selectedToken?.address as `0x${string}` | undefined);
   const vaultAddress = propVaultAddress || deployment?.vault;
 
@@ -30,7 +29,6 @@ export default function AddLiquidity({ vaultAddress: propVaultAddress }: { vault
     e.preventDefault();
     
     const amount = parseEther(ethAmount);
-    // Note: minShares/slippage protection would be handled in contract if needed
     await addETHLiquidity(amount);
   };
 

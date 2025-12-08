@@ -97,7 +97,7 @@ export class Multicall extends ContractBase {
               success: true,
               value: funcs[i].decodeResult(res.returnData)
             }
-          } catch (err: any) {
+          } catch (err) {
             results[i] = {success: false, returnData: res.returnData}
           }
         } else {

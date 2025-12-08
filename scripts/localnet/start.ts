@@ -4,7 +4,7 @@ import { $ } from "bun";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
-const KURTOSIS_PACKAGE = "kurtosis/main.star";  // Direct Starlark file (faster than packaging)
+const KURTOSIS_PACKAGE = "packages/kurtosis/main.star";  // Direct Starlark file (faster than packaging)
 const ENCLAVE_NAME = "jeju-localnet";
 const OUTPUT_DIR = join(process.cwd(), ".kurtosis");
 

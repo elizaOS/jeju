@@ -26,7 +26,7 @@ test.describe('View Reports', () => {
 
     // If there are reports, click on one
     const firstReport = page.locator('.report-card, [class*="bg-white"]').first();
-    const hasReports = await firstReport.isVisible().catch(() => false);
+    const hasReports = await firstReport.isVisible();
 
     if (hasReports) {
       // Click to view agent
@@ -42,7 +42,7 @@ test.describe('View Reports', () => {
 
     // Evidence links should be present (if reports exist)
     const evidenceLink = page.getByText('View Evidence');
-    const hasEvidence = await evidenceLink.isVisible().catch(() => false);
+    const hasEvidence = await evidenceLink.isVisible();
 
     if (hasEvidence) {
       // Should link to IPFS

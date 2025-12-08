@@ -9,26 +9,24 @@ export default function Home() {
       </h1>
       <p className="text-xl text-slate-300 mb-8 max-w-2xl">
         The unified DeFi + NFT + Token Launchpad on Jeju. 
-        Create and trade tokens, swap with Uniswap V4, provide liquidity, trade NFTs - all in one place.
+        Create and trade tokens, swap with Uniswap V4, provide liquidity, trade NFTs, and bet on prediction markets - all in one place.
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8 w-full max-w-6xl">
-        {/* Tokens Card */}
-        <Link href="/tokens" className="group">
+        <Link href="/coins" className="group">
           <div className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:scale-105">
             <div className="text-4xl mb-4">🪙</div>
-            <h3 className="text-2xl font-bold mb-2">Tokens</h3>
+            <h3 className="text-2xl font-bold mb-2">Coins</h3>
             <p className="text-slate-400 mb-4">
-              Create and trade multi-chain tokens
+              Create and trade multi-chain coins
             </p>
             <div className="flex items-center text-purple-400 group-hover:translate-x-2 transition-transform">
-              <span>Launch Token</span>
+              <span>Launch Coin</span>
               <ArrowRightIcon className="ml-2" />
             </div>
           </div>
         </Link>
 
-        {/* Swap Card */}
         <Link href="/swap" className="group">
           <div className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:scale-105">
             <div className="text-4xl mb-4">🔄</div>
@@ -43,7 +41,6 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* Pools Card */}
         <Link href="/pools" className="group">
           <div className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:scale-105">
             <div className="text-4xl mb-4">💧</div>
@@ -58,13 +55,26 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* NFTs Card */}
-        <Link href="/nfts" className="group">
+        <Link href="/markets" className="group">
+          <div className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:scale-105">
+            <div className="text-4xl mb-4">📊</div>
+            <h3 className="text-2xl font-bold mb-2">Markets</h3>
+            <p className="text-slate-400 mb-4">
+              Prediction markets on real events
+            </p>
+            <div className="flex items-center text-purple-400 group-hover:translate-x-2 transition-transform">
+              <span>Trade Predictions</span>
+              <ArrowRightIcon className="ml-2" />
+            </div>
+          </div>
+        </Link>
+
+        <Link href="/items" className="group">
           <div className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:scale-105">
             <div className="text-4xl mb-4">🖼️</div>
-            <h3 className="text-2xl font-bold mb-2">NFTs</h3>
+            <h3 className="text-2xl font-bold mb-2">Items</h3>
             <p className="text-slate-400 mb-4">
-              Browse and trade NFTs
+              Browse and trade items
             </p>
             <div className="flex items-center text-purple-400 group-hover:translate-x-2 transition-transform">
               <span>View Marketplace</span>

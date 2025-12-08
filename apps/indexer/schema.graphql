@@ -328,6 +328,254 @@ type StorageStats @entity {
   metadataFiles: BigInt!
 }
 
+# ============ Game Feed & Player Events ============
+
+type GameFeedPost @entity {
+  id: ID!
+  sessionId: String! @index
+  postId: String! @index
+  author: String! @index
+  content: String!
+  gameDay: Int!
+  timestamp: DateTime! @index
+  isSystemMessage: Boolean!
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type GameMarketUpdate @entity {
+  id: ID!
+  sessionId: String! @index
+  yesOdds: Int!
+  noOdds: Int!
+  totalVolume: BigInt!
+  gameDay: Int!
+  timestamp: DateTime! @index
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type GamePhaseChange @entity {
+  id: ID!
+  sessionId: String! @index
+  phase: String!
+  day: Int!
+  timestamp: DateTime! @index
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type PlayerSkillEvent @entity {
+  id: ID!
+  player: String! @index
+  skillName: String!
+  newLevel: Int!
+  totalXp: BigInt!
+  timestamp: DateTime! @index
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type PlayerDeathEvent @entity {
+  id: ID!
+  player: String! @index
+  killer: String @index
+  location: String!
+  timestamp: DateTime! @index
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type PlayerKillEvent @entity {
+  id: ID!
+  killer: String! @index
+  victim: String! @index
+  method: String!
+  timestamp: DateTime! @index
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type PlayerAchievement @entity {
+  id: ID!
+  player: String! @index
+  achievementId: String!
+  achievementType: String!
+  value: BigInt!
+  timestamp: DateTime! @index
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type PlayerStats @entity {
+  id: ID! # player address
+  player: String! @unique @index
+  totalSkillEvents: Int!
+  totalDeaths: Int!
+  totalKills: Int!
+  totalAchievements: Int!
+  highestSkillLevel: Int!
+  highestSkillName: String
+  lastActive: DateTime! @index
+}
+
+# ============ Node Staking & Governance ============
+
+type NodeStake @entity {
+  id: ID! # nodeId
+  nodeId: String! @unique @index
+  operator: String! @index
+  stakedToken: String!
+  stakedAmount: BigInt!
+  stakedValueUSD: BigInt!
+  rewardToken: String!
+  totalRewardsClaimed: BigInt!
+  lastClaimTime: BigInt!
+  rpcUrl: String!
+  geographicRegion: Int!
+  registrationTime: BigInt!
+  isActive: Boolean!
+  isSlashed: Boolean!
+  currentUptimeScore: BigInt
+  currentRequestsServed: BigInt
+  currentAvgResponseTime: BigInt
+  performanceUpdates: [PerformanceUpdate!]! @derivedFrom(field: "node")
+  rewardClaims: [RewardClaim!]! @derivedFrom(field: "node")
+}
+
+type PerformanceUpdate @entity {
+  id: ID!
+  node: NodeStake!
+  uptimeScore: BigInt!
+  requestsServed: BigInt!
+  avgResponseTime: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type RewardClaim @entity {
+  id: ID!
+  node: NodeStake!
+  operator: String!
+  rewardToken: String!
+  rewardAmount: BigInt!
+  paymasterFeesETH: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+type OperatorStats @entity {
+  id: ID! # operator address
+  operator: String! @unique @index
+  totalNodes: Int!
+  totalStaked: BigInt!
+  totalRewardsClaimed: BigInt!
+  averageUptime: BigInt!
+  lastActive: DateTime! @index
+}
+
+type TokenDistribution @entity {
+  id: ID!
+  token: String! @index
+  totalStaked: BigInt!
+  totalNodes: Int!
+  averageStake: BigInt!
+  lastUpdated: DateTime! @index
+}
+
+type NetworkSnapshot @entity {
+  id: ID! # timestamp
+  timestamp: DateTime! @index
+  totalNodes: Int!
+  activeNodes: Int!
+  totalStaked: BigInt!
+  totalStakedUSD: BigInt!
+  averageUptime: BigInt!
+}
+
+type GovernanceProposal @entity {
+  id: ID! # proposalId
+  proposalId: Bytes! @unique @index
+  parameter: String!
+  currentValue: BigInt!
+  proposedValue: BigInt!
+  changeMarketId: Bytes!
+  statusQuoMarketId: Bytes!
+  createdAt: BigInt!
+  votingEnds: BigInt!
+  executeAfter: BigInt!
+  executed: Boolean!
+  vetoed: Boolean!
+  proposer: String!
+  events: [GovernanceEvent!]! @derivedFrom(field: "proposal")
+}
+
+type GovernanceEvent @entity {
+  id: ID!
+  proposal: GovernanceProposal!
+  eventType: String!
+  actor: String
+  reason: String
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: String!
+}
+
+# ============ ERC-8004 Registry ============
+
+type RegisteredAgent @entity {
+  id: ID!
+  agentId: BigInt! @unique @index
+  owner: Account!
+  tokenURI: String
+  name: String!
+  description: String
+  tags: [String!]!
+  stakeToken: String!
+  stakeAmount: BigInt!
+  stakeWithdrawn: Boolean!
+  registeredAt: DateTime! @index
+  depositedAt: BigInt!
+  withdrawnAt: BigInt
+  active: Boolean!
+  a2aEndpoint: String
+  metadataUpdates: [AgentMetadata!]! @derivedFrom(field: "agent")
+  stakes: [RegistryStake!]! @derivedFrom(field: "agent")
+  tagUpdates: [TagUpdate!]! @derivedFrom(field: "agent")
+}
+
+type RegistryStake @entity {
+  id: ID!
+  agent: RegisteredAgent!
+  token: String!
+  amount: BigInt!
+  depositedAt: BigInt!
+  txHash: String!
+  blockNumber: Int!
+}
+
+type AgentMetadata @entity {
+  id: ID!
+  agent: RegisteredAgent!
+  key: String!
+  value: String!
+  updatedAt: DateTime! @index
+  txHash: String!
+  blockNumber: Int!
+}
+
+type TagUpdate @entity {
+  id: ID!
+  agent: RegisteredAgent!
+  oldTags: [String!]!
+  newTags: [String!]!
+  updatedAt: DateTime! @index
+  txHash: String!
+  blockNumber: Int!
+}
+
 # ============ Prediction Market Entities ============
 
 type PredictionMarket @entity {
@@ -394,4 +642,184 @@ type MarketStats @entity {
   totalVolume: BigInt!
   totalTrades: BigInt!
   uniqueTraders: BigInt!
+}
+
+# ============ EIL (Ethereum Interop Layer) Entities ============
+
+type XLP @entity {
+  id: ID! # XLP address
+  address: String! @unique @index
+  stakedAmount: BigInt!
+  unbondingAmount: BigInt!
+  unbondingStartTime: BigInt
+  slashedAmount: BigInt!
+  isActive: Boolean! @index
+  registeredAt: DateTime! @index
+  supportedChains: [Int!]!
+  
+  # Performance metrics
+  totalVouchersIssued: Int!
+  totalVouchersFulfilled: Int!
+  totalVouchersFailed: Int!
+  totalFeesEarned: BigInt!
+  averageResponseTimeMs: Int!
+  reputation: Int! @index # 0-100
+  
+  # Liquidity
+  liquidityDeposits: [XLPLiquidityDeposit!]! @derivedFrom(field: "xlp")
+  vouchersIssued: [CrossChainVoucher!]! @derivedFrom(field: "xlp")
+}
+
+type XLPLiquidityDeposit @entity {
+  id: ID! # xlp-token-chainId
+  xlp: XLP!
+  token: String! @index
+  chainId: Int! @index
+  amount: BigInt!
+  ethAmount: BigInt!
+  lastUpdated: DateTime! @index
+}
+
+type CrossChainVoucherRequest @entity {
+  id: ID! # requestId (bytes32)
+  requestId: String! @unique @index
+  requester: Account!
+  sourceChain: Int! @index
+  destinationChain: Int! @index
+  sourceToken: String! @index
+  destinationToken: String!
+  amount: BigInt!
+  maxFee: BigInt!
+  currentFee: BigInt!
+  feeIncrement: BigInt!
+  recipient: String!
+  gasOnDestination: BigInt!
+  deadline: BigInt!
+  createdAt: DateTime! @index
+  createdBlock: BigInt!
+  
+  status: VoucherRequestStatus! @index
+  claimed: Boolean!
+  expired: Boolean!
+  refunded: Boolean!
+  
+  voucher: CrossChainVoucher
+}
+
+enum VoucherRequestStatus {
+  PENDING
+  CLAIMED
+  FULFILLED
+  EXPIRED
+  REFUNDED
+}
+
+type CrossChainVoucher @entity {
+  id: ID! # voucherId (bytes32)
+  voucherId: String! @unique @index
+  request: CrossChainVoucherRequest!
+  xlp: XLP!
+  
+  sourceChainId: Int!
+  destinationChainId: Int!
+  sourceToken: String!
+  destinationToken: String!
+  amount: BigInt!
+  fee: BigInt!
+  gasProvided: BigInt!
+  
+  issuedAt: DateTime! @index
+  issuedBlock: BigInt!
+  expiresBlock: BigInt!
+  
+  status: VoucherStatus! @index
+  fulfilled: Boolean!
+  slashed: Boolean!
+  
+  # Transaction hashes
+  sourceClaimTx: String
+  destinationFulfillTx: String
+  fulfillmentTime: DateTime
+}
+
+enum VoucherStatus {
+  ISSUED
+  FULFILLED
+  EXPIRED
+  SLASHED
+}
+
+type EILTransfer @entity {
+  id: ID! # unique transfer ID
+  user: Account!
+  
+  sourceChain: Int! @index
+  destinationChain: Int! @index
+  sourceToken: String!
+  destinationToken: String!
+  amount: BigInt!
+  fee: BigInt!
+  
+  xlp: XLP
+  request: CrossChainVoucherRequest
+  voucher: CrossChainVoucher
+  
+  status: TransferStatus! @index
+  initiatedAt: DateTime! @index
+  completedAt: DateTime
+  
+  sourceTxHash: String!
+  destinationTxHash: String
+}
+
+enum TransferStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+type XLPSlashEvent @entity {
+  id: ID!
+  xlp: XLP!
+  voucherId: String! @index
+  chainId: Int!
+  amount: BigInt!
+  victim: String!
+  timestamp: DateTime! @index
+  disputed: Boolean!
+  txHash: String!
+}
+
+type EILStats @entity {
+  id: ID! # "global" or date string for daily stats
+  date: DateTime @index
+  
+  totalVolumeUsd: BigInt!
+  totalTransactions: BigInt!
+  totalXLPs: Int!
+  activeXLPs: Int!
+  totalStakedEth: BigInt!
+  
+  averageFeePercent: Int! # basis points
+  averageTimeSeconds: Int!
+  successRate: Int! # 0-100
+  
+  last24hVolume: BigInt!
+  last24hTransactions: BigInt!
+}
+
+type EILChainStats @entity {
+  id: ID! # chainId
+  chainId: Int! @unique @index
+  chainName: String!
+  
+  paymasterAddress: String!
+  totalVolume: BigInt!
+  totalTransfers: BigInt!
+  activeXLPs: Int!
+  totalLiquidity: BigInt!
+  
+  lastUpdated: DateTime! @index
 }

@@ -1,16 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { captureScreenshot, captureUserFlow } from '../../../../tests/shared/helpers/screenshots';
+import { captureScreenshot, captureUserFlow } from '../../../../packages/tests/shared/helpers/screenshots';
 
 test.describe('Token Creation Page', () => {
   test('should display create token form', async ({ page }) => {
-    await page.goto('/tokens/create')
+    await page.goto('/coins/create')
 
     await expect(page.getByRole('heading', { name: /Create Token/i })).toBeVisible()
     await expect(page.getByText(/Launch your own ERC20 token/i)).toBeVisible()
   })
 
   test('should have all required form fields', async ({ page }) => {
-    await page.goto('/tokens/create')
+    await page.goto('/coins/create')
 
     // Check for form fields
     await expect(page.getByPlaceholder(/My Awesome Token/i)).toBeVisible()
@@ -20,14 +20,14 @@ test.describe('Token Creation Page', () => {
   })
 
   test('should show wallet connection requirement', async ({ page }) => {
-    await page.goto('/tokens/create')
+    await page.goto('/coins/create')
 
     // Should show connect wallet message when not connected
     await expect(page.getByText(/Please connect your wallet/i)).toBeVisible()
   })
 
   test('should display how it works section', async ({ page }) => {
-    await page.goto('/tokens/create')
+    await page.goto('/coins/create')
 
     await expect(page.getByRole('heading', { name: /How it works/i })).toBeVisible()
     await expect(page.getByText(/Connect your wallet and switch to Jeju network/i)).toBeVisible()
@@ -37,7 +37,7 @@ test.describe('Token Creation Page', () => {
   })
 
   test('should validate form inputs', async ({ page }) => {
-    await page.goto('/tokens/create')
+    await page.goto('/coins/create')
 
     // Get the form submit button (inside main content, not header)
     const createButton = page.locator('main, [role="main"]').getByRole('button', { name: /Create Token|Connect Wallet|Switch to Jeju/i }).first()

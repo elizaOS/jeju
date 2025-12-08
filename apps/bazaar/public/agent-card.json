@@ -121,6 +121,41 @@
       "description": "Get recent blocks from Jeju blockchain",
       "tags": ["query", "blockchain"],
       "examples": ["Show recent blocks", "Latest blocks", "Block data"]
+    },
+    {
+      "id": "list-markets",
+      "name": "List Prediction Markets",
+      "description": "Get all active prediction markets",
+      "tags": ["query", "markets", "predictions"],
+      "examples": ["Show me prediction markets", "List all markets", "What can I bet on?"]
+    },
+    {
+      "id": "get-market-odds",
+      "name": "Get Market Odds",
+      "description": "Get current odds for a specific market",
+      "tags": ["query", "markets", "odds"],
+      "examples": ["What are the odds for market X?", "Show market odds"]
+    },
+    {
+      "id": "list-user-positions",
+      "name": "List User Positions",
+      "description": "Get user market positions and potential winnings",
+      "tags": ["query", "portfolio", "positions"],
+      "examples": ["Show my positions", "What are my bets?", "My portfolio"]
+    },
+    {
+      "id": "create-market",
+      "name": "Create Market",
+      "description": "Create a new prediction market",
+      "tags": ["action", "markets"],
+      "examples": ["Create market", "Start new prediction market"]
+    },
+    {
+      "id": "place-bet",
+      "name": "Place Bet",
+      "description": "Place a bet on a prediction market",
+      "tags": ["action", "markets", "trading"],
+      "examples": ["Bet on YES", "Place bet", "Buy shares"]
     }
   ]
 }

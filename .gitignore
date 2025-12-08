@@ -38,22 +38,22 @@ tmp/
 temp/
 
 # Forge/Foundry
-contracts/cache/
-contracts/out/
-contracts/broadcast/
-contracts/lib/
+packages/contracts/cache/
+packages/contracts/out/
+packages/contracts/broadcast/
+packages/contracts/lib/
 
 # Kurtosis
 .kurtosis/
 
 # Generated contract deployment files (except templates)
-contracts/deployments/*
-!contracts/deployments/.gitkeep
+packages/contracts/deployments/*
+!packages/contracts/deployments/.gitkeep
 
 # Keep specific template files
-!contracts/deployments/uniswap-v4-1337.json
-!contracts/deployments/erc20-factory-1337.json
-!contracts/deployments/bazaar-marketplace-1337.json
+!packages/contracts/deployments/uniswap-v4-1337.json
+!packages/contracts/deployments/erc20-factory-1337.json
+!packages/contracts/deployments/bazaar-marketplace-1337.json
 
 # Database files
 *.db
@@ -63,10 +63,26 @@ contracts/deployments/*
 # Docker
 .docker/
 
+# Vendor apps (git submodules - tracked separately)
+# Ignore everything in vendor except manifests and integration scripts
+vendor/*
+!vendor/README.md
+!vendor/.gitkeep
+!vendor/*/jeju-manifest.json
+!vendor/generate-all-integrations.ts
+!vendor/verify-integrations.ts
+!vendor/run-all-vendor-tests.sh
+
 # Misc
 .cache/
 .cache-synpress/
-vendor_examples/
 vendor/
+vendor_examples/
 playwright-report/
 test-results
+*.backup
+*.bak
+**/__pycache__/
+**/*.cpython-314.pyc
+
+cache/

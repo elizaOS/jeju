@@ -1,33 +1,20 @@
 {
-  "name": "jeju-l3",
+  "name": "jeju",
   "version": "0.1.0",
-  "description": "OP-Stack settling on Base with Flashblocks, EigenDA, and complete DeFi stack",
+  "description": "A modern EVM chain for for agents and humans",
   "type": "module",
   "scripts": {
-    "postinstall": "bun run scripts/setup-apps.ts && bun run scripts/ensure-deployment-files.ts || echo 'Setup completed with warnings'",
+    "docs:generate": "typedoc --options packages/config/typedoc.json",
+    "postinstall": "bun run scripts/setup-apps.ts || echo 'Setup completed with warnings'",
     "preflight": "bun run scripts/preflight-check.ts",
-    "dev": "bun run scripts/preflight-check.ts && bun run scripts/dev.ts",
-    "dev:skip-check": "bun run scripts/dev.ts",
+    "dev": "bun run scripts/dev.ts",
     "dev:vendor": "bun run scripts/dev-with-vendor.ts",
-    "apps:list": "bun run scripts/list-apps.ts",
-    "apps:validate": "bun run scripts/validate-manifests.ts",
-    "vendor:list": "bun run scripts/list-apps.ts",
     "wallet": "bun run scripts/show-wallet-config.ts",
     "ports": "bun run scripts/check-ports.ts",
     "cleanup": "bun run scripts/cleanup-processes.ts",
-    "build": "bun run scripts/build.ts",
+    "build": "bun run docs:generate && bun run scripts/build.ts",
     "test": "bun run scripts/test-all.ts",
-    "test:synpress": "bun run scripts/test-all-synpress.ts",
-    "test:old": "bun run scripts/test.ts",
-    "clean": "bun run scripts/clean.ts",
-    "start": "bun run scripts/start.ts",
-    "deploy:testnet": "bun run scripts/deploy.ts --network testnet",
-    "deploy:mainnet": "bun run scripts/deploy.ts --network mainnet",
-    "deploy:cloud": "bun run scripts/deploy-cloud-integration.ts",
-    "test:cloud": "bun run scripts/run-cloud-tests.ts",
-    "test:cloud:e2e": "bun test tests/e2e/cloud-*.test.ts",
-    "setup:cloud:approvers": "bun run scripts/setup-cloud-approvers.ts",
-    "verify:cloud": "bun run scripts/verify-cloud-deployment.ts"
+    "clean": "bun run scripts/clean.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.911.0",
@@ -42,6 +29,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@account-abstraction/contracts": "^0.8.0",
     "@playwright/test": "^1.56.1",
     "@synthetixio/synpress": "^4.0.0-alpha.7",
     "@types/bun": "latest",
@@ -53,11 +41,56 @@
     "prettier": "^3.2.5",
     "prettier-plugin-solidity": "^2.1.0",
     "solhint": "^6.0.1",
+    "turbo": "^2.6.3",
+    "typedoc": "^0.28.14",
+    "typedoc-plugin-markdown": "^4.9.0",
     "typescript": "^5.3.3",
     "vitepress": "^1.0.0",
     "yaml-lint": "^1.7.0"
   },
   "engines": {
     "bun": ">=1.0.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2022": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": 2022,
+      "sourceType": "module"
+    },
+    "plugins": ["@typescript-eslint"],
+    "ignorePatterns": [
+      "node_modules",
+      "dist",
+      "build",
+      "out",
+      "lib",
+      ".next",
+      ".cache",
+      "apps",
+      "babylon",
+      "caliguland2",
+      "packages/contracts",
+      "packages/kubernetes",
+      "packages/terraform",
+      "packages/kurtosis",
+      "*.config.js",
+      "*.config.ts"
+    ],
+    "rules": {
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        "argsIgnorePattern": "^_"
+      }],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-var-requires": "off",
+      "no-console": "off"
+    }
   }
 }

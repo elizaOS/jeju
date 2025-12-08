@@ -1,14 +1,14 @@
 {
-  "$schema": "../../jeju-manifest.schema.json",
+  "$schema": "../../packages/config/jeju-manifest.schema.json",
   "name": "indexer",
   "displayName": "Subsquid Indexer",
   "version": "1.0.0",
   "type": "core",
   "description": "Blockchain indexer with GraphQL API",
   "commands": {
-    "dev": "npm run dev",
-    "build": "npm run build",
-    "start": "npm run start"
+    "dev": "bun run dev",
+    "build": "bun run build",
+    "start": "bun run start"
   },
   "ports": {
     "main": 4350,
@@ -18,6 +18,15 @@
   "optional": true,
   "enabled": false,
   "autoStart": false,
-  "tags": ["indexer", "graphql", "data"]
+  "tags": ["indexer", "graphql", "data"],
+  "agent": {
+    "enabled": true,
+    "tags": ["jeju-app", "indexer", "graphql", "data"],
+    "metadata": {
+      "category": "data",
+      "provider": "jeju-network"
+    },
+    "trustModels": ["open"]
+  }
 }
 

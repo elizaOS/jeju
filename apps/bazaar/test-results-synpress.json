@@ -63,16 +63,16 @@
   },
   "suites": [
     {
-      "title": "01-wallet-connection-synpress.spec.ts",
-      "file": "01-wallet-connection-synpress.spec.ts",
+      "title": "01-wallet-connection.spec.ts",
+      "file": "01-wallet-connection.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Bazaar - Wallet Connection with Synpress",
-          "file": "01-wallet-connection-synpress.spec.ts",
-          "line": 48,
+          "title": "Wallet Connection with Synpress",
+          "file": "01-wallet-connection.spec.ts",
+          "line": 8,
           "column": 6,
           "specs": [
             {
@@ -91,34 +91,45 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 27,
+                      "duration": 2722,
                       "error": {
-                        "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!",
-                        "stack": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                        "message": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: ",
+                        "stack": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: \n    at getExtensionId (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/unlockForFixture.ts:62:20)\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixtures/metaMaskFixtures.ts:37:17)"
                       },
                       "errors": [
                         {
-                          "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                          "message": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: \n    at getExtensionId (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/unlockForFixture.ts:62:20)\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixtures/metaMaskFixtures.ts:37:17)"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-20T04:47:54.480Z",
+                      "startTime": "2025-10-22T03:44:05.772Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/shawwalters/jeju/apps/bazaar/test-results/01-wallet-connection-Walle-6c309-t-MetaMask-wallet-to-Bazaar-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/shawwalters/jeju/apps/bazaar/test-results/01-wallet-connection-Walle-6c309-t-MetaMask-wallet-to-Bazaar-chromium/test-failed-2.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "4f83dbcf08cd97d3da0a-73e18ee23879fb2a53e7",
-              "file": "01-wallet-connection-synpress.spec.ts",
-              "line": 49,
+              "id": "7774f143890a7d397368-9e6dd0cdc2438eeb1e9f",
+              "file": "01-wallet-connection.spec.ts",
+              "line": 9,
               "column": 3
             },
             {
-              "title": "should show Jeju network in wallet",
+              "title": "should display wallet address in header",
               "ok": false,
               "tags": [],
               "tests": [
@@ -133,34 +144,45 @@
                       "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 25,
+                      "duration": 2835,
                       "error": {
-                        "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!",
-                        "stack": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                        "message": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: ",
+                        "stack": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: \n    at getExtensionId (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/unlockForFixture.ts:62:20)\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixtures/metaMaskFixtures.ts:37:17)"
                       },
                       "errors": [
                         {
-                          "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                          "message": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: \n    at getExtensionId (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/unlockForFixture.ts:62:20)\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixtures/metaMaskFixtures.ts:37:17)"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-20T04:47:55.675Z",
+                      "startTime": "2025-10-22T03:44:09.779Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/shawwalters/jeju/apps/bazaar/test-results/01-wallet-connection-Walle-f308e-ay-wallet-address-in-header-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/shawwalters/jeju/apps/bazaar/test-results/01-wallet-connection-Walle-f308e-ay-wallet-address-in-header-chromium/test-failed-2.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "4f83dbcf08cd97d3da0a-69c90c775e19503f7f98",
-              "file": "01-wallet-connection-synpress.spec.ts",
-              "line": 84,
+              "id": "7774f143890a7d397368-be14726391cda89a17f2",
+              "file": "01-wallet-connection.spec.ts",
+              "line": 22,
               "column": 3
             },
             {
-              "title": "should display user balance after connection",
+              "title": "should be on Jeju network",
               "ok": false,
               "tags": [],
               "tests": [
@@ -175,114 +197,41 @@
                       "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 22,
+                      "duration": 2484,
                       "error": {
-                        "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!",
-                        "stack": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                        "message": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: ",
+                        "stack": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: \n    at getExtensionId (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/unlockForFixture.ts:62:20)\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixtures/metaMaskFixtures.ts:37:17)"
                       },
                       "errors": [
                         {
-                          "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                          "message": "Error: [GetExtensionId] Extension with name MetaMask not found.\nAvailable extensions: \n    at getExtensionId (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/unlockForFixture.ts:62:20)\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixtures/metaMaskFixtures.ts:37:17)"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-20T04:47:56.645Z",
+                      "startTime": "2025-10-22T03:44:13.624Z",
                       "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "4f83dbcf08cd97d3da0a-2bcd6667ff2b4e13a64e",
-              "file": "01-wallet-connection-synpress.spec.ts",
-              "line": 100,
-              "column": 3
-            },
-            {
-              "title": "should access swap interface with connected wallet",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 180000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 22,
-                      "error": {
-                        "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!",
-                        "stack": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
-                      },
-                      "errors": [
+                      "attachments": [
                         {
-                          "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-20T04:47:57.575Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "4f83dbcf08cd97d3da0a-79bb23367d61af01a677",
-              "file": "01-wallet-connection-synpress.spec.ts",
-              "line": 115,
-              "column": 3
-            },
-            {
-              "title": "should access liquidity interface with connected wallet",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 180000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 19,
-                      "error": {
-                        "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!",
-                        "stack": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
-                      },
-                      "errors": [
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/shawwalters/jeju/apps/bazaar/test-results/01-wallet-connection-Walle-59616-s-should-be-on-Jeju-network-chromium/test-failed-1.png"
+                        },
                         {
-                          "message": "Error: Cache for 4fd36d4f7435b4cb7d78 does not exist. Create it first!\n    at Object.context (/Users/shawwalters/jeju/apps/bazaar/node_modules/@synthetixio/synpress-metamask/src/playwright/fixture-actions/getExtensionId.ts:46:1)"
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/shawwalters/jeju/apps/bazaar/test-results/01-wallet-connection-Walle-59616-s-should-be-on-Jeju-network-chromium/test-failed-2.png"
                         }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-20T04:47:58.526Z",
-                      "annotations": [],
-                      "attachments": []
+                      ]
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "4f83dbcf08cd97d3da0a-9c91b7867e4de8a92522",
-              "file": "01-wallet-connection-synpress.spec.ts",
-              "line": 136,
+              "id": "7774f143890a7d397368-52fdc08cc10cf42ed826",
+              "file": "01-wallet-connection.spec.ts",
+              "line": 35,
               "column": 3
             }
           ]
@@ -292,11 +241,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-10-20T04:47:48.324Z",
-    "duration": 10375.175,
+    "startTime": "2025-10-22T03:44:04.272Z",
+    "duration": 12109.462,
     "expected": 0,
     "skipped": 0,
-    "unexpected": 5,
+    "unexpected": 3,
     "flaky": 0
   }
 }

@@ -106,18 +106,6 @@ const IDENTITY_REGISTRY_ABI = [
   }
 ] as const;
 
-interface RegisteredApp {
-  agentId: bigint;
-  name: string;
-  description?: string;
-  owner: string;
-  tags: string[];
-  a2aEndpoint?: string;
-  stakeToken: string;
-  stakeAmount: string;
-  depositedAt: bigint;
-}
-
 export interface RegisterAppParams {
   tokenURI: string;
   tags: string[];
@@ -136,7 +124,6 @@ export function useRegistry() {
   async function registerApp(params: RegisterAppParams): Promise<{ success: boolean; error?: string; agentId?: bigint }> {
     const { tokenURI, tags, a2aEndpoint, stakeToken, stakeAmount } = params;
 
-    // Approve ERC20 if not ETH
     if (stakeToken !== '0x0000000000000000000000000000000000000000') {
       await writeContractAsync({
         address: stakeToken,
@@ -144,12 +131,8 @@ export function useRegistry() {
         functionName: 'approve',
         args: [REGISTRY_ADDRESS, stakeAmount],
       });
-
-      // Wait for approval
-      // (You might want to add useWaitForTransactionReceipt here)
     }
 
-    // Register with stake
     const hash = await writeContractAsync({
       address: REGISTRY_ADDRESS,
       abi: IDENTITY_REGISTRY_ABI,
@@ -179,11 +162,7 @@ export function useRegistry() {
   return {
     registerApp,
     withdrawStake,
-    getRequiredStake: (_token: Address) => {
-      // This will be called from components as a hook
-      // For now, return stub. Components should use useRequiredStake hook instead
-      return null;
-    },
+    getRequiredStake: (_token: Address) => null,
     lastTransaction: txReceipt,
   };
 }
@@ -200,19 +179,27 @@ export function useRequiredStake(token: Address | undefined) {
   return data ? (data as bigint) : null;
 }
 
+interface RegisteredApp {
+  agentId: bigint;
+  name: string;
+  description?: string;
+  owner: string;
+  tags: string[];
+  a2aEndpoint?: string;
+  stakeToken: string;
+  stakeAmount: string;
+  depositedAt: bigint;
+}
+
 export function useRegisteredApps(tag?: string) {
   const { refetch, isLoading } = useReadContract({
     address: REGISTRY_ADDRESS,
     abi: IDENTITY_REGISTRY_ABI,
     functionName: tag ? 'getAgentsByTag' : 'getAllAgents',
-    args: tag ? [tag] : [0n, 100n], // Get first 100 apps
+    args: tag ? [tag] : [0n, 100n],
   });
 
-  // For each agentId, fetch details (you'd typically batch this)
   const [apps] = useState<RegisteredApp[]>([]);
-
-  // TODO: Fetch app details for each agentId
-  // This would ideally use multicall or GraphQL from indexer
 
   return {
     apps,
@@ -224,8 +211,6 @@ export function useRegisteredApps(tag?: string) {
 export function useRegistryAppDetails(_agentId: bigint) {
   const [app] = useState<RegisteredApp | null>(null);
   const [isLoading] = useState(true);
-
-  // TODO: Fetch app details from contract or indexer GraphQL
 
   return {
     app,

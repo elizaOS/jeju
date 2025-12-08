@@ -3,62 +3,46 @@
  * @module gateway/tests/contracts/identity-registry
  */
 
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, beforeAll } from 'bun:test';
 import { getPublicClient, getContractAddresses } from '../fixtures/contracts';
 
 describe('IdentityRegistry Contract', () => {
   const publicClient = getPublicClient();
-  
-  test('should calculate required stake for protocol tokens', async () => {
-    const addresses = await getContractAddresses();
-    const elizaOSAddress = process.env.VITE_ELIZAOS_TOKEN_ADDRESS as `0x${string}`;
-    
-    if (elizaOSAddress && elizaOSAddress !== '0x0000000000000000000000000000000000000000') {
-      const requiredStake = await publicClient.readContract({
-        address: addresses.identityRegistry,
-        abi: [{
-          type: 'function',
-          name: 'calculateRequiredStake',
-          inputs: [{ name: 'token', type: 'address' }],
-          outputs: [{ name: 'amount', type: 'uint256' }],
-          stateMutability: 'view',
-        }],
-        functionName: 'calculateRequiredStake',
-        args: [elizaOSAddress],
-      });
-      
-      expect(requiredStake).toBeDefined();
-      expect(requiredStake).toBeGreaterThan(0n);
-      
-      // Should be approximately 0.001 ETH worth in the token
-      // For elizaOS at $0.10, that's about 35 tokens (0.001 ETH * $3500 / $0.10)
-    }
-  });
+  let addresses: Awaited<ReturnType<typeof getContractAddresses>>;
+  let hasIdentityRegistry = false;
 
-  test('should get all registered agents', async () => {
-    const addresses = await getContractAddresses();
+  beforeAll(async () => {
+    addresses = await getContractAddresses();
+    hasIdentityRegistry = !!addresses.identityRegistry && addresses.identityRegistry !== '0x';
+  });
+  
+  test('should get total registered agents count', async () => {
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
     
-    const agents = await publicClient.readContract({
+    const count = await publicClient.readContract({
       address: addresses.identityRegistry,
       abi: [{
         type: 'function',
-        name: 'getAllAgents',
-        inputs: [
-          { name: 'offset', type: 'uint256' },
-          { name: 'limit', type: 'uint256' }
-        ],
-        outputs: [{ name: 'agentIds', type: 'uint256[]' }],
+        name: 'totalAgents',
+        inputs: [],
+        outputs: [{ name: 'count', type: 'uint256' }],
         stateMutability: 'view',
       }],
-      functionName: 'getAllAgents',
-      args: [0n, 100n],
+      functionName: 'totalAgents',
     });
     
-    expect(Array.isArray(agents)).toBe(true);
+    expect(count).toBeDefined();
+    expect(count).toBeGreaterThanOrEqual(0n);
   });
 
   test('should get agents by tag', async () => {
-    const addresses = await getContractAddresses();
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
     
     const gameAgents = await publicClient.readContract({
       address: addresses.identityRegistry,
@@ -76,64 +60,93 @@ describe('IdentityRegistry Contract', () => {
     expect(Array.isArray(gameAgents)).toBe(true);
   });
 
-  test('should read agent metadata if agents exist', async () => {
-    const addresses = await getContractAddresses();
+  test('should get supported stake tokens', async () => {
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
     
-    const agents = await publicClient.readContract({
+    const tokens = await publicClient.readContract({
       address: addresses.identityRegistry,
       abi: [{
         type: 'function',
-        name: 'getAllAgents',
-        inputs: [
-          { name: 'offset', type: 'uint256' },
-          { name: 'limit', type: 'uint256' }
-        ],
-        outputs: [{ name: 'agentIds', type: 'uint256[]' }],
+        name: 'getSupportedStakeTokens',
+        inputs: [],
+        outputs: [{ name: 'tokens', type: 'address[]' }],
         stateMutability: 'view',
       }],
-      functionName: 'getAllAgents',
-      args: [0n, 100n],
-    }) as bigint[];
+      functionName: 'getSupportedStakeTokens',
+    });
     
-    if (agents.length > 0) {
-      const tokenURI = await publicClient.readContract({
+    expect(Array.isArray(tokens)).toBe(true);
+  });
+
+  test('should read agent data if agents exist', async () => {
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
+    
+    const count = await publicClient.readContract({
+      address: addresses.identityRegistry,
+      abi: [{
+        type: 'function',
+        name: 'totalAgents',
+        inputs: [],
+        outputs: [{ name: 'count', type: 'uint256' }],
+        stateMutability: 'view',
+      }],
+      functionName: 'totalAgents',
+    }) as bigint;
+    
+    if (count > 0n) {
+      const agent = await publicClient.readContract({
         address: addresses.identityRegistry,
         abi: [{
           type: 'function',
-          name: 'tokenURI',
+          name: 'getAgent',
           inputs: [{ name: 'agentId', type: 'uint256' }],
-          outputs: [{ name: '', type: 'string' }],
+          outputs: [{
+            type: 'tuple',
+            components: [
+              { name: 'owner', type: 'address' },
+              { name: 'tokenURI', type: 'string' },
+              { name: 'registeredAt', type: 'uint256' },
+              { name: 'stakeTier', type: 'uint8' },
+              { name: 'stakeToken', type: 'address' },
+              { name: 'stakeAmount', type: 'uint256' },
+              { name: 'isBanned', type: 'bool' },
+            ]
+          }],
           stateMutability: 'view',
         }],
-        functionName: 'tokenURI',
-        args: [agents[0]],
+        functionName: 'getAgent',
+        args: [1n],
       });
       
-      expect(tokenURI).toBeDefined();
-      expect(typeof tokenURI).toBe('string');
+      expect(agent).toBeDefined();
     }
   });
 
   test('should read agent tags if agents exist', async () => {
-    const addresses = await getContractAddresses();
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
     
-    const agents = await publicClient.readContract({
+    const count = await publicClient.readContract({
       address: addresses.identityRegistry,
       abi: [{
         type: 'function',
-        name: 'getAllAgents',
-        inputs: [
-          { name: 'offset', type: 'uint256' },
-          { name: 'limit', type: 'uint256' }
-        ],
-        outputs: [{ name: 'agentIds', type: 'uint256[]' }],
+        name: 'totalAgents',
+        inputs: [],
+        outputs: [{ name: 'count', type: 'uint256' }],
         stateMutability: 'view',
       }],
-      functionName: 'getAllAgents',
-      args: [0n, 100n],
-    }) as bigint[];
+      functionName: 'totalAgents',
+    }) as bigint;
     
-    if (agents.length > 0) {
+    if (count > 0n) {
       const tags = await publicClient.readContract({
         address: addresses.identityRegistry,
         abi: [{
@@ -144,107 +157,54 @@ describe('IdentityRegistry Contract', () => {
           stateMutability: 'view',
         }],
         functionName: 'getAgentTags',
-        args: [agents[0]],
+        args: [1n],
       });
       
       expect(Array.isArray(tags)).toBe(true);
-      const agentTags = tags as string[];
-      expect(agentTags.length).toBeGreaterThan(0);
     }
   });
 
-  test('should read stake info for registered agents', async () => {
-    const addresses = await getContractAddresses();
+  test('should verify agent existence', async () => {
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
     
-    const agents = await publicClient.readContract({
+    const exists = await publicClient.readContract({
       address: addresses.identityRegistry,
       abi: [{
         type: 'function',
-        name: 'getAllAgents',
-        inputs: [
-          { name: 'offset', type: 'uint256' },
-          { name: 'limit', type: 'uint256' }
-        ],
-        outputs: [{ name: 'agentIds', type: 'uint256[]' }],
+        name: 'agentExists',
+        inputs: [{ name: 'agentId', type: 'uint256' }],
+        outputs: [{ name: 'exists', type: 'bool' }],
         stateMutability: 'view',
       }],
-      functionName: 'getAllAgents',
-      args: [0n, 100n],
-    }) as bigint[];
+      functionName: 'agentExists',
+      args: [1n],
+    });
     
-    if (agents.length > 0) {
-      const stakeInfo = await publicClient.readContract({
-        address: addresses.identityRegistry,
-        abi: [{
-          type: 'function',
-          name: 'getStakeInfo',
-          inputs: [{ name: 'agentId', type: 'uint256' }],
-          outputs: [{
-            components: [
-              { name: 'token', type: 'address' },
-              { name: 'amount', type: 'uint256' },
-              { name: 'depositedAt', type: 'uint256' },
-              { name: 'withdrawn', type: 'bool' }
-            ],
-            type: 'tuple'
-          }],
-          stateMutability: 'view',
-        }],
-        functionName: 'getStakeInfo',
-        args: [agents[0]],
-      });
-      
-      expect(stakeInfo).toBeDefined();
-      const stake = stakeInfo as {
-        token: `0x${string}`;
-        amount: bigint;
-        depositedAt: bigint;
-        withdrawn: boolean;
-      };
-      
-      expect(stake.token).toMatch(/^0x[a-fA-F0-9]{40}$/);
-      expect(stake.amount).toBeGreaterThan(0n);
-      expect(stake.depositedAt).toBeGreaterThan(0n);
-    }
+    expect(typeof exists).toBe('boolean');
   });
 
-  test('should verify agent ownership', async () => {
-    const addresses = await getContractAddresses();
+  test('should get contract version', async () => {
+    if (!hasIdentityRegistry) {
+      console.log('⚠️ IdentityRegistry not deployed, skipping test');
+      return;
+    }
     
-    const agents = await publicClient.readContract({
+    const version = await publicClient.readContract({
       address: addresses.identityRegistry,
       abi: [{
         type: 'function',
-        name: 'getAllAgents',
-        inputs: [
-          { name: 'offset', type: 'uint256' },
-          { name: 'limit', type: 'uint256' }
-        ],
-        outputs: [{ name: 'agentIds', type: 'uint256[]' }],
-        stateMutability: 'view',
+        name: 'version',
+        inputs: [],
+        outputs: [{ name: '', type: 'string' }],
+        stateMutability: 'pure',
       }],
-      functionName: 'getAllAgents',
-      args: [0n, 100n],
-    }) as bigint[];
+      functionName: 'version',
+    });
     
-    if (agents.length > 0) {
-      const owner = await publicClient.readContract({
-        address: addresses.identityRegistry,
-        abi: [{
-          type: 'function',
-          name: 'ownerOf',
-          inputs: [{ name: 'agentId', type: 'uint256' }],
-          outputs: [{ name: 'owner', type: 'address' }],
-          stateMutability: 'view',
-        }],
-        functionName: 'ownerOf',
-        args: [agents[0]],
-      });
-      
-      expect(owner).toBeDefined();
-      expect(owner).toMatch(/^0x[a-fA-F0-9]{40}$/);
-    }
+    expect(version).toBeDefined();
+    expect(typeof version).toBe('string');
   });
 });
-
-

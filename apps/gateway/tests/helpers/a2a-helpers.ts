@@ -153,8 +153,8 @@ export function extractResponseText(response: A2AResponse): string | null {
  * Check if A2A server is running
  */
 export async function isA2AServerRunning(baseUrl: string = A2A_BASE_URL): Promise<boolean> {
-  const response = await fetch(`${baseUrl}/.well-known/agent-card.json`).catch(() => null);
-  return response?.ok || false;
+  const response = await fetch(`${baseUrl}/.well-known/agent-card.json`);
+  return response.ok;
 }
 
 /**

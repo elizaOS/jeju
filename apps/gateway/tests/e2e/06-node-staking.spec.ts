@@ -35,7 +35,7 @@ test.describe('Node Staking Flow', () => {
     
     // Either shows nodes or empty state
     const emptyState = page.getByText(/No Nodes Yet/i);
-    const hasNodes = await emptyState.isVisible().catch(() => false);
+    const hasNodes = await emptyState.isVisible();
     
     if (hasNodes) {
       await expect(page.getByText(/Stake tokens and register a node/i)).toBeVisible();
@@ -150,7 +150,7 @@ test.describe('Node Staking Flow', () => {
     
     // Check for max nodes warning (if operator has 5 nodes)
     const maxWarning = page.getByText(/reached the maximum of 5 nodes/i);
-    const hasMax = await maxWarning.isVisible().catch(() => false);
+    const hasMax = await maxWarning.isVisible();
     
     if (hasMax) {
       // Form should be disabled
@@ -174,8 +174,8 @@ test.describe('My Nodes Management', () => {
     const noNodesMsg = page.getByText(/No Nodes Yet/i);
     const myNodesHeading = page.getByText(/My Nodes \(/i);
     
-    const hasEmpty = await noNodesMsg.isVisible().catch(() => false);
-    const hasNodes = await myNodesHeading.isVisible().catch(() => false);
+    const hasEmpty = await noNodesMsg.isVisible();
+    const hasNodes = await myNodesHeading.isVisible();
     
     expect(hasEmpty || hasNodes).toBe(true);
   });

@@ -1,0 +1,31 @@
+# IPFS - Testnet Configuration
+
+image:
+  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/jeju/ipfs
+  tag: "testnet-latest"
+
+replicaCount: 2
+
+ingress:
+  enabled: true
+  hosts:
+    - host: ipfs.testnet.jeju.network
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ipfs-testnet-tls
+      hosts:
+        - ipfs.testnet.jeju.network
+
+persistence:
+  enabled: true
+  storageClass: "gp3"
+  size: 100Gi
+
+env:
+  - name: IPFS_GATEWAY_URL
+    value: "https://ipfs.testnet.jeju.network"
+  - name: X402_ENABLED
+    value: "true"
+

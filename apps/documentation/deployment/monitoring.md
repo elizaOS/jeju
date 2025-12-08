@@ -1,58 +1,24 @@
 # Monitoring
 
-Set up comprehensive monitoring for your Jeju deployment.
-
-## Quick Setup
-
-### Prometheus
+## Setup
 
 ```bash
-# Deploy with Helm
 helm install prometheus ./monitoring/prometheus/
-
-# Access
-kubectl port-forward -n monitoring svc/prometheus 9090:9090
-```
-
-### Grafana
-
-```bash
-# Deploy with Helm
 helm install grafana ./monitoring/grafana/
 
-# Access
+kubectl port-forward -n monitoring svc/prometheus 9090:9090
 kubectl port-forward -n monitoring svc/grafana 3000:3000
-# Default: admin/admin
+# Grafana: admin/admin
 ```
 
-## Key Metrics to Monitor
+## Key Metrics
 
-### Chain Health
-- Block production rate
-- Transaction throughput
-- Gas prices
-- Reorg depth
+- **Chain**: Block rate, tx throughput, gas prices
+- **Sequencer**: Uptime, tx pool size, peer count
+- **Batcher**: Submission rate, gas costs, EigenDA health
+- **Proposer**: State root submissions, gas costs
 
-### Sequencer
-- Uptime
-- Block proposals
-- Transaction pool size
-- P2P peer count
-
-### Batcher
-- Batch submission rate
-- Gas costs on Base
-- EigenDA health
-- Failed batches
-
-### Proposer
-- State root submissions
-- Challenge events
-- Gas costs
-
-## Alerting
-
-### Critical Alerts
+## Alerts
 
 ```yaml
 # prometheus/alerts.yml
@@ -69,22 +35,10 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
   for: 15m
 ```
 
-### Alert Channels
-
-- Discord webhooks
-- Telegram bots
-- PagerDuty
-- Email
+Channels: Discord webhooks, Telegram, PagerDuty
 
 ## Dashboards
 
 Import from `monitoring/grafana/dashboards/`:
-- `op-stack.json` - OP-Stack metrics
-- `subsquid-overview.json` - Indexer metrics
-
-## Resources
-
-- [Deployment Overview](./overview.md)
-- [Runbooks](./runbooks.md)
-
-
+- `op-stack.json`
+- `subsquid-overview.json`

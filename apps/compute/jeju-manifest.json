@@ -1,0 +1,39 @@
+{
+  "$schema": "../../packages/config/jeju-manifest.schema.json",
+  "name": "compute",
+  "displayName": "Jeju Compute Marketplace",
+  "version": "1.0.0",
+  "type": "core",
+  "description": "Decentralized AI compute marketplace with ERC-8004 integration. Run inference nodes, stake as providers, earn rewards for serving AI models. Permissionless - wallet signatures only.",
+  "commands": {
+    "dev": "bun run dev",
+    "build": "bun run build",
+    "start": "bun run node",
+    "test": "bun run test"
+  },
+  "ports": {
+    "main": 4007,
+    "nodeApi": 4008
+  },
+  "dependencies": ["contracts", "config"],
+  "optional": false,
+  "enabled": true,
+  "autoStart": true,
+  "tags": ["compute", "ai", "inference", "staking", "erc-8004", "marketplace", "tee", "gpu"],
+  "healthCheck": {
+    "url": "http://localhost:4007/health",
+    "interval": 30000
+  },
+  "agent": {
+    "enabled": true,
+    "a2aEndpoint": "/a2a",
+    "tags": ["jeju-app", "compute", "ai", "inference", "marketplace"],
+    "metadata": {
+      "category": "compute",
+      "provider": "jeju-network"
+    },
+    "trustModels": ["open", "staked"],
+    "x402Support": true
+  }
+}
+

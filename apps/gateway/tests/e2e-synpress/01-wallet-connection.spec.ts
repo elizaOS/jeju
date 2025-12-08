@@ -106,7 +106,7 @@ test.describe('Gateway Wallet Connection', () => {
     
     // Check that we're on Jeju network
     const networkIndicator = page.locator('text=/Jeju|Chain ID/i');
-    const hasNetworkInfo = await networkIndicator.isVisible().catch(() => false);
+    const hasNetworkInfo = await networkIndicator.isVisible();
     
     if (hasNetworkInfo) {
       console.log('✅ Network indicator visible');
@@ -155,7 +155,7 @@ test.describe('Gateway Multi-Token Balance Display', () => {
     
     // Look for total value
     const totalText = page.getByText(/Total:/i);
-    const hasTotal = await totalText.isVisible().catch(() => false);
+    const hasTotal = await totalText.isVisible();
     
     if (hasTotal) {
       await expect(totalText.locator('../..').getByText(/\\$/)).toBeVisible();

@@ -82,7 +82,7 @@ All apps automatically get:
 - `CHAIN_ID` - Chain ID (1337 for localnet)
 - Port environment variables (e.g., `BAZAAR_PORT`)
 - Access to shared types from `/types`
-- Access to contract deployments from `/contracts/deployments`
+- Access to contract deployments from `/packages/contracts/deployments`
 
 ## Adding a New Core App
 
@@ -93,5 +93,5 @@ All apps automatically get:
 
 ## Manifest Schema
 
-See `/jeju-manifest.schema.json` for the complete schema definition.
+See `/packages/config/jeju-manifest.schema.json` for the complete schema definition.
 

@@ -7,4 +7,6 @@ export * from './notifications';
 export * from './format';
 export * from './logger';
 export * from './rpc';
+export * from './eil';
+export * from './agent0';
 

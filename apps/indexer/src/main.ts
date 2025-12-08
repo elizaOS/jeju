@@ -1,107 +1,85 @@
 /**
- * @fileoverview Main indexer processor - comprehensive blockchain data indexing
- * @module indexer/main
- * 
- * This is the core indexer that processes all blockchain data from Jeju:
- * - Captures every block, transaction, and event log
- * - Decodes known event signatures (ERC20, ERC721, ERC1155 transfers)
- * - Tracks token balances and NFT ownership
- * - Identifies and classifies smart contracts
- * - Builds relationship graphs between accounts
- * - Calculates daily activity metrics
- * 
- * Architecture:
- * 1. Processor fetches batches of blocks from RPC
- * 2. For each block, extract transactions and logs
- * 3. Decode known event signatures
- * 4. Build entity relationships
- * 5. Batch insert to PostgreSQL
- * 6. Make data available via GraphQL API
- * 
- * Performance:
- * - Processes 100-1000 blocks per batch
- * - Handles 300k+ event logs efficiently
- * - Real-time indexing with <10 second latency
- * - Automatic batching for optimal DB writes
- * 
- * @see {@link processor} - Blockchain data fetcher configuration
- * @see {@link schema.graphql} - Database schema and GraphQL types
+ * Main indexer processor - comprehensive blockchain data indexing
  */
 
 import {TypeormDatabase} from '@subsquid/typeorm-store'
 import {
     Block, Transaction, Account, Log, Contract, TokenTransfer, 
     DecodedEvent, Trace, TransactionStatus, TokenStandard, 
-    ContractType, TraceType
+    ContractType, TraceType, TokenBalance
 } from './model'
-import {processor} from './processor'
+import {processor, ProcessorContext} from './processor'
+import {processGameFeedEvents} from './game-feed-processor'
+import {processNodeStakingEvents} from './node-staking-processor'
 import {processMarketEvents} from './market-processor'
-// import {processGameFeedEvents} from './game-feed-processor'
-// import {processNodeStakingEvents} from './node-staking-processor'
+import {processRegistryEvents} from './registry-game-processor'
+import {processEILEvents} from './eil-processor'
+import {
+    getEventCategory, getEventName,
+    ERC20_TRANSFER, ERC1155_TRANSFER_SINGLE, ERC1155_TRANSFER_BATCH
+} from './contract-events'
+import { Store } from '@subsquid/typeorm-store'
 
-// Extended types for block header and transaction with all requested fields
-interface ExtendedBlockHeader {
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
+// Extended types for processor data with all requested fields
+interface BlockHeader {
     hash: string
     height: number
     parentHash: string
     timestamp: number
-    gasUsed?: bigint
-    gasLimit?: bigint
+    gasUsed: bigint
+    gasLimit: bigint
     baseFeePerGas?: bigint
-    difficulty?: bigint
-    size?: number | bigint
+    size: number
 }
 
-interface ExtendedTransaction {
+interface TxData {
     hash: string
     from: string
     to?: string
     transactionIndex: number
-    value?: bigint
+    value: bigint
     gasPrice?: bigint
-    gas?: bigint
-    gasUsed?: bigint
-    input?: string
-    nonce?: number
-    status?: number
+    gas: bigint
+    gasUsed: bigint
+    input: string
+    nonce: number
+    status: number
     contractAddress?: string
     type?: number
     maxFeePerGas?: bigint
     maxPriorityFeePerGas?: bigint
 }
 
-/**
- * Event signature constants
- * 
- * These are keccak256 hashes of event signatures used to identify
- * and decode specific events from the blockchain.
- */
+interface LogData {
+    address: string
+    topics: string[]
+    data: string
+    logIndex: number
+    transactionIndex: number
+    transaction?: { hash: string }
+}
 
-/**
- * Transfer event signature (ERC20 and ERC721)
- * 
- * Event: Transfer(address indexed from, address indexed to, uint256 value)
- * Signature: keccak256("Transfer(address,address,uint256)")
- * 
- * @constant {string}
- * 
- * Note: Both ERC20 and ERC721 use the same signature. We differentiate by:
- * - ERC20: 3 topics (signature + from + to), value in data field
- * - ERC721: 4 topics (signature + from + to + tokenId), no data
- */
-const TRANSFER_EVENT = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+interface TraceData {
+    transaction?: { hash: string }
+    traceAddress: number[]
+    error?: string
+    type: string
+    action: {
+        from: string
+        to?: string
+        value?: bigint
+        gas?: bigint
+        input?: string
+    }
+    result?: {
+        gasUsed?: bigint
+        output?: string
+    }
+}
 
-/**
- * ERC1155 TransferSingle event signature
- * 
- * Event: TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)
- * Signature: keccak256("TransferSingle(address,address,address,uint256,uint256)")
- * 
- * @constant {string}
- */
-const ERC1155_TRANSFER_SINGLE = '0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62'
-
-processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
+processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx: ProcessorContext<Store>) => {
     const blocks: Block[] = []
     const transactions: Transaction[] = []
     const logs: Log[] = []
@@ -110,8 +88,8 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
     const traces: Trace[] = []
     const accounts = new Map<string, Account>()
     const contracts = new Map<string, Contract>()
+    const tokenBalances = new Map<string, TokenBalance>()
 
-    // Helper to get or create account
     function getOrCreateAccount(address: string, blockNumber: number, timestamp: Date): Account {
         const id = address.toLowerCase()
         let account = accounts.get(id)
@@ -136,7 +114,6 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
         return account
     }
 
-    // Helper to get or create contract
     function getOrCreateContract(address: string, block: Block, creator: Account): Contract {
         const id = address.toLowerCase()
         let contract = contracts.get(id)
@@ -163,9 +140,28 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
         return contract
     }
 
-    // Process each block
-    for (let block of ctx.blocks) {
-        const header = block.header as ExtendedBlockHeader
+    function getOrCreateTokenBalance(accountId: string, tokenAddress: string, block: Block, timestamp: Date): TokenBalance {
+        const id = `${accountId}-${tokenAddress}`
+        let balance = tokenBalances.get(id)
+        if (!balance) {
+            const account = accounts.get(accountId) ?? getOrCreateAccount(accountId, block.number, timestamp)
+            const token = contracts.get(tokenAddress) ?? getOrCreateContract(tokenAddress, block, account)
+            
+            balance = new TokenBalance({
+                id,
+                account,
+                token,
+                balance: 0n,
+                transferCount: 0,
+                lastUpdated: timestamp
+            })
+            tokenBalances.set(id, balance)
+        }
+        return balance
+    }
+
+    for (const block of ctx.blocks) {
+        const header = block.header as unknown as BlockHeader
         const blockTimestamp = new Date(header.timestamp)
         const blockEntity = new Block({
             id: header.hash,
@@ -173,64 +169,60 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
             hash: header.hash,
             parentHash: header.parentHash,
             timestamp: blockTimestamp,
-            miner: getOrCreateAccount('0x0000000000000000000000000000000000000000', header.height, blockTimestamp),
-            gasUsed: header.gasUsed || 0n,
-            gasLimit: header.gasLimit || 0n,
-            baseFeePerGas: header.baseFeePerGas || null,
-            size: typeof header.size === 'bigint' ? Number(header.size) : header.size || 0,
+            miner: getOrCreateAccount(ZERO_ADDRESS, header.height, blockTimestamp),
+            gasUsed: header.gasUsed,
+            gasLimit: header.gasLimit,
+            baseFeePerGas: header.baseFeePerGas ?? null,
+            size: header.size,
             transactionCount: block.transactions.length
         })
         blocks.push(blockEntity)
 
-        // Process transactions
-        for (let tx of block.transactions) {
-            const rawTx = tx as ExtendedTransaction
-            const fromAccount = getOrCreateAccount(rawTx.from, header.height, blockTimestamp)
+        for (const rawTx of block.transactions) {
+            const tx = rawTx as unknown as TxData
+            const fromAccount = getOrCreateAccount(tx.from, header.height, blockTimestamp)
             fromAccount.transactionCount++
-            fromAccount.totalValueSent += rawTx.value || 0n
+            fromAccount.totalValueSent += tx.value
             
             let toAccount: Account | undefined
-            if (rawTx.to) {
-                toAccount = getOrCreateAccount(rawTx.to, header.height, blockTimestamp)
-                toAccount.totalValueReceived += rawTx.value || 0n
+            if (tx.to) {
+                toAccount = getOrCreateAccount(tx.to, header.height, blockTimestamp)
+                toAccount.totalValueReceived += tx.value
             }
 
             const txEntity = new Transaction({
-                id: rawTx.hash,
-                hash: rawTx.hash,
+                id: tx.hash,
+                hash: tx.hash,
                 block: blockEntity,
-                transactionIndex: rawTx.transactionIndex,
+                blockNumber: header.height,
+                transactionIndex: tx.transactionIndex,
                 from: fromAccount,
                 to: toAccount,
-                value: rawTx.value || 0n,
-                gasPrice: rawTx.gasPrice || null,
-                gasLimit: BigInt(rawTx.gas || 0),
-                gasUsed: rawTx.gasUsed ? BigInt(rawTx.gasUsed) : null,
-                input: rawTx.input || '0x',
-                nonce: rawTx.nonce || 0,
-                status: rawTx.status === 1 ? TransactionStatus.SUCCESS : TransactionStatus.FAILURE,
-                contractAddress: null,  // Will be updated after contracts are created
-                type: rawTx.type || null,
-                maxFeePerGas: rawTx.maxFeePerGas || null,
-                maxPriorityFeePerGas: rawTx.maxPriorityFeePerGas || null
+                value: tx.value,
+                gasPrice: tx.gasPrice ?? null,
+                gasLimit: tx.gas,
+                gasUsed: tx.gasUsed,
+                input: tx.input,
+                nonce: tx.nonce,
+                status: tx.status === 1 ? TransactionStatus.SUCCESS : TransactionStatus.FAILURE,
+                contractAddress: null,
+                type: tx.type ?? null,
+                maxFeePerGas: tx.maxFeePerGas ?? null,
+                maxPriorityFeePerGas: tx.maxPriorityFeePerGas ?? null
             })
             
-            // Track contract creation for later processing
-            if (rawTx.contractAddress) {
-                const createdContract = getOrCreateContract(rawTx.contractAddress, blockEntity, fromAccount)
+            if (tx.contractAddress) {
+                const createdContract = getOrCreateContract(tx.contractAddress, blockEntity, fromAccount)
                 createdContract.creationTransaction = txEntity
             }
             transactions.push(txEntity)
         }
 
-        // Process logs - THE CRITICAL MISSING PIECE!
-        for (let log of block.logs) {
-            // Get or create contract that emitted this event
-            const fromAccount = accounts.get(log.address.toLowerCase()) || getOrCreateAccount(log.address, header.height, blockTimestamp)
-            const contractEntity = getOrCreateContract(log.address, blockEntity, fromAccount)
+        for (const rawLog of block.logs) {
+            const log = rawLog as unknown as LogData
             const addressAccount = getOrCreateAccount(log.address, header.height, blockTimestamp)
+            const contractEntity = getOrCreateContract(log.address, blockEntity, addressAccount)
 
-            // Find transaction for this log by matching transactionIndex
             const txEntity = transactions.find(t => 
                 t.block.id === blockEntity.id && 
                 t.transactionIndex === log.transactionIndex
@@ -243,24 +235,24 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                 transaction: txEntity,
                 logIndex: log.logIndex,
                 address: addressAccount,
-                topic0: log.topics[0] || null,
-                topic1: log.topics[1] || null,
-                topic2: log.topics[2] || null,
-                topic3: log.topics[3] || null,
-                data: log.data || null,
+                topic0: log.topics[0] ?? null,
+                topic1: log.topics[1] ?? null,
+                topic2: log.topics[2] ?? null,
+                topic3: log.topics[3] ?? null,
+                data: log.data ?? null,
                 removed: false,
                 transactionIndex: log.transactionIndex
             })
             logs.push(logEntity)
 
-            // Detect and decode known events
             const eventSig = log.topics[0]
             if (!eventSig) continue
+
+            const eventCategory = getEventCategory(eventSig)
+            const eventName = getEventName(eventSig)
             
-            // ERC20/ERC721 Transfer (same signature)
-            if (eventSig === TRANSFER_EVENT) {
+            if (eventSig === ERC20_TRANSFER) {
                 if (log.topics.length === 3 && log.data) {
-                    // ERC20 Transfer
                     contractEntity.isERC20 = true
                     contractEntity.contractType = ContractType.ERC20
 
@@ -286,6 +278,19 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                         timestamp: blockEntity.timestamp
                     }))
 
+                    if (fromAddr !== ZERO_ADDRESS) {
+                        const fromBalance = getOrCreateTokenBalance(fromAddr.toLowerCase(), log.address.toLowerCase(), blockEntity, blockTimestamp)
+                        fromBalance.balance = fromBalance.balance - value
+                        fromBalance.transferCount++
+                        fromBalance.lastUpdated = blockTimestamp
+                    }
+                    if (toAddr !== ZERO_ADDRESS) {
+                        const toBalance = getOrCreateTokenBalance(toAddr.toLowerCase(), log.address.toLowerCase(), blockEntity, blockTimestamp)
+                        toBalance.balance = toBalance.balance + value
+                        toBalance.transferCount++
+                        toBalance.lastUpdated = blockTimestamp
+                    }
+
                     decodedEvents.push(new DecodedEvent({
                         id: logEntity.id,
                         log: logEntity,
@@ -298,7 +303,6 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                         timestamp: blockEntity.timestamp
                     }))
                 } else if (log.topics.length === 4) {
-                    // ERC721 Transfer
                     contractEntity.isERC721 = true
                     contractEntity.contractType = ContractType.ERC721
 
@@ -337,7 +341,6 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                     }))
                 }
             }
-            // ERC1155 TransferSingle
             else if (eventSig === ERC1155_TRANSFER_SINGLE && log.data) {
                 contractEntity.isERC1155 = true
                 contractEntity.contractType = ContractType.ERC1155
@@ -386,62 +389,120 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
                     timestamp: blockEntity.timestamp
                 }))
             }
+            else if (eventSig === ERC1155_TRANSFER_BATCH && log.data) {
+                contractEntity.isERC1155 = true
+                contractEntity.contractType = ContractType.ERC1155
+
+                const operator = '0x' + log.topics[1].slice(26)
+                const fromAddr = '0x' + log.topics[2].slice(26)
+                const toAddr = '0x' + log.topics[3].slice(26)
+
+                decodedEvents.push(new DecodedEvent({
+                    id: logEntity.id,
+                    log: logEntity,
+                    block: blockEntity,
+                    transaction: txEntity,
+                    address: addressAccount,
+                    eventSignature: eventSig,
+                    eventName: 'TransferBatch',
+                    args: { operator, from: fromAddr, to: toAddr, data: log.data },
+                    timestamp: blockEntity.timestamp
+                }))
+            }
+            else if (eventCategory) {
+                const args: Record<string, string> = {
+                    category: eventCategory.category,
+                    contract: eventCategory.contract
+                }
+                log.topics.forEach((topic, i) => {
+                    if (i > 0) args[`topic${i}`] = topic
+                })
+                if (log.data && log.data !== '0x') {
+                    args.data = log.data
+                }
+
+                decodedEvents.push(new DecodedEvent({
+                    id: logEntity.id,
+                    log: logEntity,
+                    block: blockEntity,
+                    transaction: txEntity,
+                    address: addressAccount,
+                    eventSignature: eventSig,
+                    eventName,
+                    args,
+                    timestamp: blockEntity.timestamp
+                }))
+
+                if (eventCategory.category === 'game') {
+                    contractEntity.contractType = ContractType.GAME
+                } else if (eventCategory.category === 'prediction') {
+                    contractEntity.contractType = ContractType.PREDICTION_MARKET
+                } else if (eventCategory.category === 'marketplace') {
+                    contractEntity.contractType = ContractType.NFT_MARKETPLACE
+                } else if (eventCategory.category === 'defi') {
+                    contractEntity.contractType = ContractType.DEX
+                }
+            }
         }
 
-        // Process traces (internal transactions)
-        // Note: Trace processing can be expanded based on available fields
-        for (let trace of block.traces) {
+        // Process traces if enabled (requires archive node)
+        for (const rawTrace of block.traces) {
+            const trace = rawTrace as unknown as TraceData
             if (!trace.transaction) continue
 
             const txEntity = transactions.find(t => t.hash === trace.transaction!.hash)
             if (!txEntity) continue
 
-            // Simplified trace type mapping - adapt to actual trace types from processor
-            const traceType = TraceType.CALL  // Default to CALL for now
+            let traceType = TraceType.CALL
+            if (trace.type === 'create') traceType = TraceType.CREATE
+            else if (trace.type === 'create2') traceType = TraceType.CREATE2
+            else if (trace.type === 'delegatecall') traceType = TraceType.DELEGATECALL
+            else if (trace.type === 'staticcall') traceType = TraceType.STATICCALL
+            else if (trace.type === 'suicide') traceType = TraceType.SELFDESTRUCT
 
-            // Simplified trace entity - can be enhanced based on actual trace data available
-            const traceEntity = new Trace({
+            const fromAddr = trace.action.from
+            const toAddr = trace.action.to
+
+            traces.push(new Trace({
                 id: `${trace.transaction.hash}-${trace.traceAddress.join('-')}`,
                 transaction: txEntity,
                 traceAddress: trace.traceAddress,
                 type: traceType,
-                from: getOrCreateAccount('0x0000000000000000000000000000000000000000', header.height, blockTimestamp),
-                to: null,
-                value: null,
-                gas: null,
-                gasUsed: null,
-                input: null,
-                output: null,
-                error: trace.error || null
-            })
-            traces.push(traceEntity)
+                from: getOrCreateAccount(fromAddr, header.height, blockTimestamp),
+                to: toAddr ? getOrCreateAccount(toAddr, header.height, blockTimestamp) : null,
+                value: trace.action.value ?? null,
+                gas: trace.action.gas ?? null,
+                gasUsed: trace.result?.gasUsed ?? null,
+                input: trace.action.input ?? null,
+                output: trace.result?.output ?? null,
+                error: trace.error ?? null
+            }))
         }
     }
 
-    const startBlock = ctx.blocks.at(0)?.header.height
-    const endBlock = ctx.blocks.at(-1)?.header.height
+    const startBlock = ctx.blocks[0]?.header.height
+    const endBlock = ctx.blocks[ctx.blocks.length - 1]?.header.height
     ctx.log.info(
         `Processed blocks ${startBlock}-${endBlock}: ` +
         `${blocks.length} blocks, ${transactions.length} txs, ${logs.length} logs, ` +
-        `${tokenTransfers.length} tokens, ${decodedEvents.length} events, ` +
-        `${contracts.size} contracts, ${accounts.size} accounts, ${traces.length} traces`
+        `${tokenTransfers.length} transfers, ${decodedEvents.length} decoded events, ` +
+        `${contracts.size} contracts, ${accounts.size} accounts, ${traces.length} traces, ` +
+        `${tokenBalances.size} balances`
     )
 
-    // Save everything to database in correct order (respect foreign keys!)
-    // Order matters: child tables depend on parent tables
-    await ctx.store.upsert(Array.from(accounts.values()))  // 1. Accounts first (no dependencies)
-    await ctx.store.insert(blocks)  // 2. Blocks (no dependencies except accounts)
-    await ctx.store.insert(transactions)  // 3. Transactions (depend on blocks and accounts)
-    await ctx.store.upsert(Array.from(contracts.values()))  // 4. Contracts (depend on blocks and transactions)
-    await ctx.store.insert(logs)  // 5. Logs (depend on blocks, transactions, contracts)
-    await ctx.store.insert(decodedEvents)  // 6. Decoded events (depend on logs)
-    await ctx.store.insert(tokenTransfers)  // 7. Token transfers (depend on all above)
-    if (traces.length > 0) {
-        await ctx.store.insert(traces)  // 8. Traces (depend on transactions)
-    }
+    await ctx.store.upsert(Array.from(accounts.values()))
+    await ctx.store.insert(blocks)
+    await ctx.store.insert(transactions)
+    await ctx.store.upsert(Array.from(contracts.values()))
+    await ctx.store.insert(logs)
+    await ctx.store.insert(decodedEvents)
+    await ctx.store.insert(tokenTransfers)
+    await ctx.store.upsert(Array.from(tokenBalances.values()))
+    await ctx.store.insert(traces)
     
-    // Process specialized event types
-    await processMarketEvents(ctx)  // 9. Prediction market events
-    // await processGameFeedEvents(ctx)  // 10. Game feed and player events
-    // await processNodeStakingEvents(ctx)  // 11. Node staking and governance
+    await processGameFeedEvents(ctx)
+    await processNodeStakingEvents(ctx)
+    await processMarketEvents(ctx)
+    await processRegistryEvents(ctx)
+    await processEILEvents(ctx)
 })

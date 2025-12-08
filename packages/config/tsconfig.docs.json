@@ -1,0 +1,37 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["bun-types", "node"]
+  },
+  "include": [
+    "../../apps/**/src/**/*.ts",
+    "../../apps/**/src/**/*.tsx",
+    "../../apps/**/lib/**/*.ts",
+    "../../apps/**/hooks/**/*.ts",
+    "../../apps/**/config/**/*.ts",
+    "../../apps/**/server/**/*.ts",
+    "../../types/**/*.ts"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__",
+    "**/tests"
+  ]
+}
+

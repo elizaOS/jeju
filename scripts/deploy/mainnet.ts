@@ -11,7 +11,7 @@
 
 import { $ } from "bun";
 
-console.log("🚀 Jeju L3 Mainnet Deployment\n");
+console.log("🚀 Jeju Mainnet Deployment\n");
 
 console.log("⚠️  MAINNET DEPLOYMENT CHECKLIST:\n");
 
@@ -56,7 +56,7 @@ if (result.exitCode !== 0) {
 console.log("\n✅ Mainnet L1 contracts deployed!");
 console.log("\n📝 Next steps:");
 console.log("   1. Generate genesis: bun run scripts/deploy/l2-genesis.ts --network mainnet");
-console.log("   2. Update config/chain/mainnet.json");
+console.log("   2. Update packages/config/chain/mainnet.json");
 console.log("   3. Deploy infrastructure: bun run k8s:mainnet");
 console.log("   4. Monitor closely for 48 hours");
 

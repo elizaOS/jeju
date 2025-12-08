@@ -40,16 +40,12 @@ export default function RegisterToken() {
       return;
     }
 
-    try {
-      await registerToken(
-        tokenAddress as `0x${string}`,
-        priceOracle,
-        minFeeNum,
-        maxFeeNum
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-    }
+    await registerToken(
+      tokenAddress as `0x${string}`,
+      priceOracle,
+      minFeeNum,
+      maxFeeNum
+    );
   };
 
   return (

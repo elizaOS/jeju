@@ -1,7 +1,7 @@
 {
-  "$schema": "../../jeju-manifest.schema.json",
+  "$schema": "../../packages/config/jeju-manifest.schema.json",
   "name": "gateway",
-  "displayName": "Gateway Portal - Protocol Infrastructure Hub",
+  "displayName": "Gateway Portal",
   "version": "1.0.0",
   "type": "core",
   "description": "Protocol Infrastructure Hub: Bridge tokens, deploy paymasters, provide ETH liquidity, run nodes, earn rewards. Supports elizaOS, CLANKER, VIRTUAL, CLANKERMON + any ERC20. Protocol power = paymaster + liquidity.",
@@ -18,6 +18,17 @@
   "optional": false,
   "enabled": true,
   "autoStart": true,
-  "tags": ["protocol", "infrastructure", "paymaster", "nodes", "staking", "liquidity", "elizaOS", "multi-token"]
+  "tags": ["protocol", "infrastructure", "paymaster", "nodes", "staking", "liquidity", "elizaOS", "multi-token"],
+  "agent": {
+    "enabled": true,
+    "a2aEndpoint": "/a2a",
+    "tags": ["jeju-app", "protocol", "infrastructure", "nodes", "staking"],
+    "metadata": {
+      "category": "infrastructure",
+      "provider": "jeju-network"
+    },
+    "trustModels": ["open"],
+    "x402Support": true
+  }
 }
 

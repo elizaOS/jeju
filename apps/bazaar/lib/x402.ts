@@ -1,9 +1,3 @@
-/**
- * x402 Payment Protocol Implementation for Bazaar
- * Based on x402 specification v1.0
- * See: VENDOR_EXAMPLES_VERIFICATION.md for integration details
- */
-
 import { Address, parseEther, formatEther } from 'viem';
 
 export interface PaymentRequirements {
@@ -47,9 +41,6 @@ export interface SettlementResponse {
   error?: string;
 }
 
-/**
- * Payment tier definitions for Bazaar
- */
 export const PAYMENT_TIERS = {
   // NFT Marketplace Fees
   NFT_LISTING: parseEther('0.001'), // 0.001 ETH to list NFT
@@ -63,6 +54,10 @@ export const PAYMENT_TIERS = {
   // Token Launch Fees
   TOKEN_DEPLOYMENT: parseEther('0.005'), // 0.005 ETH to deploy token
   
+  // Prediction Markets Fees
+  MARKET_CREATION: parseEther('0.01'), // 0.01 ETH to create market
+  TRADING_FEE: 50, // 0.5% of trade amount (basis points)
+  
   // API Access Fees
   PREMIUM_API_DAILY: parseEther('0.1'), // Daily premium API access
   PREMIUM_API_MONTHLY: parseEther('2.0'), // Monthly premium access
@@ -71,9 +66,6 @@ export const PAYMENT_TIERS = {
   HISTORICAL_DATA: parseEther('0.05'), // One-time historical data access
 } as const;
 
-/**
- * Create a 402 Payment Required response
- */
 export function createPaymentRequirement(
   resource: string,
   amount: bigint,
@@ -106,13 +98,6 @@ export function createPaymentRequirement(
   };
 }
 
-/**
- * Verify a payment payload
- * In production, this would verify the signature and check on-chain settlement
- */
-/**
- * EIP-712 Domain for x402 payments
- */
 const EIP712_DOMAIN = {
   name: 'x402 Payment Protocol',
   version: '1',
@@ -120,9 +105,6 @@ const EIP712_DOMAIN = {
   verifyingContract: '0x0000000000000000000000000000000000000000' as Address, // Can be payment processor contract
 };
 
-/**
- * EIP-712 Types for x402 payment
- */
 const EIP712_TYPES = {
   Payment: [
     { name: 'scheme', type: 'string' },
@@ -136,15 +118,11 @@ const EIP712_TYPES = {
   ],
 };
 
-/**
- * Verify payment with EIP-712 signature validation
- */
 export async function verifyPayment(
   payload: PaymentPayload,
   expectedAmount: bigint,
   expectedRecipient: Address
 ): Promise<{ valid: boolean; error?: string; signer?: Address }> {
-  // Basic validation
   if (!payload.amount || !payload.payTo || !payload.asset) {
     return { valid: false, error: 'Missing required payment fields' };
   }
@@ -159,186 +137,122 @@ export async function verifyPayment(
   }
 
   if (payload.payTo.toLowerCase() !== expectedRecipient.toLowerCase()) {
-    return { 
-      valid: false, 
-      error: `Invalid recipient: ${payload.payTo} !== ${expectedRecipient}` 
-    };
+    return { valid: false, error: `Invalid recipient: ${payload.payTo} !== ${expectedRecipient}` };
   }
 
-  // Check timestamp is recent (within 5 minutes)
   const now = Math.floor(Date.now() / 1000);
   if (Math.abs(now - payload.timestamp) > 300) {
     return { valid: false, error: 'Payment timestamp expired' };
   }
 
-  // Verify EIP-712 signature
   if (!payload.signature) {
     return { valid: false, error: 'Payment signature required' };
   }
 
-  try {
-    const { verifyTypedData, recoverTypedDataAddress } = await import('viem');
-    
-    // Determine chain ID from network
-    const chainId = payload.network === 'base-sepolia' ? 84532 : 
-                    payload.network === 'base' ? 8453 : 
-                    1337; // Jeju localnet
+  const { verifyTypedData, recoverTypedDataAddress } = await import('viem');
+  
+  const chainId = payload.network === 'base-sepolia' ? 84532 : 
+                  payload.network === 'base' ? 8453 : 1337;
 
-    const domain = {
-      ...EIP712_DOMAIN,
-      chainId,
-    };
+  const domain = { ...EIP712_DOMAIN, chainId };
 
-    // Prepare message for verification
-    const message = {
-      scheme: payload.scheme,
-      network: payload.network,
-      asset: payload.asset,
-      payTo: payload.payTo,
-      amount: BigInt(payload.amount),
-      resource: payload.resource,
-      nonce: payload.nonce,
-      timestamp: BigInt(payload.timestamp),
-    };
+  const message = {
+    scheme: payload.scheme,
+    network: payload.network,
+    asset: payload.asset,
+    payTo: payload.payTo,
+    amount: BigInt(payload.amount),
+    resource: payload.resource,
+    nonce: payload.nonce,
+    timestamp: BigInt(payload.timestamp),
+  };
 
-    // Recover signer address from signature
-    const signer = await recoverTypedDataAddress({
-      domain,
-      types: EIP712_TYPES,
-      primaryType: 'Payment',
-      message,
-      signature: payload.signature as `0x${string}`,
-    });
+  const signer = await recoverTypedDataAddress({
+    domain,
+    types: EIP712_TYPES,
+    primaryType: 'Payment',
+    message,
+    signature: payload.signature as `0x${string}`,
+  });
 
-    // Verify signature is valid
-    const isValid = await verifyTypedData({
-      address: signer,
-      domain,
-      types: EIP712_TYPES,
-      primaryType: 'Payment',
-      message,
-      signature: payload.signature as `0x${string}`,
-    });
+  const isValid = await verifyTypedData({
+    address: signer,
+    domain,
+    types: EIP712_TYPES,
+    primaryType: 'Payment',
+    message,
+    signature: payload.signature as `0x${string}`,
+  });
 
-    if (!isValid) {
-      return { valid: false, error: 'Invalid payment signature' };
-    }
-
-    // Store signer for later use (e.g., checking they have funds)
-    return { valid: true, signer };
-  } catch (error) {
-    console.error('[x402] Signature verification error:', error);
-    return { 
-      valid: false, 
-      error: `Signature verification failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    };
+  if (!isValid) {
+    return { valid: false, error: 'Invalid payment signature' };
   }
+
+  return { valid: true, signer };
 }
 
-/**
- * Settle a payment on-chain
- * Actually executes the blockchain transaction
- */
-export async function settlePayment(
-  payload: PaymentPayload
-): Promise<SettlementResponse> {
-  try {
-    // Import viem for actual contract interaction
-    const { createPublicClient, createWalletClient, http, parseAbi } = await import('viem');
-    const { privateKeyToAccount } = await import('viem/accounts');
-    const { jeju } = await import('../config/chains');
-    
-    // Get settlement wallet from environment
-    const settlementKey = process.env.NEXT_PUBLIC_SETTLEMENT_PRIVATE_KEY;
-    
-    if (!settlementKey) {
-      // If no settlement key, verify payment structure but don't settle
-      console.warn('[x402] No settlement key configured, payment verified but not settled on-chain');
-      return {
-        settled: false,
-        error: 'Settlement wallet not configured (payment verified but not executed)',
-      };
-    }
+export async function settlePayment(payload: PaymentPayload): Promise<SettlementResponse> {
+  const { createPublicClient, createWalletClient, http, parseAbi } = await import('viem');
+  const { privateKeyToAccount } = await import('viem/accounts');
+  const { jeju } = await import('../config/chains');
+  
+  const settlementKey = process.env.NEXT_PUBLIC_SETTLEMENT_PRIVATE_KEY;
+  
+  if (!settlementKey) {
+    return { settled: false, error: 'Settlement wallet not configured' };
+  }
 
-    const account = privateKeyToAccount(settlementKey as `0x${string}`);
-    
-    const publicClient = createPublicClient({
-      chain: jeju,
-      transport: http(),
-    });
+  const account = privateKeyToAccount(settlementKey as `0x${string}`);
+  
+  const publicClient = createPublicClient({ chain: jeju, transport: http() });
+  const walletClient = createWalletClient({ account, chain: jeju, transport: http() });
 
-    const walletClient = createWalletClient({
-      account,
-      chain: jeju,
-      transport: http(),
-    });
-
-    // If paying in ETH (zero address), verify ETH was sent
-    if (payload.asset === '0x0000000000000000000000000000000000000000') {
-      // For ETH payments, we'd check the transaction value
-      // This is a simplified check
-      return {
-        settled: true,
-        txHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-        blockNumber: Number(await publicClient.getBlockNumber()),
-        timestamp: Math.floor(Date.now() / 1000),
-        amountSettled: payload.amount,
-      };
-    }
-
-    // For ERC20 tokens, verify allowance and execute transferFrom
-    const erc20Abi = parseAbi([
-      'function allowance(address owner, address spender) view returns (uint256)',
-      'function transferFrom(address from, address to, uint256 amount) returns (bool)',
-    ]);
-
-    // Check allowance
-    const allowance = await publicClient.readContract({
-      address: payload.asset,
-      abi: erc20Abi,
-      functionName: 'allowance',
-      args: [account.address, payload.payTo],
-    });
-
-    const requiredAmount = BigInt(payload.amount);
-    
-    if (allowance < requiredAmount) {
-      return {
-        settled: false,
-        error: `Insufficient allowance: ${allowance} < ${requiredAmount}`,
-      };
-    }
-
-    // Execute transferFrom to move tokens to recipient
-    const hash = await walletClient.writeContract({
-      address: payload.asset,
-      abi: erc20Abi,
-      functionName: 'transferFrom',
-      args: [account.address, payload.payTo, requiredAmount],
-    });
-
-    // Wait for transaction confirmation
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
+  if (payload.asset === '0x0000000000000000000000000000000000000000') {
     return {
       settled: true,
-      txHash: hash,
-      blockNumber: Number(receipt.blockNumber),
+      txHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+      blockNumber: Number(await publicClient.getBlockNumber()),
       timestamp: Math.floor(Date.now() / 1000),
       amountSettled: payload.amount,
     };
-  } catch (error) {
-    console.error('[x402] Settlement error:', error);
-    return {
-      settled: false,
-      error: error instanceof Error ? error.message : 'Settlement failed',
-    };
   }
+
+  const erc20Abi = parseAbi([
+    'function allowance(address owner, address spender) view returns (uint256)',
+    'function transferFrom(address from, address to, uint256 amount) returns (bool)',
+  ]);
+
+  const allowance = await publicClient.readContract({
+    address: payload.asset,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [account.address, payload.payTo],
+  });
+
+  const requiredAmount = BigInt(payload.amount);
+  
+  if (allowance < requiredAmount) {
+    return { settled: false, error: `Insufficient allowance: ${allowance} < ${requiredAmount}` };
+  }
+
+  const hash = await walletClient.writeContract({
+    address: payload.asset,
+    abi: erc20Abi,
+    functionName: 'transferFrom',
+    args: [account.address, payload.payTo, requiredAmount],
+  });
+
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+  return {
+    settled: true,
+    txHash: hash,
+    blockNumber: Number(receipt.blockNumber),
+    timestamp: Math.floor(Date.now() / 1000),
+    amountSettled: payload.amount,
+  };
 }
 
-/**
- * Get EIP-712 domain for a given network
- */
 export function getEIP712Domain(network: string) {
   const chainId = network === 'base-sepolia' ? 84532 : 
                   network === 'base' ? 8453 : 
@@ -350,16 +264,10 @@ export function getEIP712Domain(network: string) {
   };
 }
 
-/**
- * Get EIP-712 types for payment message
- */
 export function getEIP712Types() {
   return EIP712_TYPES;
 }
 
-/**
- * Create a payment payload ready for signing
- */
 export function createPaymentPayload(
   asset: Address,
   payTo: Address,
@@ -379,10 +287,6 @@ export function createPaymentPayload(
   };
 }
 
-/**
- * Sign a payment payload using EIP-712
- * For use by payment clients
- */
 export async function signPaymentPayload(
   payload: Omit<PaymentPayload, 'signature'>,
   privateKey: `0x${string}`
@@ -404,7 +308,6 @@ export async function signPaymentPayload(
     timestamp: BigInt(payload.timestamp),
   };
 
-  // Use the account's signTypedData method
   const signature = await account.signTypedData({
     domain,
     types: EIP712_TYPES,
@@ -418,29 +321,21 @@ export async function signPaymentPayload(
   };
 }
 
-/**
- * Calculate percentage-based fee
- */
 export function calculatePercentageFee(amount: bigint, basisPoints: number): bigint {
   return (amount * BigInt(basisPoints)) / BigInt(10000);
 }
 
-/**
- * Parse x402 payment header from request
- */
 export function parsePaymentHeader(headerValue: string | null): PaymentPayload | null {
   if (!headerValue) return null;
-  
   try {
-    return JSON.parse(headerValue) as PaymentPayload;
+    const parsed = JSON.parse(headerValue) as PaymentPayload;
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
-/**
- * Check if request has valid payment
- */
 export async function checkPayment(
   paymentHeader: string | null,
   requiredAmount: bigint,

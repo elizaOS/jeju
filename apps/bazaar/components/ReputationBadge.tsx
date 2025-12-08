@@ -1,8 +1,3 @@
-/**
- * Reputation Badge Component
- * Shows compact reputation indicators for traders
- */
-
 'use client';
 
 import { useReadContract } from 'wagmi';
@@ -10,9 +5,9 @@ import { Shield, AlertTriangle, Award, Zap } from 'lucide-react';
 import { Address } from 'viem';
 
 interface ReputationBadgeProps {
-  address: Address;
-  agentId?: bigint;
-  size?: 'sm' | 'md' | 'lg';
+  address: Address
+  agentId?: bigint
+  size?: 'sm' | 'md' | 'lg'
 }
 
 const LABEL_MANAGER_ABI = [

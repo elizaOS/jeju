@@ -1,0 +1,124 @@
+[
+  {
+    "type": "function",
+    "name": "modifyLiquidity",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "components": [
+          { "name": "currency0", "type": "address" },
+          { "name": "currency1", "type": "address" },
+          { "name": "fee", "type": "uint24" },
+          { "name": "tickSpacing", "type": "int24" },
+          { "name": "hooks", "type": "address" }
+        ]
+      },
+      {
+        "name": "params",
+        "type": "tuple",
+        "components": [
+          { "name": "tickLower", "type": "int24" },
+          { "name": "tickUpper", "type": "int24" },
+          { "name": "liquidityDelta", "type": "int256" },
+          { "name": "salt", "type": "bytes32" }
+        ]
+      },
+      { "name": "hookData", "type": "bytes" },
+      { "name": "settleUsingBurn", "type": "bool" },
+      { "name": "takeClaims", "type": "bool" }
+    ],
+    "outputs": [
+      { "name": "callerDelta", "type": "int256" },
+      { "name": "feesAccrued", "type": "int256" }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "getPosition",
+    "inputs": [
+      { "name": "poolId", "type": "bytes32" },
+      { "name": "owner", "type": "address" },
+      { "name": "tickLower", "type": "int24" },
+      { "name": "tickUpper", "type": "int24" },
+      { "name": "salt", "type": "bytes32" }
+    ],
+    "outputs": [
+      { "name": "liquidity", "type": "uint128" },
+      { "name": "feeGrowthInside0LastX128", "type": "uint256" },
+      { "name": "feeGrowthInside1LastX128", "type": "uint256" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "mint",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "components": [
+          { "name": "currency0", "type": "address" },
+          { "name": "currency1", "type": "address" },
+          { "name": "fee", "type": "uint24" },
+          { "name": "tickSpacing", "type": "int24" },
+          { "name": "hooks", "type": "address" }
+        ]
+      },
+      { "name": "tickLower", "type": "int24" },
+      { "name": "tickUpper", "type": "int24" },
+      { "name": "liquidity", "type": "uint256" },
+      { "name": "amount0Max", "type": "uint256" },
+      { "name": "amount1Max", "type": "uint256" },
+      { "name": "recipient", "type": "address" },
+      { "name": "deadline", "type": "uint256" }
+    ],
+    "outputs": [
+      { "name": "tokenId", "type": "uint256" },
+      { "name": "liquidity", "type": "uint128" },
+      { "name": "amount0", "type": "uint256" },
+      { "name": "amount1", "type": "uint256" }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "burn",
+    "inputs": [
+      { "name": "tokenId", "type": "uint256" },
+      { "name": "liquidity", "type": "uint128" },
+      { "name": "amount0Min", "type": "uint256" },
+      { "name": "amount1Min", "type": "uint256" },
+      { "name": "deadline", "type": "uint256" }
+    ],
+    "outputs": [
+      { "name": "amount0", "type": "uint256" },
+      { "name": "amount1", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "IncreaseLiquidity",
+    "inputs": [
+      { "name": "tokenId", "type": "uint256", "indexed": true },
+      { "name": "liquidity", "type": "uint128", "indexed": false },
+      { "name": "amount0", "type": "uint256", "indexed": false },
+      { "name": "amount1", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "DecreaseLiquidity",
+    "inputs": [
+      { "name": "tokenId", "type": "uint256", "indexed": true },
+      { "name": "liquidity", "type": "uint128", "indexed": false },
+      { "name": "amount0", "type": "uint256", "indexed": false },
+      { "name": "amount1", "type": "uint256", "indexed": false }
+    ]
+  }
+]
+
+
+

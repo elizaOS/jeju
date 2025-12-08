@@ -1,135 +1,83 @@
 /**
  * Multicoin Paymaster Integration for Indexer
- * Supports gas payments for query transactions
  */
 
-import { Address, createPublicClient, http, parseAbi, encodePacked } from 'viem';
+import { ethers } from 'ethers';
 
-const JEJU_CHAIN = {
-  id: 1337,
-  name: 'Jeju L3',
-  network: 'jeju',
-  nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-  rpcUrls: {
-    default: { http: [process.env.RPC_URL || 'http://localhost:9545'] },
-    public: { http: [process.env.RPC_URL || 'http://localhost:9545'] },
-  },
-};
-
-const PAYMASTER_FACTORY_ABI = parseAbi([
+const PAYMASTER_FACTORY_ABI = [
   'function getAllPaymasters() external view returns (address[] memory)',
   'function getPaymasterByToken(address token) external view returns (address)',
   'function paymasterStake(address paymaster) external view returns (uint256)',
-]);
+];
 
-const PAYMASTER_ABI = parseAbi([
+const PAYMASTER_ABI = [
   'function token() external view returns (address)',
-]);
-
-const PAYMASTER_FACTORY_ADDRESS = (process.env.PAYMASTER_FACTORY_ADDRESS ||
-  '0x0000000000000000000000000000000000000000') as Address;
+];
 
 const MIN_STAKE_THRESHOLD = BigInt(10) * BigInt(10 ** 18);
 
 export interface PaymasterInfo {
-  address: Address;
-  token: Address;
+  address: string;
+  token: string;
   stake: bigint;
   available: boolean;
 }
 
-function getPublicClient() {
-  return createPublicClient({
-    chain: JEJU_CHAIN,
-    transport: http(),
-  });
+function getProvider() {
+  const rpcUrl = process.env.RPC_URL;
+  if (!rpcUrl) throw new Error('RPC_URL environment variable is required');
+  return new ethers.JsonRpcProvider(rpcUrl);
 }
 
 export async function getAvailablePaymasters(minStake: bigint = MIN_STAKE_THRESHOLD): Promise<PaymasterInfo[]> {
-  if (PAYMASTER_FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000') {
-    return [];
-  }
+  const factoryAddress = process.env.PAYMASTER_FACTORY_ADDRESS;
+  if (!factoryAddress) return [];
 
-  try {
-    const client = getPublicClient();
-    
-    const paymasters = await client.readContract({
-      address: PAYMASTER_FACTORY_ADDRESS,
-      abi: PAYMASTER_FACTORY_ABI,
-      functionName: 'getAllPaymasters',
-    } as any) as Address[];
+  const provider = getProvider();
+  const factory = new ethers.Contract(factoryAddress, PAYMASTER_FACTORY_ABI, provider);
+  const paymasters: string[] = await factory.getAllPaymasters();
 
-    const paymasterDetails = await Promise.all(
-      paymasters.map(async (paymasterAddr) => {
-        try {
-          const [token, stake] = await Promise.all([
-            client.readContract({
-              address: paymasterAddr,
-              abi: PAYMASTER_ABI,
-              functionName: 'token',
-            } as any),
-            client.readContract({
-              address: PAYMASTER_FACTORY_ADDRESS,
-              abi: PAYMASTER_FACTORY_ABI,
-              functionName: 'paymasterStake',
-              args: [paymasterAddr],
-            } as any),
-          ]);
+  const paymasterDetails = await Promise.all(
+    paymasters.map(async (paymasterAddr) => {
+      const paymaster = new ethers.Contract(paymasterAddr, PAYMASTER_ABI, provider);
+      const [token, stake] = await Promise.all([
+        paymaster.token(),
+        factory.paymasterStake(paymasterAddr),
+      ]);
 
-          return {
-            address: paymasterAddr,
-            token: token as Address,
-            stake: stake as bigint,
-            available: (stake as bigint) >= minStake,
-          };
-        } catch {
-          return null;
-        }
-      })
-    );
+      return {
+        address: paymasterAddr,
+        token: token as string,
+        stake: stake as bigint,
+        available: (stake as bigint) >= minStake,
+      };
+    })
+  );
 
-    return paymasterDetails.filter((pm): pm is PaymasterInfo => pm !== null && pm.available);
-  } catch {
-    return [];
-  }
+  return paymasterDetails.filter(pm => pm.available);
 }
 
-export async function getPaymasterForToken(tokenAddress: Address): Promise<Address | null> {
-  if (PAYMASTER_FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000') {
-    return null;
-  }
+export async function getPaymasterForToken(tokenAddress: string): Promise<string | null> {
+  const factoryAddress = process.env.PAYMASTER_FACTORY_ADDRESS;
+  if (!factoryAddress) return null;
 
-  try {
-    const client = getPublicClient();
-    
-    const paymaster = await client.readContract({
-      address: PAYMASTER_FACTORY_ADDRESS,
-      abi: PAYMASTER_FACTORY_ABI,
-      functionName: 'getPaymasterByToken',
-      args: [tokenAddress],
-    } as any) as Address;
+  const provider = getProvider();
+  const factory = new ethers.Contract(factoryAddress, PAYMASTER_FACTORY_ABI, provider);
+  
+  const paymaster = await factory.getPaymasterByToken(tokenAddress);
+  const stake = await factory.paymasterStake(paymaster);
 
-    const stake = await client.readContract({
-      address: PAYMASTER_FACTORY_ADDRESS,
-      abi: PAYMASTER_FACTORY_ABI,
-      functionName: 'paymasterStake',
-      args: [paymaster],
-    } as any) as bigint;
-
-    return stake >= MIN_STAKE_THRESHOLD ? paymaster : null;
-  } catch {
-    return null;
-  }
+  return stake >= MIN_STAKE_THRESHOLD ? paymaster : null;
 }
 
 export function generatePaymasterData(
-  paymasterAddress: Address,
+  paymasterAddress: string,
   verificationGasLimit: bigint = BigInt(100000),
   postOpGasLimit: bigint = BigInt(50000)
-): `0x${string}` {
-  return encodePacked(
+): string {
+  return ethers.solidityPacked(
     ['address', 'uint128', 'uint128'],
-    [paymasterAddress, BigInt(verificationGasLimit), BigInt(postOpGasLimit)]
+    [paymasterAddress, verificationGasLimit, postOpGasLimit]
   );
 }
 
@@ -138,4 +86,3 @@ export const paymasterService = {
   getPaymasterForToken,
   generatePaymasterData,
 };
-

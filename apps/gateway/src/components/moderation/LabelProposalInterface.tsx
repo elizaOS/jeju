@@ -57,20 +57,16 @@ const LABEL_TYPES = [
   },
 ] as const;
 
-// REAL IPFS upload
-import { uploadToIPFS } from '../../../lib/ipfs';
+import { uploadToIPFS } from '../../lib/ipfs';
 
 const useIPFSUpload = () => {
   const [uploading, setUploading] = useState(false);
 
   const upload = async (file: File): Promise<string> => {
     setUploading(true);
-    try {
-      const hash = await uploadToIPFS(file);
-      return hash;
-    } finally {
-      setUploading(false);
-    }
+    const hash = await uploadToIPFS(file);
+    setUploading(false);
+    return hash;
   };
 
   return { upload, uploading };
@@ -107,12 +103,8 @@ export default function LabelProposalInterface({ targetAgentId, onSuccess }: Lab
     if (!file) return;
 
     setEvidenceFile(file);
-    try {
-      const hash = await uploadToIPFS(file);
-      setEvidenceHash(hash);
-    } catch (error) {
-      console.error('Upload failed:', error);
-    }
+    const hash = await uploadToIPFS(file);
+    setEvidenceHash(hash);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

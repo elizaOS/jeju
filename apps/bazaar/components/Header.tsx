@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
@@ -14,12 +15,14 @@ export function Header() {
 
   const navItems = [
     { href: '/', label: 'Home' },
-    { href: '/tokens', label: 'Tokens' },
+    { href: '/coins', label: 'Coins' },
     { href: '/swap', label: 'Swap' },
     { href: '/pools', label: 'Pools' },
-    { href: '/nfts', label: 'NFTs' },
-    { href: '/my-nfts', label: 'My NFTs' },
+    { href: '/markets', label: 'Markets' },
+    { href: '/items', label: 'Items' },
   ]
+  
+  const [showPortfolioDropdown, setShowPortfolioDropdown] = useState(false)
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10">
@@ -51,8 +54,8 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Wallet Connection */}
-          <div>
+          {/* Wallet Connection / Portfolio Widget */}
+          <div className="relative">
             {!isConnected ? (
               <button
                 onClick={() => connect({ connector: injected() })}
@@ -61,17 +64,49 @@ export function Header() {
                 Connect Wallet
               </button>
             ) : (
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-slate-300">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </div>
+              <>
                 <button
-                  onClick={() => disconnect()}
-                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition-all"
+                  onClick={() => setShowPortfolioDropdown(!showPortfolioDropdown)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
                 >
-                  Disconnect
+                  <div className="text-sm text-slate-300">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </div>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
-              </div>
+                
+                {/* Dropdown Menu */}
+                {showPortfolioDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowPortfolioDropdown(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-2 w-56 rounded-lg bg-slate-800 border border-white/10 shadow-xl z-50 overflow-hidden">
+                      <Link
+                        href="/portfolio"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors"
+                        onClick={() => setShowPortfolioDropdown(false)}
+                      >
+                        <span className="text-xl">📊</span>
+                        <span className="font-medium">View Portfolio</span>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          disconnect()
+                          setShowPortfolioDropdown(false)
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors text-left border-t border-white/10"
+                      >
+                        <span className="text-xl">🚪</span>
+                        <span className="font-medium">Disconnect</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>

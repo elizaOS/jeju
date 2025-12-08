@@ -5,7 +5,6 @@
 
 import { Page } from '@playwright/test';
 import { PNG } from 'pngjs';
-import { readFileSync } from 'fs';
 
 /**
  * Take screenshot and validate it's not blank
@@ -54,54 +53,40 @@ async function validateScreenshotHasContent(
   imageBuffer: Buffer,
   minColors: number = 10
 ): Promise<boolean> {
-  try {
-    const png = PNG.sync.read(imageBuffer);
-    const colorSet = new Set<string>();
-    
-    // Sample pixels (every 10th pixel to avoid performance issues)
-    for (let y = 0; y < png.height; y += 10) {
-      for (let x = 0; x < png.width; x += 10) {
-        const idx = (png.width * y + x) << 2;
-        const r = png.data[idx];
-        const g = png.data[idx + 1];
-        const b = png.data[idx + 2];
-        
-        // Create color key
-        colorSet.add(`${r},${g},${b}`);
-        
-        // Early exit if we have enough colors
-        if (colorSet.size >= minColors) {
-          return true;
-        }
+  const png = PNG.sync.read(imageBuffer);
+  const colorSet = new Set<string>();
+  
+  for (let y = 0; y < png.height; y += 10) {
+    for (let x = 0; x < png.width; x += 10) {
+      const idx = (png.width * y + x) << 2;
+      const r = png.data[idx];
+      const g = png.data[idx + 1];
+      const b = png.data[idx + 2];
+      
+      colorSet.add(`${r},${g},${b}`);
+      
+      if (colorSet.size >= minColors) {
+        return true;
       }
     }
-    
-    // If we have fewer than minColors unique colors, likely blank
-    return colorSet.size >= minColors;
-  } catch (error) {
-    console.error('Screenshot validation error:', error);
-    return false; // Fail safe - if we can't validate, assume invalid
   }
+  
+  return colorSet.size >= minColors;
 }
 
 /**
  * Assert page has loaded content (not blank white screen)
  */
 export async function assertPageLoaded(page: Page, expectedText?: string): Promise<void> {
-  // Wait for any content to appear
   await page.waitForLoadState('domcontentloaded');
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
-    // Network might not be idle if streams are open, that's ok
-  });
+  await page.waitForLoadState('networkidle', { timeout: 10000 });
   
-  // Check body has content
   const bodyText = await page.locator('body').textContent();
   
   if (!bodyText || bodyText.trim().length === 0) {
     throw new Error('Page appears blank - no text content in body');
   }
   
-  // If expected text provided, verify it's present
   if (expectedText && !bodyText.includes(expectedText)) {
     throw new Error(`Page missing expected text: "${expectedText}". Got: "${bodyText.substring(0, 200)}..."`);
   }

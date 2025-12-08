@@ -1,5 +1,5 @@
 import { Address } from 'viem'
-import tokenList from '../../../config/jeju-tokens.json'
+import tokenConfig from '../../../packages/config/tokens.json'
 
 export interface TokenInfo {
   address: Address | string
@@ -10,11 +10,14 @@ export interface TokenInfo {
   logoUrl?: string
   tags?: string[]
   description?: string
+  priceUSD?: number
+  hasPaymaster?: boolean
 }
 
-export const TOKENS: Record<string, TokenInfo> = tokenList.tokens as Record<string, TokenInfo>
+export const TOKENS: Record<string, TokenInfo> = tokenConfig.tokens as Record<string, TokenInfo>
 
 export const NATIVE_TOKEN: TokenInfo = TOKENS.ETH
+
 export const WRAPPED_NATIVE: TokenInfo = TOKENS.WETH
 
 export function getTokenBySymbol(symbol: string): TokenInfo | undefined {
@@ -31,8 +34,14 @@ export function getAllTokens(): TokenInfo[] {
   return Object.values(TOKENS)
 }
 
+export function getPaymasterTokens(): TokenInfo[] {
+  return getAllTokens().filter((token) => token.hasPaymaster)
+}
+
 export function isTokenDeployed(token: TokenInfo): boolean {
-  return !token.address.startsWith('TBD_')
+  if (!token.address) return false
+  if (typeof token.address !== 'string') return false
+  return !token.address.startsWith('TBD_') && token.address !== '0x'
 }
 
 export function getDeployedTokens(): TokenInfo[] {

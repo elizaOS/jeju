@@ -1,5 +1,5 @@
 {
-  "$schema": "../../jeju-manifest.schema.json",
+  "$schema": "../../packages/config/jeju-manifest.schema.json",
   "name": "bazaar",
   "displayName": "Bazaar",
   "version": "1.0.0",
@@ -22,5 +22,16 @@
   "healthCheck": {
     "url": "http://localhost:4006",
     "interval": 30000
+  },
+  "agent": {
+    "enabled": true,
+    "a2aEndpoint": "/api/a2a",
+    "tags": ["jeju-app", "defi", "nft", "marketplace", "launchpad"],
+    "metadata": {
+      "category": "defi",
+      "provider": "jeju-network"
+    },
+    "trustModels": ["open"],
+    "x402Support": true
   }
 }

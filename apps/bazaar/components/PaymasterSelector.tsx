@@ -1,13 +1,7 @@
-/**
- * Paymaster Selector Component
- * Allows users to choose which token to use for gas payments
- */
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Address, parseEther } from 'viem';
-import { ChevronDown, Check, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronDown, Check, Loader2 } from 'lucide-react';
 import { getPaymasterOptions, type PaymasterOption } from '@/lib/paymaster';
 
 interface PaymasterSelectorProps {
@@ -27,31 +21,22 @@ export default function PaymasterSelector({
   const [selected, setSelected] = useState<PaymasterOption | null>(null);
   const [options, setOptions] = useState<PaymasterOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPaymasters();
   }, [estimatedGas, gasPrice]);
 
   async function loadPaymasters() {
-    try {
-      setLoading(true);
-      setError(null);
-      const paymasterOptions = await getPaymasterOptions(estimatedGas, gasPrice);
-      setOptions(paymasterOptions);
-      
-      // Auto-select recommended option
-      const recommended = paymasterOptions.find(opt => opt.recommended);
-      if (recommended) {
-        setSelected(recommended);
-        onSelect(recommended);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load paymasters');
-      console.error('Error loading paymasters:', err);
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    const paymasterOptions = await getPaymasterOptions(estimatedGas, gasPrice);
+    setOptions(paymasterOptions);
+    
+    const recommended = paymasterOptions.find(opt => opt.recommended);
+    if (recommended) {
+      setSelected(recommended);
+      onSelect(recommended);
     }
+    setLoading(false);
   }
 
   function handleSelect(option: PaymasterOption) {
@@ -72,26 +57,6 @@ export default function PaymasterSelector({
         <div className="flex items-center gap-2 text-gray-500">
           <Loader2 className="animate-spin" size={16} />
           <span className="text-sm">Loading payment options...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={`border border-red-200 bg-red-50 rounded-lg p-4 ${className}`}>
-        <div className="flex items-start gap-2 text-red-600">
-          <AlertCircle size={16} className="mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium">Failed to load payment options</p>
-            <p className="text-red-500 mt-1">{error}</p>
-            <button
-              onClick={loadPaymasters}
-              className="mt-2 text-red-600 hover:text-red-700 underline text-xs"
-            >
-              Try again
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -197,11 +162,6 @@ export default function PaymasterSelector({
               </button>
             ))}
 
-            {options.length === 0 && (
-              <div className="px-4 py-3 text-center text-sm text-gray-500">
-                No paymasters available
-              </div>
-            )}
           </div>
         </>
       )}

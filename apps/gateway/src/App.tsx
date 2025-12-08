@@ -31,13 +31,6 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
-// Log configuration for debugging
-console.log('🌉 Gateway Portal - Multi-Token System');
-console.log('  Chain ID:', chainId);
-console.log('  RPC URL:', rpcUrl, '(STATIC PORT - never changes)');
-console.log('  Native Token: elizaOS (Jeju) 🏝️');
-console.log('  Bridgeable Tokens: CLANKER, VIRTUAL, CLANKERMON (from Base)');
-console.log('  + ANY custom ERC20 token from Base network');
 
 export default function App() {
   return (

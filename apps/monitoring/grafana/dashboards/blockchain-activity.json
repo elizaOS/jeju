@@ -70,7 +70,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT COUNT(*) as total FROM transaction WHERE $__timeFilter(block.timestamp) AND block.id = transaction.block_id",
+          "rawSql": "SELECT COUNT(*) as total FROM transaction t JOIN block b ON t.block_id = b.id WHERE b.timestamp > NOW() - INTERVAL '24 hours'",
           "format": "table"
         }
       ],
@@ -441,17 +441,17 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  date as time,\n  transaction_count as \"Transactions\"\nFROM daily_activity\nWHERE $__timeFilter(date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', b.timestamp) as time,\n  COUNT(*) as \"Transactions\"\nFROM transaction t\nJOIN block b ON t.block_id = b.id\nWHERE $__timeFilter(b.timestamp)\nGROUP BY time\nORDER BY time",
           "format": "time_series",
           "refId": "A"
         },
         {
-          "rawSql": "SELECT \n  date as time,\n  unique_senders as \"Unique Senders\"\nFROM daily_activity\nWHERE $__timeFilter(date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', b.timestamp) as time,\n  COUNT(DISTINCT t.from_id) as \"Unique Senders\"\nFROM transaction t\nJOIN block b ON t.block_id = b.id\nWHERE $__timeFilter(b.timestamp)\nGROUP BY time\nORDER BY time",
           "format": "time_series",
           "refId": "B"
         },
         {
-          "rawSql": "SELECT \n  date as time,\n  contract_deployments as \"Contract Deployments\"\nFROM daily_activity\nWHERE $__timeFilter(date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', first_seen_at) as time,\n  COUNT(*) as \"Contract Deployments\"\nFROM contract\nWHERE $__timeFilter(first_seen_at)\nGROUP BY time\nORDER BY time",
           "format": "time_series",
           "refId": "C"
         }

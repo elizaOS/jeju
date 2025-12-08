@@ -8,16 +8,11 @@ const BASE_URL = process.env.IPFS_API_URL || 'http://localhost:3100';
 
 describe('IPFS A2A Agent', () => {
   beforeAll(async () => {
-    // Wait for service to be ready
-    let retries = 5;
-    while (retries > 0) {
-      try {
-        const response = await fetch(`${BASE_URL}/health`);
-        if (response.ok) break;
-      } catch (e) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        retries--;
-      }
+    // Wait for service to be ready with simple polling
+    for (let i = 0; i < 5; i++) {
+      const response = await fetch(`${BASE_URL}/health`).catch(() => null);
+      if (response?.ok) break;
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   });
 

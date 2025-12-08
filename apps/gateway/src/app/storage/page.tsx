@@ -6,8 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { useAccount, useReadContract } from 'wagmi';
 import { Upload, Folder, DollarSign, Clock, HardDrive } from 'lucide-react';
 
 const FILE_STORAGE_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_FILE_STORAGE_MANAGER_ADDRESS as `0x${string}`;
@@ -97,7 +96,7 @@ export default function StorageManagerPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'upload' | 'files' | 'funding')}
                   className={`py-4 px-2 border-b-2 transition-colors ${
                     activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
@@ -143,33 +142,26 @@ function UploadSection() {
     if (!file) return;
 
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+    
+    const formData = new FormData();
+    formData.append('file', file);
 
-      const response = await fetch(`${JEJU_IPFS_API}/upload`, {
-        method: 'POST',
-        headers: {
-          'X-Duration-Months': duration.toString(),
-        },
-        body: formData,
-      });
+    const response = await fetch(`${JEJU_IPFS_API}/upload`, {
+      method: 'POST',
+      headers: {
+        'X-Duration-Months': duration.toString(),
+      },
+      body: formData,
+    });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      setCID(result.cid);
-      
-      // TODO: Record on-chain via FileStorageManager
-      
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert(`Upload failed: ${error}`);
-    } finally {
+    if (!response.ok) {
       setUploading(false);
+      throw new Error(`Upload failed: ${response.statusText}`);
     }
+
+    const result = await response.json();
+    setCID(result.cid);
+    setUploading(false);
   };
 
   return (

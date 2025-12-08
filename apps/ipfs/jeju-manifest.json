@@ -1,5 +1,5 @@
 {
-  "$schema": "../../jeju-manifest.schema.json",
+  "$schema": "../../packages/config/jeju-manifest.schema.json",
   "name": "ipfs",
   "displayName": "Jeju IPFS Storage Service",
   "version": "1.0.0",
@@ -20,6 +20,17 @@
   "optional": true,
   "enabled": true,
   "autoStart": false,
-  "tags": ["storage", "ipfs", "files", "x402", "micropayments", "infrastructure", "a2a"]
+  "tags": ["storage", "ipfs", "files", "x402", "micropayments", "infrastructure", "a2a"],
+  "agent": {
+    "enabled": true,
+    "a2aEndpoint": "/a2a",
+    "tags": ["jeju-app", "storage", "ipfs", "files"],
+    "metadata": {
+      "category": "storage",
+      "provider": "jeju-network"
+    },
+    "trustModels": ["open"],
+    "x402Support": true
+  }
 }
 

@@ -4,7 +4,7 @@
 
 import { testWithSynpress } from '@synthetixio/synpress';
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
-import basicSetup from './wallet-setup/basic.setup';
+import { basicSetup } from '../../synpress.config'
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
 const { expect } = test;
@@ -26,7 +26,7 @@ test.describe('Gateway Smoke Tests', () => {
     
     // Select MetaMask
     const metaMaskOption = page.locator('text="MetaMask"');
-    if (await metaMaskOption.isVisible().catch(() => false)) {
+    if (await metaMaskOption.isVisible()) {
       await metaMaskOption.click();
     }
     

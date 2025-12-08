@@ -1,9 +1,3 @@
-/**
- * A2A (Agent-to-Agent) JSON-RPC endpoint for Bazaar
- * Enables autonomous agents to discover and interact with the marketplace
- * Implements x402 micropayments for premium features
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getJejuTokens, getLatestBlocks, getTokenTransfers, getTokenHolders, getContractDetails } from '@/lib/indexer-client';
 import { 
@@ -14,14 +8,12 @@ import {
 } from '@/lib/x402';
 import { Address } from 'viem';
 
-// CORS headers for A2A cross-origin requests
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, X-Payment',
 };
 
-// Recipient address for x402 payments
 const PAYMENT_RECIPIENT = (process.env.NEXT_PUBLIC_BAZAAR_PAYMENT_RECIPIENT || 
   '0x0000000000000000000000000000000000000000') as Address;
 
@@ -61,10 +53,6 @@ interface A2AResponse {
   };
 }
 
-/**
- * Execute a skill and return results
- * Some skills require payment via x402
- */
 async function executeSkill(
   skillId: string, 
   params: Record<string, unknown>,

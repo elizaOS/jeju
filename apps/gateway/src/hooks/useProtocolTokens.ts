@@ -1,7 +1,7 @@
 /**
  * Hook to load protocol tokens configuration
  * 
- * Loads from protocol-tokens.json and provides typed access
+ * Provides typed access to protocol tokens
  */
 
 import { useMemo } from 'react';

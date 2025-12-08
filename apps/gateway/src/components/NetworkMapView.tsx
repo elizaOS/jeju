@@ -34,21 +34,11 @@
  * IMPACT: None on core node staking functionality
  */
 
-import { useEffect, useRef } from 'react';
-import { useNodeStaking } from '../hooks/useNodeStaking';
+import { useRef } from 'react';
 
 export default function NetworkMapView() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const { operatorNodeIds } = useNodeStaking();
-  
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    // PLACEHOLDER - V2 feature
-    const nodeCount = operatorNodeIds?.length || 0;
-    console.log('Network map (V2): Nodes to display:', nodeCount);
-  }, [operatorNodeIds]);
-  
+
   return (
     <div className="card">
       <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>

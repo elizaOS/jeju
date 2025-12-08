@@ -1,32 +1,61 @@
 /**
- * Protocol Token configuration and utilities
+ * @fileoverview Protocol token configuration for Gateway multi-token system
+ * @module gateway/lib/tokens
  * 
- * ONLY includes tokens with deployed paymasters.
- * These are the tokens users can:
- * - Bridge from Base to Jeju
- * - Use to pay for gas
- * - Earn as LP rewards by providing ETH
+ * Manages the list of protocol tokens that have deployed paymaster infrastructure.
+ * These tokens can be bridged from Base, used for gas payments, and earn LP rewards.
+ * 
+ * Features:
+ * - elizaOS, CLANKER, VIRTUAL, CLANKERMON support
+ * - Paymaster address tracking
+ * - Vault and distributor integration
+ * - Base bridge address mapping
+ * 
+ * @example Get protocol tokens
+ * ```typescript
+ * import { getProtocolTokens, getTokenBySymbol } from '@/lib/tokens';
+ * 
+ * const tokens = getProtocolTokens();
+ * const elizaOS = getTokenBySymbol('elizaOS');
+ * console.log('Paymaster:', elizaOS?.paymasterAddress);
+ * ```
  */
 
 import type { TokenOption } from '../components/TokenSelector';
 
+/**
+ * Extended token configuration with paymaster infrastructure
+ */
 export interface ProtocolToken extends TokenOption {
+  /** Whether this token has a deployed paymaster */
   hasPaymaster: boolean;
+  /** Whether this token is bridged from Base */
   bridged: boolean;
+  /** Original chain where token was deployed */
   originChain: string;
+  /** Token address on Base (if bridged) */
   baseAddress?: string;
+  /** Liquidity vault address for this token */
   vaultAddress?: string;
+  /** Fee distributor address for this token */
   distributorAddress?: string;
+  /** Paymaster contract address for this token */
   paymasterAddress?: string;
 }
 
 /**
  * Get all protocol tokens (tokens with paymasters only)
  * 
- * This is the curated list of tokens that:
- * - Have deployed paymaster infrastructure
- * - Can be used for gas payments
- * - Reward ETH LPs with token fees
+ * Returns the curated list of tokens that have full paymaster infrastructure
+ * deployed. These tokens can be used for gas payments and LP rewards.
+ * 
+ * @returns Array of token options for UI display
+ * 
+ * @example
+ * ```typescript
+ * const tokens = getAllTokens();
+ * console.log(`${tokens.length} tokens available`);
+ * ```
  */
 export function getAllTokens(): TokenOption[] {
   return getProtocolTokens().map(t => ({
@@ -40,7 +69,19 @@ export function getAllTokens(): TokenOption[] {
 }
 
 /**
- * Get full protocol token configs (with paymaster addresses)
+ * Get full protocol token configurations with paymaster addresses
+ * 
+ * Returns complete token configurations including vault, distributor,
+ * and paymaster addresses. Filters out zero addresses in production.
+ * 
+ * @returns Array of complete protocol token configurations
+ * 
+ * @example
+ * ```typescript
+ * const tokens = getProtocolTokens();
+ * const elizaOS = tokens.find(t => t.symbol === 'elizaOS');
+ * console.log('Vault:', elizaOS?.vaultAddress);
+ * ```
  */
 export function getProtocolTokens(): ProtocolToken[] {
   const allTokens = [
@@ -111,10 +152,32 @@ export function getProtocolTokens(): ProtocolToken[] {
   return allTokens.filter(t => t.address !== '0x0000000000000000000000000000000000000000');
 }
 
+/**
+ * Get protocol token by symbol
+ * 
+ * @param symbol - Token symbol to search for (case-insensitive)
+ * @returns Token option or undefined if not found
+ * 
+ * @example
+ * ```typescript
+ * const usdc = getTokenBySymbol('elizaOS');
+ * ```
+ */
 export function getTokenBySymbol(symbol: string): TokenOption | undefined {
   return getAllTokens().find(t => t.symbol.toLowerCase() === symbol.toLowerCase());
 }
 
+/**
+ * Get protocol token by contract address
+ * 
+ * @param address - Token contract address (case-insensitive)
+ * @returns Token option or undefined if not found
+ * 
+ * @example
+ * ```typescript
+ * const token = getTokenByAddress('0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+ * ```
+ */
 export function getTokenByAddress(address: string): TokenOption | undefined {
   return getAllTokens().find(t => t.address.toLowerCase() === address.toLowerCase());
 }

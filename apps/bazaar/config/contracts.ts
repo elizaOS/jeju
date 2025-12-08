@@ -1,9 +1,6 @@
 import { Address } from 'viem'
 import { JEJU_CHAIN_ID } from './chains'
 
-// Import deployment files
-// NOTE: For localnet (chain 1337), use uniswap-v4-1337.json
-// For testnet, use the chain-specific file (e.g., uniswap-v4-420691.json for Base Sepolia)
 import v4Deployment from '../../../contracts/deployments/uniswap-v4-1337.json'
 import factoryDeployment from '../../../contracts/deployments/erc20-factory-1337.json'
 import marketplaceDeployment from '../../../contracts/deployments/bazaar-marketplace-1337.json'
@@ -21,41 +18,58 @@ export interface NFTContracts {
   hyperscapeItems?: Address
   hyperscapeGold?: Address
   marketplace?: Address
+  tradeEscrow?: Address
+  gameAgentId?: number
 }
 
 export interface TokenFactoryContracts {
   erc20Factory: Address
 }
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address
+
 export const V4_CONTRACTS: Record<number, V4Contracts> = {
-  [JEJU_CHAIN_ID]: {
-    poolManager: v4Deployment.poolManager as Address,
+  1337: {
+    poolManager: ((v4Deployment as Record<string, string>).poolManager || ZERO_ADDRESS) as Address,
     weth: v4Deployment.weth as Address,
-    // Periphery contracts deployed automatically during `bun run dev`
-    swapRouter: v4Deployment.swapRouter as Address | undefined,
-    positionManager: v4Deployment.positionManager as Address | undefined,
-    quoterV4: v4Deployment.quoterV4 as Address | undefined,
-    stateView: v4Deployment.stateView as Address | undefined,
+    swapRouter: v4Deployment.swapRouter as Address,
+    positionManager: v4Deployment.positionManager as Address,
+    quoterV4: v4Deployment.quoterV4 as Address,
+    stateView: v4Deployment.stateView as Address,
+  },
+  420691: {
+    poolManager: ((v4Deployment as Record<string, string>).poolManager || ZERO_ADDRESS) as Address,
+    weth: v4Deployment.weth as Address,
+    swapRouter: v4Deployment.swapRouter as Address,
+    positionManager: v4Deployment.positionManager as Address,
+    quoterV4: v4Deployment.quoterV4 as Address,
+    stateView: v4Deployment.stateView as Address,
   },
 }
+
+const marketplaceData = marketplaceDeployment as Record<string, string>
 
 export const NFT_CONTRACTS: Record<number, NFTContracts> = {
   1337: {
-    marketplace: marketplaceDeployment.marketplace as Address,
-    hyperscapeGold: marketplaceDeployment.goldToken as Address,
+    marketplace: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
+    hyperscapeGold: (marketplaceData.goldToken || marketplaceData.Token || ZERO_ADDRESS) as Address,
+    hyperscapeItems: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
   },
   [JEJU_CHAIN_ID]: {
-    marketplace: marketplaceDeployment.marketplace as Address,
-    hyperscapeGold: marketplaceDeployment.goldToken as Address,
+    marketplace: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
+    hyperscapeGold: (marketplaceData.goldToken || marketplaceData.Token || ZERO_ADDRESS) as Address,
+    hyperscapeItems: (marketplaceData.marketplace || marketplaceData.at || ZERO_ADDRESS) as Address,
   },
 }
 
+const factoryData = factoryDeployment as Record<string, string>
+
 export const TOKEN_FACTORY_CONTRACTS: Record<number, TokenFactoryContracts> = {
   1337: {
-    erc20Factory: factoryDeployment.factory as Address,
+    erc20Factory: (factoryData.factory || factoryData.at || ZERO_ADDRESS) as Address,
   },
   [JEJU_CHAIN_ID]: {
-    erc20Factory: factoryDeployment.factory as Address,
+    erc20Factory: (factoryData.factory || factoryData.at || ZERO_ADDRESS) as Address,
   },
 }
 

@@ -35,12 +35,12 @@ async function deployCloudReputationProvider(
   // For now, we'll assume it's already compiled
   const artifactPath = path.join(
     __dirname,
-    '../contracts/out/CloudReputationProvider.sol/CloudReputationProvider.json'
+    '../packages/contracts/out/CloudReputationProvider.sol/CloudReputationProvider.json'
   );
   
   if (!fs.existsSync(artifactPath)) {
     throw new Error(
-      'CloudReputationProvider not compiled. Run: cd contracts && forge build'
+      'CloudReputationProvider not compiled. Run: cd packages/contracts && forge build'
     );
   }
   
@@ -133,7 +133,7 @@ async function main() {
   
   // Load deployment addresses
   const addressesPath = process.env.ADDRESSES_FILE || 
-    path.join(__dirname, '../contracts/deployments/localnet-addresses.json');
+    path.join(__dirname, '../packages/contracts/deployments/localnet-addresses.json');
   
   if (!fs.existsSync(addressesPath)) {
     throw new Error(`Deployment addresses not found at: ${addressesPath}`);

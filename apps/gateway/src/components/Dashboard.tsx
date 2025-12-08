@@ -1,20 +1,22 @@
 import { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
-import { Wallet, Factory, DropletIcon, BarChart3, Combine, Server, Book } from 'lucide-react';
+import { Wallet, Factory, DropletIcon, BarChart3, Zap, Server, Book, Waves } from 'lucide-react';
 import TokenList from './TokenList';
 import RegisterToken from './RegisterToken';
 import DeployPaymaster from './DeployPaymaster';
 import AddLiquidity from './AddLiquidity';
 import LPDashboard from './LPDashboard';
-import BridgeToken from './BridgeToken';
+import CrossChainTransfer from './CrossChainTransfer';
+import XLPDashboard from './XLPDashboard';
+import EILStats from './EILStats';
 import MultiTokenBalanceDisplay from './MultiTokenBalanceDisplay';
 import NodeStakingTab from './NodeStakingTab';
 import RegistryTab from './RegistryTab';
 
 export default function Dashboard() {
   const { isConnected } = useAccount();
-  const [activeTab, setActiveTab] = useState<'tokens' | 'deploy' | 'liquidity' | 'earnings' | 'bridge' | 'nodes' | 'registry'>('tokens');
+  const [activeTab, setActiveTab] = useState<'tokens' | 'deploy' | 'liquidity' | 'earnings' | 'transfer' | 'xlp' | 'nodes' | 'registry'>('tokens');
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -45,7 +47,7 @@ export default function Dashboard() {
             <Wallet size={64} style={{ margin: '0 auto 1rem', color: '#667eea' }} />
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Connect Your Wallet</h2>
             <p style={{ color: '#64748b', marginBottom: '2rem' }}>
-              Bridge tokens from Base, deploy paymasters, add liquidity, and earn token rewards
+              Instant cross-chain transfers, deploy paymasters, add liquidity, and earn token rewards
             </p>
             <ConnectButton />
           </div>
@@ -64,11 +66,18 @@ export default function Dashboard() {
                 Registered Tokens
               </button>
               <button
-                className={`button ${activeTab === 'bridge' ? '' : 'button-secondary'}`}
-                onClick={() => setActiveTab('bridge')}
+                className={`button ${activeTab === 'transfer' ? '' : 'button-secondary'}`}
+                onClick={() => setActiveTab('transfer')}
               >
-                <Combine size={18} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                Bridge from Base
+                <Zap size={18} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                Cross-Chain Transfer
+              </button>
+              <button
+                className={`button ${activeTab === 'xlp' ? '' : 'button-secondary'}`}
+                onClick={() => setActiveTab('xlp')}
+              >
+                <Waves size={18} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                XLP Dashboard
               </button>
               <button
                 className={`button ${activeTab === 'deploy' ? '' : 'button-secondary'}`}
@@ -116,7 +125,13 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-            {activeTab === 'bridge' && <BridgeToken />}
+            {activeTab === 'transfer' && (
+              <div>
+                <EILStats />
+                <CrossChainTransfer />
+              </div>
+            )}
+            {activeTab === 'xlp' && <XLPDashboard />}
             {activeTab === 'deploy' && <DeployPaymaster />}
             {activeTab === 'liquidity' && <AddLiquidity />}
             {activeTab === 'earnings' && <LPDashboard />}

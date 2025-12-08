@@ -42,8 +42,8 @@ if (stopResult.exitCode === 0) {
 console.log("2️⃣  Removing Build Artifacts...");
 
 const pathsToClean = [
-  "contracts/out",
-  "contracts/cache",
+  "packages/contracts/out",
+  "packages/contracts/cache",
   "apps/indexer/lib",
   "apps/indexer/.sqd",
   "apps/node-explorer/dist",

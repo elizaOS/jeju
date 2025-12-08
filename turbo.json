@@ -29,7 +29,12 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "globalDependencies": [
+    "packages/contracts/deployments/**",
+    "packages/config/**/*.json",
+    "types/**/*.ts"
+  ]
 }
 
 

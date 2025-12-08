@@ -1,6 +1,21 @@
+/**
+ * Gateway contract ABIs and addresses
+ * 
+ * Provides minimal ABI definitions needed for frontend interactions with:
+ * - Token Registry
+ * - Paymaster Factory
+ * - Liquidity Vaults
+ * - ERC20 tokens
+ * 
+ * @module gateway/lib/contracts
+ */
+
 import { Address } from 'viem';
 
-// Contract ABIs (minimal for frontend needs)
+/**
+ * Token Registry contract ABI
+ * Handles token registration and configuration
+ */
 export const TOKEN_REGISTRY_ABI = [
   {
     type: 'function',
@@ -57,6 +72,10 @@ export const TOKEN_REGISTRY_ABI = [
   }
 ] as const;
 
+/**
+ * Paymaster Factory contract ABI
+ * Deploys and manages paymaster infrastructure
+ */
 export const PAYMASTER_FACTORY_ABI = [
   {
     type: 'function',
@@ -103,6 +122,10 @@ export const PAYMASTER_FACTORY_ABI = [
   }
 ] as const;
 
+/**
+ * Liquidity Vault contract ABI
+ * Manages ETH and token liquidity for paymasters
+ */
 export const LIQUIDITY_VAULT_ABI = [
   {
     type: 'function',
@@ -140,6 +163,9 @@ export const LIQUIDITY_VAULT_ABI = [
   }
 ] as const;
 
+/**
+ * Standard ERC20 token ABI
+ */
 export const IERC20_ABI = [
   {
     type: 'function',
@@ -170,17 +196,17 @@ export const IERC20_ABI = [
   }
 ] as const;
 
-// Contract addresses (loaded from deployment files or env)
+/**
+ * Get deployed contract addresses from environment
+ * 
+ * @returns Contract addresses for token registry, paymaster factory, and price oracle
+ */
 export const getContractAddresses = (): {
   tokenRegistry: Address;
   paymasterFactory: Address;
   priceOracle: Address;
-} => {
-  // These would be loaded from deployment files in production
-  // For now, return placeholder that will be set after deployment
-  return {
-    tokenRegistry: (import.meta.env.VITE_TOKEN_REGISTRY_ADDRESS || '0x0000000000000000000000000000000000000000') as Address,
-    paymasterFactory: (import.meta.env.VITE_PAYMASTER_FACTORY_ADDRESS || '0x0000000000000000000000000000000000000000') as Address,
-    priceOracle: (import.meta.env.VITE_PRICE_ORACLE_ADDRESS || '0x0000000000000000000000000000000000000000') as Address
-  };
-};
+} => ({
+  tokenRegistry: (import.meta.env.VITE_TOKEN_REGISTRY_ADDRESS || '0x0000000000000000000000000000000000000000') as Address,
+  paymasterFactory: (import.meta.env.VITE_PAYMASTER_FACTORY_ADDRESS || '0x0000000000000000000000000000000000000000') as Address,
+  priceOracle: (import.meta.env.VITE_PRICE_ORACLE_ADDRESS || '0x0000000000000000000000000000000000000000') as Address,
+});

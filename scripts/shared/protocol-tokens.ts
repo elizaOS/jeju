@@ -1,47 +1,76 @@
 /**
  * Protocol Token Configuration Utility
  * 
- * Loads and manages protocol-tokens.json configuration
+ * Loads and manages tokens.json configuration
  */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-interface ProtocolTokenConfig {
-  symbol: string;
-  name: string;
+interface TokenMarketData {
+  marketCapUSD?: number;
+  volumeUSD24h?: number;
+  holders?: number;
+  maxSupply?: number;
+  circulatingSupply?: number;
+}
+
+interface TokenDexPools {
+  uniswapV3?: {
+    feeTiers: number[];
+    primaryPair: string;
+  };
+}
+
+interface TokenBridgeConfig {
+  enabled: boolean;
+  minAmount: string;
+  estimatedTime: number;
+}
+
+interface DeployedContracts {
+  vault: string;
+  distributor: string;
+  paymaster: string;
+}
+
+export interface TokenConfig {
   address: string;
+  name: string;
+  symbol: string;
   decimals: number;
   isNative: boolean;
-  description: string;
-  priceUSD: number;
+  description?: string;
+  priceUSD?: number;
   hasPaymaster: boolean;
-  bridged: boolean;
-  originChain: string;
+  bridged?: boolean;
+  originChain?: string;
   baseAddress?: string;
   logoUrl: string;
   website?: string;
   tags: string[];
-  deployedContracts: {
-    vault: string;
-    distributor: string;
-    paymaster: string;
-  };
-  bridge?: {
-    enabled: boolean;
-    minAmount: string;
-    estimatedTime: number;
-  };
+  marketData?: TokenMarketData;
+  dexPools?: TokenDexPools;
+  deployedContracts?: DeployedContracts;
+  bridge?: TokenBridgeConfig;
 }
 
-interface ProtocolTokensManifest {
+interface TokensManifest {
   version: string;
-  description: string;
   lastUpdated: string;
-  tokens: ProtocolTokenConfig[];
-  eligibility: {
-    description: string;
-    requirements: string[];
+  chains: Record<string, { chainId: number; name: string }>;
+  tokens: Record<string, TokenConfig>;
+  oracle: {
+    chainlinkETHUSD: string;
+    uniswapV3Factory: string;
+    weth: string;
+    updateFrequency: number;
+    priceDeviationThreshold: number;
+  };
+  bridge: {
+    standardBridge: string;
+    crossDomainMessenger: string;
+    estimatedConfirmationTime: number;
   };
   lpRewards: {
     description: string;
@@ -51,46 +80,57 @@ interface ProtocolTokensManifest {
       ethLPShare: number;
       tokenLPShare: number;
     };
-    example: Record<string, string>;
   };
 }
 
-let manifestCache: ProtocolTokensManifest | null = null;
+let manifestCache: TokensManifest | null = null;
 
 /**
- * Load protocol tokens configuration
+ * Load tokens configuration
  */
-export function loadProtocolTokens(): ProtocolTokensManifest {
+export function loadTokensConfig(): TokensManifest {
   if (!manifestCache) {
-    const configPath = join(process.cwd(), 'config', 'protocol-tokens.json');
+    const configPath = join(process.cwd(), 'config', 'tokens.json');
     manifestCache = JSON.parse(readFileSync(configPath, 'utf-8'));
   }
   return manifestCache!;
 }
 
 /**
- * Get all protocol tokens
+ * Get all tokens
  */
-export function getAllProtocolTokens(): ProtocolTokenConfig[] {
-  const manifest = loadProtocolTokens();
-  return manifest.tokens;
+export function getAllTokens(): TokenConfig[] {
+  const manifest = loadTokensConfig();
+  return Object.values(manifest.tokens);
 }
 
 /**
- * Get protocol token by symbol
+ * Get tokens with paymaster support
  */
-export function getProtocolToken(symbolOrAddress: string): ProtocolTokenConfig | null {
-  const tokens = getAllProtocolTokens();
+export function getPaymasterTokens(): TokenConfig[] {
+  return getAllTokens().filter(t => t.hasPaymaster);
+}
+
+/**
+ * Get token by symbol or address
+ */
+export function getToken(symbolOrAddress: string): TokenConfig | null {
+  const manifest = loadTokensConfig();
   
-  // Try by symbol
-  for (const token of tokens) {
-    if (token.symbol.toLowerCase() === symbolOrAddress.toLowerCase()) {
+  // Try by symbol (key)
+  if (manifest.tokens[symbolOrAddress]) {
+    return manifest.tokens[symbolOrAddress];
+  }
+  
+  // Try by symbol (case-insensitive)
+  for (const [symbol, token] of Object.entries(manifest.tokens)) {
+    if (symbol.toLowerCase() === symbolOrAddress.toLowerCase()) {
       return token;
     }
   }
   
   // Try by address
-  for (const token of tokens) {
+  for (const token of Object.values(manifest.tokens)) {
     if (token.address.toLowerCase() === symbolOrAddress.toLowerCase()) {
       return token;
     }
@@ -102,38 +142,48 @@ export function getProtocolToken(symbolOrAddress: string): ProtocolTokenConfig |
 /**
  * Get tokens that support bridging
  */
-export function getBridgeableTokens(): ProtocolTokenConfig[] {
-  return getAllProtocolTokens().filter(t => t.bridge?.enabled);
+export function getBridgeableTokens(): TokenConfig[] {
+  return getAllTokens().filter(t => t.bridge?.enabled);
 }
 
 /**
  * Get native Jeju tokens
  */
-export function getNativeTokens(): ProtocolTokenConfig[] {
-  return getAllProtocolTokens().filter(t => t.isNative);
+export function getNativeTokens(): TokenConfig[] {
+  return getAllTokens().filter(t => t.isNative);
 }
 
 /**
  * Get bridged tokens (from Base)
  */
-export function getBridgedTokens(): ProtocolTokenConfig[] {
-  return getAllProtocolTokens().filter(t => t.bridged);
+export function getBridgedTokens(): TokenConfig[] {
+  return getAllTokens().filter(t => t.bridged);
 }
 
 /**
- * Update deployed contract addresses
+ * Get oracle configuration
  */
-export function updateDeployedAddresses(
-  symbol: string,
-  vault: string,
-  distributor: string,
-  paymaster: string
-): void {
-  const token = getProtocolToken(symbol);
-  if (token) {
-    token.deployedContracts = { vault, distributor, paymaster };
-  }
+export function getOracleConfig() {
+  return loadTokensConfig().oracle;
 }
 
-export type { ProtocolTokenConfig, ProtocolTokensManifest };
+/**
+ * Get bridge configuration
+ */
+export function getBridgeConfig() {
+  return loadTokensConfig().bridge;
+}
+
+/**
+ * Get LP rewards configuration
+ */
+export function getLPRewardsConfig() {
+  return loadTokensConfig().lpRewards;
+}
+
+// Backwards compatibility aliases
+export const loadProtocolTokens = loadTokensConfig;
+export const getAllProtocolTokens = getPaymasterTokens;
+export const getProtocolToken = getToken;
+export type ProtocolTokenConfig = TokenConfig;
 

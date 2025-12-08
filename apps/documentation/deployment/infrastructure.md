@@ -1,90 +1,41 @@
-# Infrastructure Setup
-
-Detailed infrastructure configuration for Jeju.
+# Infrastructure
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│ AWS VPC                                  │
-│                                          │
-│  ┌────────────────────────────────────┐ │
-│  │ EKS Cluster                         │ │
-│  │                                     │ │
-│  │  ┌──────────────┐  ┌──────────────┐│ │
-│  │  │  op-node     │  │  reth        ││ │
-│  │  └──────────────┘  └──────────────┘│ │
-│  │                                     │ │
-│  │  ┌──────────────┐  ┌──────────────┐│ │
-│  │  │  op-batcher  │  │  op-proposer││ │
-│  │  └──────────────┘  └──────────────┘│ │
-│  └────────────────────────────────────┘ │
-│                                          │
-│  ┌────────────────────────────────────┐ │
-│  │ RDS PostgreSQL                     │ │
-│  └────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
+AWS VPC
+├── EKS Cluster
+│   ├── op-node
+│   ├── reth
+│   ├── op-batcher
+│   └── op-proposer
+└── RDS PostgreSQL
 ```
 
-## Terraform Setup
-
-### 1. Configure Backend
+## Terraform
 
 ```bash
-cd terraform
-cp backend.tf.example backend.tf
-# Edit with your S3/DynamoDB settings
-```
-
-### 2. Deploy Network
-
-```bash
-cd terraform/environments/testnet
+cd terraform/environments/{testnet|mainnet}
 terraform init
+
+# Deploy in order
 terraform apply -target=module.network
-```
-
-### 3. Deploy EKS
-
-```bash
 terraform apply -target=module.eks
-```
-
-### 4. Deploy RDS
-
-```bash
 terraform apply -target=module.rds
+terraform apply
 ```
 
-## Kubernetes Setup
-
-### 1. Configure kubectl
+## Kubernetes
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name jeju-testnet
-```
+# Configure kubectl
+aws eks update-kubeconfig --region us-east-1 --name jeju-{env}
 
-### 2. Install Controllers
-
-```bash
-# AWS Load Balancer Controller
+# Install controllers
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller
-
-# Cert Manager
 helm install cert-manager jetstack/cert-manager
-```
 
-### 3. Deploy Services
-
-```bash
+# Deploy services
 cd kubernetes/helmfile
-helmfile -e testnet sync
+helmfile -e {testnet|mainnet} sync
 ```
-
-## Resources
-
-- [Deployment Overview](./overview)
-- [Prerequisites](./prerequisites)
-- [Monitoring Guide](./monitoring)
-
-

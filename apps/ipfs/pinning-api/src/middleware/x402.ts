@@ -51,22 +51,16 @@ export async function x402Middleware(c: Context, next: Next) {
     );
   }
 
-  // Verify payment
-  try {
-    const payment = JSON.parse(paymentProof);
-    const isValid = await verifyPayment(payment);
+  const payment = JSON.parse(paymentProof);
+  const isValid = await verifyPayment(payment);
 
-    if (!isValid) {
-      return c.json({ error: 'Invalid payment proof' }, 402);
-    }
-
-    // Store payment info for later
-    c.set('payment', payment);
-
-    await next();
-  } catch (error) {
-    return c.json({ error: `Payment verification failed: ${error}` }, 402);
+  if (!isValid) {
+    return c.json({ error: 'Invalid payment proof' }, 402);
   }
+
+  c.set('payment', payment);
+
+  await next();
 }
 
 /**
@@ -86,28 +80,19 @@ async function verifyPayment(payment: {
   amount: string;
   payer: string;
 }): Promise<boolean> {
-  try {
-    // Get transaction receipt
-    const receipt = await publicClient.getTransactionReceipt({
-      hash: payment.txHash as `0x${string}`,
-    });
+  const receipt = await publicClient.getTransactionReceipt({
+    hash: payment.txHash as `0x${string}`,
+  });
 
-    if (!receipt) return false;
+  if (!receipt) return false;
+  if (receipt.status !== 'success') return false;
 
-    // Verify transaction succeeded
-    if (receipt.status !== 'success') return false;
+  // TODO: Parse USDC Transfer event to verify:
+  // - Transfer was to our receiver address
+  // - Amount matches expected cost
+  // - Token is USDC
 
-    // TODO: Parse USDC Transfer event to verify:
-    // - Transfer was to our receiver address
-    // - Amount matches expected cost
-    // - Token is USDC
-
-    // For now, basic verification
-    return receipt.to?.toLowerCase() === USDC_ADDRESS.toLowerCase();
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    return false;
-  }
+  return receipt.to?.toLowerCase() === USDC_ADDRESS.toLowerCase();
 }
 
 /**

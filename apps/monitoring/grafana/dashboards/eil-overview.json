@@ -1,0 +1,344 @@
+{
+  "uid": "eil-overview",
+  "title": "EIL - Cross-Chain Overview",
+  "tags": ["eil", "cross-chain", "xlp"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "editable": true,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "🌐 EIL Protocol Health",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Active XLPs",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COUNT(*) as count FROM xlp WHERE is_active = true",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 1, "color": "yellow" },
+              { "value": 5, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Total Staked ETH",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COALESCE(SUM(staked_amount) / 1e18, 0) as eth FROM xlp WHERE is_active = true",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ETH",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 10, "color": "yellow" },
+              { "value": 100, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "24h Volume",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COALESCE(SUM(amount) / 1e18, 0) as volume FROM eil_transfer WHERE initiated_at > NOW() - INTERVAL '24 hours'",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ETH",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "blue" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Success Rate",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT CASE WHEN COUNT(*) = 0 THEN 100 ELSE (COUNT(*) FILTER (WHERE status = 'COMPLETED') * 100.0 / COUNT(*)) END as rate FROM eil_transfer",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 90, "color": "yellow" },
+              { "value": 99, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Pending Transfers",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COUNT(*) as pending FROM eil_transfer WHERE status IN ('PENDING', 'IN_PROGRESS')",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 10, "color": "yellow" },
+              { "value": 50, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Avg Response Time",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (completed_at - initiated_at))), 0) as seconds FROM eil_transfer WHERE status = 'COMPLETED' AND completed_at IS NOT NULL",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 30, "color": "yellow" },
+              { "value": 60, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "📊 Transfer Volume Over Time",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "id": 9,
+      "title": "Transfer Volume (ETH)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT date_trunc('hour', initiated_at) as time, SUM(amount) / 1e18 as volume FROM eil_transfer WHERE initiated_at > NOW() - INTERVAL '24 hours' GROUP BY 1 ORDER BY 1",
+        "format": "time_series"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ETH",
+          "custom": { "fillOpacity": 30, "gradientMode": "opacity" }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Transfer Count",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT date_trunc('hour', initiated_at) as time, COUNT(*) as transfers FROM eil_transfer WHERE initiated_at > NOW() - INTERVAL '24 hours' GROUP BY 1 ORDER BY 1",
+        "format": "time_series"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 30, "gradientMode": "opacity" }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "🔗 Cross-Chain Routes",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
+    },
+    {
+      "id": 12,
+      "title": "Top Routes by Volume",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 15 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT source_chain as \"Source\", destination_chain as \"Destination\", COUNT(*) as \"Transfers\", SUM(amount) / 1e18 as \"Volume (ETH)\" FROM eil_transfer GROUP BY source_chain, destination_chain ORDER BY SUM(amount) DESC LIMIT 10",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 13,
+      "title": "Transfers by Status",
+      "type": "piechart",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 15 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT status, COUNT(*) as count FROM eil_transfer GROUP BY status",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Fee Revenue (ETH)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 15 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COALESCE(SUM(total_fees_earned) / 1e18, 0) as fees FROM xlp",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ETH",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "value": 0, "color": "green" }] }
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "🌊 XLP Performance",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 }
+    },
+    {
+      "id": 16,
+      "title": "XLP Leaderboard",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 22 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT CONCAT(SUBSTRING(address, 1, 6), '...', SUBSTRING(address, 39, 42)) as \"XLP\", staked_amount / 1e18 as \"Stake (ETH)\", total_vouchers_fulfilled as \"Fulfilled\", total_vouchers_failed as \"Failed\", total_fees_earned / 1e18 as \"Fees (ETH)\", reputation as \"Rep\" FROM xlp WHERE is_active = true ORDER BY total_fees_earned DESC LIMIT 20",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Rep" }, "properties": [{ "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "basic" } }] }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "title": "XLP Stake Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT CONCAT(SUBSTRING(address, 1, 6), '...') as xlp, staked_amount / 1e18 as stake FROM xlp WHERE is_active = true ORDER BY staked_amount DESC LIMIT 10",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 18,
+      "title": "⚠️ Slashing & Issues",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 }
+    },
+    {
+      "id": 19,
+      "title": "Recent Slash Events",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 16, "x": 0, "y": 31 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT timestamp, CONCAT(SUBSTRING(xlp_id, 1, 10), '...') as \"XLP\", amount / 1e18 as \"Amount (ETH)\", disputed as \"Disputed\", tx_hash as \"Tx\" FROM xlp_slash_event ORDER BY timestamp DESC LIMIT 10",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 20,
+      "title": "Total Slashed",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 31 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COALESCE(SUM(slashed_amount) / 1e18, 0) as slashed FROM xlp",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ETH",
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Failed Vouchers",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 31 },
+      "datasource": { "type": "postgres", "uid": "postgres-indexer" },
+      "targets": [{
+        "rawSql": "SELECT COUNT(*) as failed FROM cross_chain_voucher WHERE status = 'EXPIRED' OR slashed = true",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 1, "color": "yellow" },
+              { "value": 10, "color": "red" }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
+

@@ -1,25 +1,21 @@
 # RPC Methods
 
-Jeju supports all standard Ethereum JSON-RPC methods.
+Standard Ethereum JSON-RPC.
 
-## Standard Methods
+## Examples
 
-### eth_blockNumber
 ```bash
+# Block number
 curl -X POST https://rpc.jeju.network \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
-```
 
-### eth_getBalance
-```bash
+# Balance
 curl -X POST https://rpc.jeju.network \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0x...","latest"],"id":1}'
-```
 
-### eth_sendRawTransaction
-```bash
+# Send tx
 curl -X POST https://rpc.jeju.network \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0x..."],"id":1}'
@@ -27,27 +23,17 @@ curl -X POST https://rpc.jeju.network \
 
 ## Supported APIs
 
-- `eth` - Ethereum standard methods
-- `net` - Network information
-- `web3` - Web3 client version
+- `eth` - Standard Ethereum
+- `net` - Network info
+- `web3` - Client version
 - `txpool` - Transaction pool (some nodes)
-- `trace` - Transaction tracing (archive nodes only)
+- `trace` - Tracing (archive nodes)
 
 ## Rate Limits
 
-### Public RPC
-- 100 requests/second per IP
-- 5,000 requests/minute per IP
-- Burst: 200 requests
+| Tier | Limit |
+|------|-------|
+| Public | 100 req/s, 5k req/min |
+| Own node | Unlimited |
 
-### Your Own Node
-- No rate limits
-- See [Run RPC Node](./run-rpc-node.md)
-
-## Resources
-
-- [Quick Start](./quick-start.md)
-- [Network Information](/network/testnet)
-- [Run Your Own Node](./run-rpc-node.md)
-
-
+For higher limits: [Run your own node](./run-rpc-node)

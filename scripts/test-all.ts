@@ -45,16 +45,11 @@ const TEST_SUITES: TestSuite[] = [
     command: 'bun test scripts/shared/notifications.test.ts',
     required: false
   },
-  {
-    name: 'Network Ban Cache Tests',
-    command: 'bun test scripts/shared/__tests__/NetworkBanCache.test.ts',
-    required: false
-  },
   
   // Config tests
   {
     name: 'Config Tests',
-    command: 'bun test config/index.test.ts',
+    command: 'bun test packages/config/index.test.ts',
     required: false
   },
   

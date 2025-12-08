@@ -2,45 +2,14 @@
  * Token utility functions for formatting and calculations
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import type { BaseTokensManifest } from '../../types/base-tokens';
-
-let tokenManifest: BaseTokensManifest | null = null;
-
-/**
- * Load token configuration
- */
-export function loadTokenConfig(): BaseTokensManifest {
-  if (!tokenManifest) {
-    const configPath = join(process.cwd(), 'config', 'base-tokens.json');
-    tokenManifest = JSON.parse(readFileSync(configPath, 'utf-8'));
-  }
-  return tokenManifest!;
-}
+import { loadTokensConfig, getToken, getAllTokens, type TokenConfig } from './protocol-tokens';
 
 /**
  * Get decimals for a token
  */
 export function getTokenDecimals(symbolOrAddress: string): number {
-  const config = loadTokenConfig();
-  
-  // Try by symbol first
-  for (const [symbol, tokenConfig] of Object.entries(config.tokens)) {
-    if (symbol.toLowerCase() === symbolOrAddress.toLowerCase()) {
-      return tokenConfig.decimals;
-    }
-  }
-  
-  // Try by address
-  for (const tokenConfig of Object.values(config.tokens)) {
-    if (tokenConfig.address.toLowerCase() === symbolOrAddress.toLowerCase()) {
-      return tokenConfig.decimals;
-    }
-  }
-  
-  // Default to 18
-  return 18;
+  const token = getToken(symbolOrAddress);
+  return token?.decimals ?? 18;
 }
 
 /**
@@ -94,53 +63,24 @@ export function parseTokenAmount(
  * Get token symbol from address
  */
 export function getTokenSymbol(address: string): string {
-  const config = loadTokenConfig();
-  
-  for (const [symbol, tokenConfig] of Object.entries(config.tokens)) {
-    if (tokenConfig.address.toLowerCase() === address.toLowerCase()) {
-      return symbol;
-    }
-  }
-  
-  return 'UNKNOWN';
+  const token = getToken(address);
+  return token?.symbol ?? 'UNKNOWN';
 }
 
 /**
  * Get token name from address
  */
 export function getTokenName(address: string): string {
-  const config = loadTokenConfig();
-  
-  for (const tokenConfig of Object.values(config.tokens)) {
-    if (tokenConfig.address.toLowerCase() === address.toLowerCase()) {
-      return tokenConfig.name;
-    }
-  }
-  
-  return 'Unknown Token';
+  const token = getToken(address);
+  return token?.name ?? 'Unknown Token';
 }
 
 /**
  * Get token price in USD
  */
 export function getTokenPriceUSD(symbolOrAddress: string): number {
-  const config = loadTokenConfig();
-  
-  // Try by symbol
-  for (const [symbol, tokenConfig] of Object.entries(config.tokens)) {
-    if (symbol.toLowerCase() === symbolOrAddress.toLowerCase()) {
-      return tokenConfig.marketData.priceUSD;
-    }
-  }
-  
-  // Try by address
-  for (const tokenConfig of Object.values(config.tokens)) {
-    if (tokenConfig.address.toLowerCase() === symbolOrAddress.toLowerCase()) {
-      return tokenConfig.marketData.priceUSD;
-    }
-  }
-  
-  return 0;
+  const token = getToken(symbolOrAddress);
+  return token?.priceUSD ?? 0;
 }
 
 /**
@@ -179,14 +119,12 @@ export function getAllSupportedTokens(): Array<{
   decimals: number;
   priceUSD: number;
 }> {
-  const config = loadTokenConfig();
-  
-  return Object.entries(config.tokens).map(([symbol, tokenConfig]) => ({
-    symbol,
-    address: tokenConfig.address,
-    name: tokenConfig.name,
-    decimals: tokenConfig.decimals,
-    priceUSD: tokenConfig.marketData.priceUSD,
+  return getAllTokens().map((token) => ({
+    symbol: token.symbol,
+    address: token.address,
+    name: token.name,
+    decimals: token.decimals,
+    priceUSD: token.priceUSD ?? 0,
   }));
 }
 
@@ -211,23 +149,7 @@ export function priceFromSqrtPriceX96(sqrtPriceX96: bigint): number {
 /**
  * Get token configuration
  */
-export function getTokenConfig(symbolOrAddress: string) {
-  const config = loadTokenConfig();
-  
-  // Try by symbol
-  for (const [symbol, tokenConfig] of Object.entries(config.tokens)) {
-    if (symbol.toLowerCase() === symbolOrAddress.toLowerCase()) {
-      return { symbol, ...tokenConfig };
-    }
-  }
-  
-  // Try by address
-  for (const [symbol, tokenConfig] of Object.entries(config.tokens)) {
-    if (tokenConfig.address.toLowerCase() === symbolOrAddress.toLowerCase()) {
-      return { symbol, ...tokenConfig };
-    }
-  }
-  
-  return null;
+export function getTokenConfig(symbolOrAddress: string): TokenConfig | null {
+  return getToken(symbolOrAddress);
 }
 

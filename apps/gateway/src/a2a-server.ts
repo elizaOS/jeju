@@ -6,7 +6,7 @@
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { createPaymentRequirement, checkPayment, PAYMENT_TIERS } from './lib/x402.js';
+import { createPaymentRequirement, checkPayment, PAYMENT_TIERS, PaymentRequirements } from './lib/x402.js';
 import { Address } from 'viem';
 
 const app = express();
@@ -32,10 +32,9 @@ interface A2ARequest {
   id: number | string;
 }
 
-async function executeSkill(skillId: string, params: Record<string, unknown>, paymentHeader: string | null): Promise<{ message: string; data: Record<string, unknown>; requiresPayment?: any }> {
+async function executeSkill(skillId: string, params: Record<string, unknown>, paymentHeader: string | null): Promise<{ message: string; data: Record<string, unknown>; requiresPayment?: PaymentRequirements }> {
   switch (skillId) {
     case 'list-protocol-tokens': {
-      // In production, this would query the TokenRegistry contract
       return {
         message: 'Protocol tokens: elizaOS, CLANKER, VIRTUAL, CLANKERMON',
         data: {
@@ -302,7 +301,7 @@ app.post('/a2a', async (req: Request, res: Response) => {
   }
 
   const skillId = dataPart.data.skillId;
-  const skillParams = (dataPart.data.params as Record<string, unknown>) || {};
+  const skillParams = (dataPart.data.params as unknown as Record<string, unknown>) || {};
   const paymentHeader = req.headers['x-payment'] as string | undefined;
 
   if (!skillId) {
@@ -313,44 +312,33 @@ app.post('/a2a', async (req: Request, res: Response) => {
     });
   }
 
-  try {
-    const result = await executeSkill(skillId, skillParams, paymentHeader || null);
+  const result = await executeSkill(skillId, skillParams, paymentHeader || null);
 
-    if (result.requiresPayment) {
-      return res.status(402).json({
-        jsonrpc: '2.0',
-        id: body.id,
-        error: {
-          code: 402,
-          message: 'Payment Required',
-          data: result.requiresPayment,
-        },
-      });
-    }
-
-    res.json({
-      jsonrpc: '2.0',
-      id: body.id,
-      result: {
-        role: 'agent',
-        parts: [
-          { kind: 'text', text: result.message },
-          { kind: 'data', data: result.data },
-        ],
-        messageId: message.messageId,
-        kind: 'message',
-      },
-    });
-  } catch (error) {
-    res.json({
+  if (result.requiresPayment) {
+    return res.status(402).json({
       jsonrpc: '2.0',
       id: body.id,
       error: {
-        code: -32603,
-        message: error instanceof Error ? error.message : 'Internal error'
-      }
+        code: 402,
+        message: 'Payment Required',
+        data: result.requiresPayment,
+      },
     });
   }
+
+  res.json({
+    jsonrpc: '2.0',
+    id: body.id,
+    result: {
+      role: 'agent',
+      parts: [
+        { kind: 'text', text: result.message },
+        { kind: 'data', data: result.data },
+      ],
+      messageId: message.messageId,
+      kind: 'message',
+    },
+  });
 });
 
 app.listen(PORT, () => {

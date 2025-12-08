@@ -5,7 +5,7 @@
 
 import { testWithSynpress } from '@synthetixio/synpress';
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
-import basicSetup from '../fixtures/synpress-wallet';
+import { basicSetup } from '../fixtures/synpress-wallet';
 import { connectWallet, approveTransaction } from '../helpers/wallet-helpers';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
@@ -53,7 +53,7 @@ test.describe('Deploy Paymaster Flow', () => {
     
     // Fee margin slider should appear
     const slider = page.locator('input[type="range"]');
-    const hasSlider = await slider.isVisible().catch(() => false);
+    const hasSlider = await slider.isVisible();
     
     if (hasSlider) {
       await expect(slider).toBeVisible();
@@ -93,9 +93,9 @@ test.describe('Deploy Paymaster Flow', () => {
     const alreadyDeployed = page.getByText(/already deployed/i);
     const deployButton = page.getByRole('button', { name: /Deploy Paymaster/i });
     
-    const hasWarning = await notRegistered.isVisible().catch(() => false);
-    const hasDeployed = await alreadyDeployed.isVisible().catch(() => false);
-    const hasButton = await deployButton.isVisible().catch(() => false);
+    const hasWarning = await notRegistered.isVisible();
+    const hasDeployed = await alreadyDeployed.isVisible();
+    const hasButton = await deployButton.isVisible();
     
     // Should have one of these states
     expect(hasWarning || hasDeployed || hasButton).toBe(true);
@@ -111,7 +111,7 @@ test.describe('Deploy Paymaster Flow', () => {
     
     // Check for already deployed warning
     const warning = page.getByText(/already deployed/i);
-    const hasWarning = await warning.isVisible().catch(() => false);
+    const hasWarning = await warning.isVisible();
     
     if (hasWarning) {
       await expect(page.getByText(/Vault:/i)).toBeVisible();
@@ -131,7 +131,7 @@ test.describe('Deploy Paymaster Flow', () => {
     
     // Set fee margin
     const slider = page.locator('input[type="range"]');
-    if (await slider.isVisible().catch(() => false)) {
+    if (await slider.isVisible()) {
       await slider.fill('100'); // 1%
     }
     

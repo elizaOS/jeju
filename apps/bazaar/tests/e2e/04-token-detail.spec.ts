@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { captureScreenshot, captureUserFlow } from '../../../../tests/shared/helpers/screenshots';
+import { captureScreenshot, captureUserFlow } from '../../../../packages/tests/shared/helpers/screenshots';
 
 test.describe('Token Detail Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,7 +13,7 @@ test.describe('Token Detail Page', () => {
 
   test('should navigate to token detail page', async ({ page }) => {
     // Go to tokens page
-    await page.goto('/tokens');
+    await page.goto('/coins');
     
     // Wait for tokens to load
     await page.waitForTimeout(1000);
@@ -26,16 +26,16 @@ test.describe('Token Detail Page', () => {
       await tokenCards.first().click();
       
       // Should navigate to detail page
-      await expect(page).toHaveURL(/\/tokens\/\d+\/0x[a-fA-F0-9]{40}/);
+      await expect(page).toHaveURL(/\/coins\/\d+\/0x[a-fA-F0-9]{40}/);
     } else {
       // No tokens available, test page structure
-      await page.goto('/tokens/420691/0x1234567890123456789012345678901234567890');
+      await page.goto('/coins/420691/0x1234567890123456789012345678901234567890');
     }
   });
 
   test('should display token information', async ({ page }) => {
     // Navigate to a mock token detail page
-    await page.goto('/tokens/420691/0x1234567890123456789012345678901234567890');
+    await page.goto('/coins/420691/0x1234567890123456789012345678901234567890');
     
     // Wait for page load
     await page.waitForTimeout(500);
@@ -47,7 +47,7 @@ test.describe('Token Detail Page', () => {
   });
 
   test('should display token stats section', async ({ page }) => {
-    await page.goto('/tokens/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+    await page.goto('/coins/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
     
     await page.waitForTimeout(500);
     
@@ -61,7 +61,7 @@ test.describe('Token Detail Page', () => {
   });
 
   test('should have navigable UI structure', async ({ page }) => {
-    await page.goto('/tokens/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+    await page.goto('/coins/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
     
     await page.waitForTimeout(500);
     
@@ -74,7 +74,7 @@ test.describe('Token Detail Page', () => {
   });
 
   test('should display page without errors', async ({ page }) => {
-    await page.goto('/tokens/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+    await page.goto('/coins/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
     
     await page.waitForTimeout(500);
     
@@ -87,7 +87,7 @@ test.describe('Token Detail Page', () => {
   });
 
   test('should have valid HTML structure', async ({ page }) => {
-    await page.goto('/tokens/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+    await page.goto('/coins/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
     
     await page.waitForTimeout(500);
     
@@ -97,7 +97,7 @@ test.describe('Token Detail Page', () => {
   });
 
   test('should show back navigation to tokens list', async ({ page }) => {
-    await page.goto('/tokens/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+    await page.goto('/coins/420691/0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
     
     await page.waitForTimeout(500);
     

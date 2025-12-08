@@ -7,7 +7,7 @@ import { Address, createPublicClient, http, parseAbi } from 'viem';
 
 const JEJU_CHAIN = {
   id: 1337,
-  name: 'Jeju L3',
+  name: 'Jeju',
   network: 'jeju',
   nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
   rpcUrls: {
@@ -51,54 +51,50 @@ export async function checkUserBan(userAddress: Address): Promise<BanCheckResult
     return { allowed: true };
   }
 
-  try {
-    const client = getPublicClient();
-    
-    const agentId = await client.readContract({
-      address: IDENTITY_REGISTRY_ADDRESS,
-      abi: IDENTITY_REGISTRY_ABI,
-      functionName: 'getAgentId',
-      args: [userAddress],
-    });
+  const client = getPublicClient();
+  
+  const agentId = await client.readContract({
+    address: IDENTITY_REGISTRY_ADDRESS,
+    abi: IDENTITY_REGISTRY_ABI,
+    functionName: 'getAgentId',
+    args: [userAddress],
+  });
 
-    const isBanned = await client.readContract({
+  const isBanned = await client.readContract({
+    address: BAN_MANAGER_ADDRESS,
+    abi: BAN_MANAGER_ABI,
+    functionName: 'isBanned',
+    args: [agentId],
+  });
+
+  if (isBanned) {
+    const reason = await client.readContract({
       address: BAN_MANAGER_ADDRESS,
       abi: BAN_MANAGER_ABI,
-      functionName: 'isBanned',
+      functionName: 'getBanReason',
       args: [agentId],
     });
 
-    if (isBanned) {
-      const reason = await client.readContract({
-        address: BAN_MANAGER_ADDRESS,
-        abi: BAN_MANAGER_ABI,
-        functionName: 'getBanReason',
-        args: [agentId],
-      });
-
-      return {
-        allowed: false,
-        reason: reason as string,
-      };
-    }
-
-    const isAllowed = await client.readContract({
-      address: BAN_MANAGER_ADDRESS,
-      abi: BAN_MANAGER_ABI,
-      functionName: 'isAccessAllowed',
-      args: [agentId, IPFS_APP_ID as `0x${string}`],
-    });
-
-    if (!isAllowed) {
-      return {
-        allowed: false,
-        reason: 'Access denied for IPFS service',
-      };
-    }
-
-    return { allowed: true };
-  } catch (error) {
-    return { allowed: true };
+    return {
+      allowed: false,
+      reason: reason as string,
+    };
   }
+
+  const isAllowed = await client.readContract({
+    address: BAN_MANAGER_ADDRESS,
+    abi: BAN_MANAGER_ABI,
+    functionName: 'isAccessAllowed',
+    args: [agentId, IPFS_APP_ID as `0x${string}`],
+  });
+
+  if (!isAllowed) {
+    return {
+      allowed: false,
+      reason: 'Access denied for IPFS service',
+    };
+  }
+
+  return { allowed: true };
 }
 

@@ -66,7 +66,7 @@ console.log("━━━━━━━━━━━━━━━━━━━━━━�
 
 // Step 1: Build contracts
 console.log("1️⃣  Building Smart Contracts...\n");
-const buildResult = await $`cd contracts && forge build`.nothrow();
+const buildResult = await $`cd packages/contracts && forge build`.nothrow();
 
 if (buildResult.exitCode !== 0) {
   console.error("\n❌ Contract build failed");
@@ -146,7 +146,7 @@ if (verifyResult.exitCode !== 0) {
 // Step 7: Generate deployment report
 console.log("7️⃣  Generating Deployment Report...\n");
 
-const deploymentFile = `contracts/deployments/${network}/deployment.json`;
+const deploymentFile = `packages/contracts/deployments/${network}/deployment.json`;
 if (existsSync(deploymentFile)) {
   const deploymentData = await Bun.file(deploymentFile).json();
   
@@ -171,7 +171,7 @@ console.log(`🎉 ${network.toUpperCase()} deployment complete!\n`);
 console.log("📚 Next Steps:");
 console.log(`  - Start services:   bun run start`);
 console.log(`  - Run tests:        bun run test`);
-console.log(`  - View deployments: ls contracts/deployments/${network}/`);
+console.log(`  - View deployments: ls packages/contracts/deployments/${network}/`);
 console.log("");
 
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");

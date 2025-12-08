@@ -1,8 +1,3 @@
-/**
- * Indexer GraphQL Client
- * Connects to the Jeju indexer to fetch token data, transactions, and events
- */
-
 const INDEXER_URL = process.env.NEXT_PUBLIC_INDEXER_URL || 'http://localhost:4350/graphql'
 
 interface GraphQLResponse<T> {
@@ -36,7 +31,6 @@ async function graphqlQuery<T>(query: string, variables?: Record<string, unknown
   return json.data
 }
 
-// Query for ERC20 tokens on Jeju
 export async function getJejuTokens(filter?: {
   limit?: number
   offset?: number
@@ -58,11 +52,6 @@ export async function getJejuTokens(filter?: {
         lastSeenAt
         creator {
           address
-        }
-        decodedEvents(limit: 1, where: { eventName_eq: "Transfer" }) {
-          eventName
-          args
-          timestamp
         }
       }
     }
@@ -96,7 +85,6 @@ export async function getJejuTokens(filter?: {
   return result.contracts
 }
 
-// Query for token transfers
 export async function getTokenTransfers(tokenAddress: string, limit = 50) {
   const query = `
     query GetTokenTransfers($tokenAddress: String!, $limit: Int!) {
@@ -146,7 +134,6 @@ export async function getTokenTransfers(tokenAddress: string, limit = 50) {
   return result.tokenTransfers
 }
 
-// Query for token holders
 export async function getTokenHolders(tokenAddress: string, limit = 100) {
   const query = `
     query GetTokenHolders($tokenAddress: String!, $limit: Int!) {
@@ -188,7 +175,6 @@ export async function getTokenHolders(tokenAddress: string, limit = 100) {
   return result.tokenBalances
 }
 
-// Query for latest blocks
 export async function getLatestBlocks(limit = 10) {
   const query = `
     query GetBlocks($limit: Int!) {
@@ -216,7 +202,6 @@ export async function getLatestBlocks(limit = 10) {
   return result.blocks
 }
 
-// Query for contract details
 export async function getContractDetails(address: string) {
   const query = `
     query GetContract($address: String!) {

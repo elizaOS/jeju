@@ -16,7 +16,7 @@
 import { $ } from "bun";
 import { resolve } from "path";
 import { readFileSync, existsSync } from "fs";
-import { getChainConfig } from "../config";
+import { getChainConfig } from "../packages/config";
 import type { NetworkType } from "../types";
 
 async function main() {

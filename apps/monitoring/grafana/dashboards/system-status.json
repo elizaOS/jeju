@@ -1,0 +1,217 @@
+{
+  "uid": "system-status",
+  "title": "System Status - Working Example",
+  "tags": ["system", "status", "monitoring"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "editable": true,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Monitoring Status",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "up{job='prometheus'}",
+        "legendFormat": "Prometheus"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [
+            {"value": "1", "text": "✓ Online"},
+            {"value": "0", "text": "✗ Offline"}
+          ],
+          "thresholds": {
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 1, "color": "green"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Total Blocks Indexed",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "postgres", "uid": "postgres-indexer"},
+      "targets": [{
+        "rawSql": "SELECT COUNT(*) as value FROM block",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "steps": [
+              {"value": 0, "color": "blue"},
+              {"value": 50, "color": "green"}
+            ]
+          },
+          "unit": "blocks"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Total Transactions",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "postgres", "uid": "postgres-indexer"},
+      "targets": [{
+        "rawSql": "SELECT COUNT(*) as value FROM transaction",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "steps": [{"value": 0, "color": "purple"}]
+          },
+          "unit": "tx"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Database Connection",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "postgres", "uid": "postgres-indexer"},
+      "targets": [{
+        "rawSql": "SELECT 1 as value",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [{"value": "1", "text": "✓ Connected"}],
+          "thresholds": {
+            "steps": [{"value": 0, "color": "green"}]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Blocks Over Time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "postgres", "uid": "postgres-indexer"},
+      "targets": [{
+        "rawSql": "SELECT timestamp as time, number as value FROM block WHERE timestamp > NOW() - INTERVAL '1 hour' ORDER BY timestamp",
+        "format": "time_series"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          },
+          "color": {"mode": "palette-classic"}
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Prometheus Scrape Duration",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "rate(prometheus_target_scrape_duration_seconds[5m])",
+        "legendFormat": "{{job}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          },
+          "color": {"mode": "palette-classic"},
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Recent Blocks",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+      "datasource": {"type": "postgres", "uid": "postgres-indexer"},
+      "targets": [{
+        "rawSql": "SELECT number as \"Block #\", LEFT(hash, 20) || '...' as \"Hash\", transaction_count as \"Txs\", timestamp as \"Time\" FROM block ORDER BY number DESC LIMIT 20",
+        "format": "table"
+      }],
+      "options": {
+        "showHeader": true,
+        "sortBy": [{"displayName": "Block #", "desc": true}]
+      }
+    },
+    {
+      "id": 8,
+      "title": "Service Availability",
+      "type": "stat",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 20},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "up{job='op-node'}",
+          "legendFormat": "OP Node",
+          "refId": "A"
+        },
+        {
+          "expr": "up{job='reth'}",
+          "legendFormat": "Reth",
+          "refId": "B"
+        },
+        {
+          "expr": "up{job='subsquid-processor'}",
+          "legendFormat": "Indexer",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [
+            {"value": "null", "text": "Offline"},
+            {"value": "0", "text": "Down"},
+            {"value": "1", "text": "Up"}
+          ],
+          "thresholds": {
+            "steps": [
+              {"value": null, "color": "gray"},
+              {"value": 0, "color": "red"},
+              {"value": 1, "color": "green"}
+            ]
+          },
+          "noValue": "Not Running"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    }
+  ]
+}
+

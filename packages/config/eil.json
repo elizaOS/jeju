@@ -1,0 +1,19 @@
+{
+  "l1StakeManager": "0xaC156EFC5a5ad1d4Db8541C31F995E203dA796aC",
+  "entryPoint": "0xaC156EFC5a5ad1d4Db8541C31F995E203dA796aC",
+  "crossChainPaymasters": {
+    "1337": "0x0000000000000000000000000000000000000000",
+    "420691": "0xa7Cd0542a8F4CCa6Dd021C3A0Af0E423Ad7DFfB7"
+  },
+  "supportedTokens": ["0x0000000000000000000000000000000000000000"],
+  "networks": {
+    "1337": {
+      "name": "L1 (Localnet)",
+      "rpcUrl": "http://127.0.0.1:8545"
+    },
+    "420691": {
+      "name": "Jeju (Localnet)", 
+      "rpcUrl": "http://127.0.0.1:9545"
+    }
+  }
+}

@@ -19,7 +19,7 @@ import {
   printPortAllocation,
   getAllCorePorts,
   getAllVendorPorts
-} from '../config/ports';
+} from '../packages/config/ports';
 
 const COLORS = {
   RESET: '\x1b[0m',
@@ -123,7 +123,7 @@ function main() {
 
   // Summary
   console.log('═'.repeat(67));
-  console.log(`${COLORS.GREEN}${COLORS.BOLD}✅ Port configuration is valid!${COLORS.RESET}`);
+  console.log(`${COLORS.GREEN}${COLORS.BOLD}✅ Port configuration is valid${COLORS.RESET}`);
   console.log('═'.repeat(67));
   console.log('\n💡 To override ports, set environment variables before running services:');
   console.log('   Example: NODE_EXPLORER_API_PORT=5002 bun run dev\n');

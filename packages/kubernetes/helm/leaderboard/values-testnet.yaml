@@ -1,0 +1,35 @@
+# Leaderboard - Testnet Configuration
+
+image:
+  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/jeju/leaderboard
+  tag: "testnet-latest"
+
+replicaCount: 2
+
+ingress:
+  enabled: true
+  hosts:
+    - host: leaderboard.testnet.jeju.network
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: leaderboard-testnet-tls
+      hosts:
+        - leaderboard.testnet.jeju.network
+
+# External RDS database
+externalDatabase:
+  host: jeju-testnet-rds.xxxxx.us-east-1.rds.amazonaws.com
+  port: 5432
+  database: leaderboard
+  username: leaderboard
+
+env:
+  - name: SITE_URL
+    value: "https://leaderboard.testnet.jeju.network"
+  - name: SITE_NAME
+    value: "Jeju Network Leaderboard - Testnet"
+  - name: LARGE_MODEL
+    value: "openai/gpt-4o-mini"
+

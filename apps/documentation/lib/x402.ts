@@ -70,11 +70,9 @@ export function createPaymentRequirement(
 
 export function parsePaymentHeader(headerValue: string | null): PaymentPayload | null {
   if (!headerValue) return null;
-  try {
-    return JSON.parse(headerValue) as PaymentPayload;
-  } catch {
-    return null;
-  }
+  const parsed = JSON.parse(headerValue) as PaymentPayload;
+  if (!parsed || typeof parsed !== 'object') return null;
+  return parsed;
 }
 
 export async function checkPayment(

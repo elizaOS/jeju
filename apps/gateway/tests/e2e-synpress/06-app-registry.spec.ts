@@ -5,7 +5,7 @@
 
 import { testWithSynpress } from '@synthetixio/synpress';
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
-import basicSetup from '../fixtures/synpress-wallet';
+import { basicSetup } from '../fixtures/synpress-wallet';
 import { connectWallet, approveTransaction } from '../helpers/wallet-helpers';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
@@ -68,7 +68,7 @@ test.describe('App Registry Flow', () => {
     const emptyState = page.getByText(/No Apps Found/i);
     const appCards = page.locator('.card').filter({ hasText: /ID:/i });
     
-    const isEmpty = await emptyState.isVisible().catch(() => false);
+    const isEmpty = await emptyState.isVisible();
     const hasApps = await appCards.count() > 0;
     
     expect(isEmpty || hasApps).toBe(true);

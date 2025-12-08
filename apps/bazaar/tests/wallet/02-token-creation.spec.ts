@@ -1,6 +1,6 @@
 import { testWithSynpress } from '@synthetixio/synpress'
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright'
-import basicSetup from '../../test/wallet-setup/jeju.setup'
+import { basicSetup } from '../../synpress.config'
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup))
 const { expect } = test
@@ -12,7 +12,7 @@ test.describe('Token Creation with Wallet', () => {
     await page.goto('/')
     
     const connectButton = page.getByRole('button', { name: /Connect Wallet/i })
-    if (await connectButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await connectButton.isVisible({ timeout: 5000 })) {
       await connectButton.click()
       await page.waitForTimeout(1000)
       await metamask.connectToDapp()

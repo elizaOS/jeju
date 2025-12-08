@@ -56,7 +56,7 @@ async function main() {
   console.log("  • This RPC URL points to L2 (Jeju), where all apps live");
   console.log("  • Port 9545 is STATIC and never changes (forwarded automatically)");
   console.log("  • Port forwarding is handled by 'bun run dev'");
-  console.log("  • You can always use http://127.0.0.1:9545 for Jeju L2\n");
+  console.log("  • You can always use http://127.0.0.1:9545 for Jeju\n");
   
   console.log("✅ Ready to use Jeju apps:");
   console.log("  • Paymaster Dashboard: http://localhost:3006");

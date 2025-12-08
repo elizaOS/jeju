@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Babylon - Permissionless AI Game</title>
+  <meta name="description" content="Verifiable, trustless AI game running in TEE with on-chain state">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #050508;
+      --bg-secondary: #0c0c12;
+      --bg-tertiary: #14141f;
+      --bg-card: #0a0a10;
+      --accent-primary: #00ffaa;
+      --accent-secondary: #00c4ff;
+      --accent-tertiary: #8b5cf6;
+      --accent-warning: #fbbf24;
+      --accent-danger: #ef4444;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --text-muted: #555566;
+      --border-default: #1a1a28;
+      --border-hover: #2a2a40;
+      --glow-primary: rgba(0, 255, 170, 0.15);
+      --glow-secondary: rgba(0, 196, 255, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Background effect */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--glow-primary), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, var(--glow-secondary), transparent),
+        linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 3rem 0 2rem;
+      position: relative;
+    }
+
+    .logo {
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 60px var(--glow-primary);
+    }
+
+    .tagline {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      font-weight: 400;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      padding: 0.5rem 1.25rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-default);
+      border-radius: 100px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-pill.live { border-color: var(--accent-primary); }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--glow-primary); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
+    }
+
+    /* Warning banner */
+    .warning-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .warning-banner .icon { font-size: 1.25rem; }
+    .warning-banner strong { display: block; color: var(--accent-warning); }
+    .warning-banner p { color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem; }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-title .icon { font-size: 1.25rem; }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.25rem 0.625rem;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-default { background: var(--bg-tertiary); color: var(--text-secondary); }
+    .badge-success { background: rgba(0, 255, 170, 0.12); color: var(--accent-primary); }
+    .badge-warning { background: rgba(251, 191, 36, 0.12); color: var(--accent-warning); }
+    .badge-info { background: rgba(0, 196, 255, 0.12); color: var(--accent-secondary); }
+
+    /* Metrics */
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid var(--border-default);
+    }
+
+    .metric:last-child { border-bottom: none; }
+
+    .metric-label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .metric-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .metric-value.green { color: var(--accent-primary); }
+    .metric-value.blue { color: var(--accent-secondary); }
+    .metric-value.yellow { color: var(--accent-warning); }
+    .metric-value.purple { color: var(--accent-tertiary); }
+
+    /* Code block */
+    .code-block {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-default);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--text-secondary);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    /* Commits list */
+    .commits-list {
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .commit-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: var(--bg-tertiary);
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .commit-item:last-child { margin-bottom: 0; }
+
+    .commit-hash {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent-secondary);
+    }
+
+    .commit-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.125rem;
+    }
+
+    .commit-status {
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .commit-status.pending { background: rgba(251, 191, 36, 0.15); color: var(--accent-warning); }
+    .commit-status.revealed { background: rgba(0, 255, 170, 0.15); color: var(--accent-primary); }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 0.625rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: var(--bg-primary);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn-secondary:hover { border-color: var(--border-hover); }
+
+    /* ENS Registration Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.25rem;
+    }
+
+    .modal-close:hover { color: var(--text-primary); }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-default);
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+    }
+
+    .price-display {
+      background: var(--bg-tertiary);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+    }
+
+    .price-total {
+      font-weight: 600;
+      color: var(--accent-primary);
+      border-top: 1px solid var(--border-default);
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+    }
+
+    /* Loading */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      transition: opacity 0.3s;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border-default);
+      border-top-color: var(--accent-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #loading-text {
+      margin-top: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-default);
+      padding: 2rem 0;
+      margin-top: 2rem;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--accent-secondary); }
+
+    .footer-hash {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .logo { font-size: 2rem; }
+      .grid { grid-template-columns: 1fr; }
+      .btn-group { flex-direction: column; }
+      .btn { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading">
+    <div class="loader"></div>
+    <p id="loading-text">Initializing permissionless network...</p>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <h1 class="logo">BABYLON</h1>
+      <p class="tagline">Verifiable Permissionless AI Game</p>
+      <div class="status-pill live">
+        <span class="status-dot"></span>
+        <span id="network-status">Connecting...</span>
+      </div>
+    </header>
+
+    <!-- Simulation Warning -->
+    <div class="warning-banner" id="simulation-warning" style="display: none;">
+      <span class="icon">⚠️</span>
+      <div>
+        <strong>Simulation Mode</strong>
+        <p>Running locally. Hardware attestation is simulated. Deploy to Phala CVM for real TEE.</p>
+      </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="grid">
+      <!-- TEE Attestation -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><span class="icon">🔐</span> TEE Attestation</h3>
+          <span class="badge badge-default" id="attestation-badge">Loading</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Code Hash</span>
+          <span class="metric-value blue" id="code-hash">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Operator</span>
+          <span class="metric-value green" id="operator-address">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Hardware</span>
+          <span class="metric-value" id="hardware-authentic">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Heartbeat</span>
+          <span class="metric-value" id="last-heartbeat">...</span>
+        </div>
+      </div>
+
+      <!-- On-Chain State -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><span class="icon">⛓️</span> On-Chain State</h3>
+          <span class="badge badge-default" id="chain-badge">Loading</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Contract</span>
+          <span class="metric-value blue" id="contract-address">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">State CID</span>
+          <span class="metric-value" id="state-cid">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Version</span>
+          <span class="metric-value green" id="state-version">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Treasury</span>
+          <span class="metric-value yellow" id="treasury-balance">...</span>
+        </div>
+      </div>
+
+      <!-- Encryption -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><span class="icon">🔒</span> Encryption</h3>
+          <span class="badge badge-success">Real Crypto</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Algorithm</span>
+          <span class="metric-value green">AES-256-GCM</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Key Derivation</span>
+          <span class="metric-value green">HKDF-SHA256</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Key Version</span>
+          <span class="metric-value purple" id="key-version">...</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Leaks</span>
+          <span class="metric-value green">None</span>
+        </div>
+      </div>
+
+      <!-- Commit-Reveal -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><span class="icon">📝</span> Commit-Reveal</h3>
+          <span class="badge badge-info" id="commits-count">0</span>
+        </div>
+        <div class="commits-list" id="commits-list">
+          <p class="metric-label" style="text-align: center; padding: 1rem;">No commits yet...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Encrypted State Viewer -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <h3 class="card-title"><span class="icon">📦</span> Latest Encrypted State</h3>
+        <span class="badge badge-default" id="state-badge">Not Loaded</span>
+      </div>
+      <div class="code-block" id="encrypted-state">Click "Fetch State" to load encrypted game state from decentralized storage...</div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-group">
+      <button class="btn btn-primary" id="fetch-state" onclick="fetchLatestState()">
+        🔄 Fetch State
+      </button>
+      <button class="btn btn-secondary" id="verify-btn" onclick="runVerification()">
+        ✅ Verify Integrity
+      </button>
+      <button class="btn btn-secondary" id="check-takeover" onclick="checkTakeover()">
+        🔄 Check Takeover
+      </button>
+      <button class="btn btn-secondary" onclick="openENSModal()">
+        🌐 Register ENS
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-links">
+        <a href="https://github.com/babylon-game" target="_blank">GitHub</a>
+        <a href="#" id="ipfs-link">IPFS</a>
+        <a href="#" id="arweave-link">Arweave</a>
+        <a href="https://sepolia.etherscan.io" target="_blank" id="etherscan-link">Contract</a>
+      </div>
+      <p class="footer-hash">
+        Content: <code id="content-hash">Loading...</code>
+      </p>
+    </footer>
+  </div>
+
+  <!-- ENS Registration Modal -->
+  <div class="modal-overlay" id="ens-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">🌐 Register ENS Name</h3>
+        <button class="modal-close" onclick="closeENSModal()">&times;</button>
+      </div>
+      
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+        Register a unique .eth name to deploy your own game instance accessible via ENS.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">ENS Name</label>
+        <input type="text" class="form-input" id="ens-name-input" placeholder="my-babylon-game" oninput="checkENSAvailability()">
+        <p class="form-hint" id="ens-availability">Enter a name to check availability</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Duration</label>
+        <select class="form-input" id="ens-duration">
+          <option value="1">1 Year</option>
+          <option value="2">2 Years</option>
+          <option value="5">5 Years</option>
+        </select>
+      </div>
+
+      <div class="price-display" id="price-display" style="display: none;">
+        <div class="price-row">
+          <span>Registration</span>
+          <span id="price-base">0.000 ETH</span>
+        </div>
+        <div class="price-row">
+          <span>Premium</span>
+          <span id="price-premium">0.000 ETH</span>
+        </div>
+        <div class="price-row price-total">
+          <span>Total</span>
+          <span id="price-total">0.000 ETH</span>
+        </div>
+      </div>
+
+      <div class="warning-banner" style="margin-bottom: 1.5rem;">
+        <span class="icon">💡</span>
+        <div>
+          <strong>How it works</strong>
+          <p>Registration requires 2 transactions: commit (prevents front-running) and reveal (completes registration). This takes ~1-2 minutes on Sepolia.</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="register-ens-btn" onclick="registerENS()" disabled style="width: 100%;">
+        Register Name
+      </button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ENS Modal functions
+    function _openENSModal() {
+      document.getElementById('ens-modal').classList.add('active');
+    }
+
+    function closeENSModal() {
+      document.getElementById('ens-modal').classList.remove('active');
+    }
+
+    // Close modal on outside click
+    document.getElementById('ens-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'ens-modal') closeENSModal();
+    });
+
+    let checkTimeout = null;
+
+    async function checkENSAvailability() {
+      const input = document.getElementById('ens-name-input');
+      const hint = document.getElementById('ens-availability');
+      const priceDisplay = document.getElementById('price-display');
+      const registerBtn = document.getElementById('register-ens-btn');
+      
+      const name = input.value.trim().toLowerCase().replace('.eth', '');
+      
+      if (!name || name.length < 3) {
+        hint.textContent = 'Name must be at least 3 characters';
+        hint.style.color = 'var(--text-secondary)';
+        priceDisplay.style.display = 'none';
+        registerBtn.disabled = true;
+        return;
+      }
+
+      hint.textContent = 'Checking availability...';
+      hint.style.color = 'var(--text-secondary)';
+
+      // Debounce
+      clearTimeout(checkTimeout);
+      checkTimeout = setTimeout(async () => {
+        // Simulate availability check (in production, call registrar.checkAvailability)
+        const available = !['ethereum', 'vitalik', 'bitcoin', 'test'].includes(name);
+        const duration = parseInt(document.getElementById('ens-duration').value);
+        
+        // Simulate pricing (real prices vary by name length)
+        const basePrice = name.length <= 3 ? 0.1 : name.length <= 4 ? 0.05 : 0.003;
+        const total = basePrice * duration;
+
+        if (available) {
+          hint.textContent = `✅ ${name}.eth is available!`;
+          hint.style.color = 'var(--accent-primary)';
+          
+          priceDisplay.style.display = 'block';
+          document.getElementById('price-base').textContent = basePrice.toFixed(4) + ' ETH';
+          document.getElementById('price-premium').textContent = '0.0000 ETH';
+          document.getElementById('price-total').textContent = total.toFixed(4) + ' ETH';
+          
+          registerBtn.disabled = false;
+        } else {
+          hint.textContent = `❌ ${name}.eth is not available`;
+          hint.style.color = 'var(--accent-danger)';
+          priceDisplay.style.display = 'none';
+          registerBtn.disabled = true;
+        }
+      }, 500);
+    }
+
+    async function _registerENS() {
+      const btn = document.getElementById('register-ens-btn');
+      const name = document.getElementById('ens-name-input').value.trim().toLowerCase();
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Step 1/3: Committing...';
+
+      try {
+        // Simulate registration steps
+        await new Promise(r => setTimeout(r, 2000));
+        btn.textContent = '⏳ Step 2/3: Waiting...';
+        
+        await new Promise(r => setTimeout(r, 3000));
+        btn.textContent = '⏳ Step 3/3: Registering...';
+        
+        await new Promise(r => setTimeout(r, 2000));
+
+        alert(`🎉 Successfully registered ${name}.eth!
+
+Your game will be accessible at:
+• https://${name}.eth.limo
+• https://${name}.eth.link
+
+Next steps:
+1. Upload your frontend to IPFS
+2. Set contenthash via ENS deployer
+3. Your permissionless game is live!`);
+
+        closeENSModal();
+
+      } catch (error) {
+        alert('Registration failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Register Name';
+      }
+    }
+
+    // Re-check when duration changes
+    document.getElementById('ens-duration').addEventListener('change', checkENSAvailability);
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+---
+description: EXTERMELY IMPORTANT CODING STYLE RULES
+alwaysApply: true
+---
+
+Do not use try { } catch { } blocks unless they are absolutely necessary or handling user supplied data. Avoid defensive programming and implement clean code with fail-fast patterns.
+
+IMPORTANT: After you have finished a task, go through again and review for slop, unnecessary comments, fallbacks and overly complex state management
+
+It is very important that you ALWAYS review your work after you've completed it to make sure that it is as clean, tight, compact as possible, with strong types and fail fast where it makes sense
+
+If you are expecting something, you can use an expect/throw pattern. Always aim to catch errors and throw instead of hiding errors and falling back.

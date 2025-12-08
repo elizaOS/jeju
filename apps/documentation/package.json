@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vitepress dev --port ${DOCUMENTATION_PORT:-4004}",
     "a2a": "bun run server/a2a-server.ts",
-    "build": "vitepress build",
+    "build": "bun run docs:generate && vitepress build",
+    "docs:generate": "cd ../.. && typedoc",
     "preview": "vitepress preview --port ${DOCUMENTATION_PORT:-4004}",
     "test": "bun run test:e2e && bun run test:unit",
     "test:unit": "bun test tests/unit/",
@@ -23,6 +24,8 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "playwright-core": "^1.56.1",
+    "typedoc": "^0.28.14",
+    "typedoc-plugin-markdown": "^4.9.0",
     "vitepress": "^1.0.0"
   }
 }

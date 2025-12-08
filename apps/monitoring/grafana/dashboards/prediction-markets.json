@@ -441,17 +441,17 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  date as time,\n  market_count as \"Markets Created\"\nFROM market_stats\nWHERE $__timeFilter(date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', created_at) as time,\n  COUNT(*) as \"Markets Created\"\nFROM prediction_market\nWHERE $__timeFilter(created_at)\nGROUP BY time\nORDER BY time",
           "format": "time_series",
           "refId": "A"
         },
         {
-          "rawSql": "SELECT \n  date as time,\n  unique_traders as \"Unique Traders\"\nFROM market_stats\nWHERE $__timeFilter(date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', mt.timestamp) as time,\n  COUNT(DISTINCT mt.trader_id) as \"Unique Traders\"\nFROM market_trade mt\nWHERE $__timeFilter(mt.timestamp)\nGROUP BY time\nORDER BY time",
           "format": "time_series",
           "refId": "B"
         },
         {
-          "rawSql": "SELECT \n  date as time,\n  trade_count as \"Total Trades\"\nFROM market_stats\nWHERE $__timeFilter(date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', mt.timestamp) as time,\n  COUNT(*) as \"Total Trades\"\nFROM market_trade mt\nWHERE $__timeFilter(mt.timestamp)\nGROUP BY time\nORDER BY time",
           "format": "time_series",
           "refId": "C"
         }
@@ -512,7 +512,7 @@
     },
     {
       "id": 14,
-      "title": "Oracle Game Activity",
+      "title": "Resolved Markets",
       "type": "table",
       "gridPos": {
         "h": 10,
@@ -526,7 +526,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  og.question as \"Question\",\n  LEFT(og.session_id, 10) || '...' as \"Session ID\",\n  og.finalized as \"Finalized\",\n  og.outcome as \"Outcome\",\n  og.committed_at as \"Committed At\",\n  og.revealed_at as \"Revealed At\",\n  (og.total_payout::numeric / 1e18) as \"Total Payout\"\nFROM oracle_game og\nORDER BY og.committed_at DESC\nLIMIT 30",
+          "rawSql": "SELECT \n  LEFT(pm.question, 50) || '...' as \"Question\",\n  LEFT(pm.session_id, 10) || '...' as \"Session ID\",\n  pm.resolved as \"Resolved\",\n  CASE WHEN pm.outcome THEN 'YES' ELSE 'NO' END as \"Outcome\",\n  (pm.total_volume::numeric / 1e18) as \"Total Volume\",\n  pm.created_at as \"Created At\"\nFROM prediction_market pm\nWHERE pm.resolved = true\nORDER BY pm.created_at DESC\nLIMIT 30",
           "format": "table"
         }
       ],

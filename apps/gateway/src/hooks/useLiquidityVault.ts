@@ -18,7 +18,6 @@ export function useLiquidityVault(vaultAddress: `0x${string}` | undefined) {
 
   const addETHLiquidity = async (amount: bigint) => {
     if (!vaultAddress) return;
-    // Note: addETHLiquidity has no inputs per the ABI
     addETH({
       address: vaultAddress,
       abi: LIQUIDITY_VAULT_ABI,

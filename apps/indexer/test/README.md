@@ -19,7 +19,7 @@ npm run test
 ---
 
 ### `localnet.sh`
-Full localnet integration test - verifies indexing from Jeju L2.
+Full localnet integration test - verifies indexing from Jeju.
 
 ```bash
 npm run test:localnet

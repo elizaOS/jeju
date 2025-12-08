@@ -7,12 +7,12 @@ import { ChainConfigSchema, type ChainConfig } from "../../types/chain";
 import { type Deployment } from "../../types/contracts";
 
 const NETWORK = "testnet";
-const CONFIG_PATH = join(process.cwd(), "config", "chain", `${NETWORK}.json`);
-const CONTRACTS_DIR = join(process.cwd(), "contracts");
+const CONFIG_PATH = join(process.cwd(), "packages", "config", "chain", `${NETWORK}.json`);
+const CONTRACTS_DIR = join(process.cwd(), "packages", "contracts");
 const DEPLOYMENTS_DIR = join(CONTRACTS_DIR, "deployments", NETWORK);
 
 async function main() {
-  console.log(`🚀 Deploying Jeju L2 to ${NETWORK}...`);
+  console.log(`🚀 Deploying Jeju to ${NETWORK}...`);
   
   // Load config
   const config = loadConfig();
@@ -77,7 +77,7 @@ async function main() {
   console.log("\n📌 Next steps:");
   console.log("1. Verify contracts: bun run verify:testnet");
   console.log("2. Update frontend config with new contract addresses");
-  console.log("3. Deploy infrastructure: cd terraform/environments/testnet && terraform apply");
+  console.log("3. Deploy infrastructure: cd packages/terraform/environments/testnet && terraform apply");
   console.log("4. Deploy Kubernetes services: bun run k8s:apply");
 }
 

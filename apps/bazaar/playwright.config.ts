@@ -1,34 +1,25 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
-const BAZAAR_PORT = process.env.BAZAAR_PORT || '4006';
-const BASE_URL = process.env.BASE_URL || `http://localhost:${BAZAAR_PORT}`;
+const BAZAAR_PORT = parseInt(process.env.BAZAAR_PORT || '4006')
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testIgnore: '**/e2e-wallet/**', // Exclude wallet tests from main config
-  fullyParallel: false,
-  workers: 1,
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'list',
 
-  reporter: [
-    ['dot'],
-  ],
-
-  timeout: 90000,
-
+  timeout: 60000,
   expect: {
     timeout: 10000,
   },
 
   use: {
-    baseURL: BASE_URL,
+    baseURL: `http://localhost:${BAZAAR_PORT}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    viewport: { width: 1280, height: 720 },
-    ignoreHTTPSErrors: true,
-    actionTimeout: 15000,
   },
 
   projects: [
@@ -40,8 +31,9 @@ export default defineConfig({
 
   webServer: {
     command: 'bun run dev',
-    url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    url: `http://localhost:${BAZAAR_PORT}`,
+    reuseExistingServer: true,
     timeout: 120000,
   },
-});
+})
+

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { captureScreenshot, captureUserFlow } from '../../../../tests/shared/helpers/screenshots'
+import { captureScreenshot, captureUserFlow } from '../../../../packages/tests/shared/helpers/screenshots'
 
 test.describe('Bazaar Homepage', () => {
   test('should display homepage with all features', async ({ page }) => {
@@ -21,10 +21,11 @@ test.describe('Bazaar Homepage', () => {
             await expect(page.getByRole('heading', { name: /Welcome to Bazaar/i })).toBeVisible()
 
             // Check feature cards by looking for the heading inside each card
-            await expect(page.getByRole('heading', { name: /^Tokens$/i })).toBeVisible()
+            await expect(page.getByRole('heading', { name: /^Coins$/i })).toBeVisible()
             await expect(page.getByRole('heading', { name: /^Swap$/i })).toBeVisible()
             await expect(page.getByRole('heading', { name: /^Pools$/i })).toBeVisible()
-            await expect(page.getByRole('heading', { name: /^NFTs$/i })).toBeVisible()
+            await expect(page.getByRole('heading', { name: /^Markets$/i })).toBeVisible()
+            await expect(page.getByRole('heading', { name: /^Items$/i })).toBeVisible()
           },
         },
       ],
@@ -46,7 +47,7 @@ test.describe('Bazaar Homepage', () => {
           name: 'click-tokens',
           action: async () => {
             // Click on Tokens card
-            await page.getByRole('link', { name: /Tokens/i }).first().click()
+            await page.getByRole('link', { name: /Coins/i }).first().click()
           },
           waitFor: 1000,
         },
@@ -54,8 +55,8 @@ test.describe('Bazaar Homepage', () => {
           name: 'tokens-page',
           action: async () => {
             // Should be on tokens page
-            await expect(page).toHaveURL(/\/tokens/)
-            await expect(page.getByRole('heading', { name: /Tokens/i })).toBeVisible()
+            await expect(page).toHaveURL(/\/coins/)
+            await expect(page.getByRole('heading', { name: /Coins/i }).first()).toBeVisible()
           },
         },
       ],
@@ -74,10 +75,11 @@ test.describe('Bazaar Homepage', () => {
 
     // Check navigation items
     await expect(page.getByRole('link', { name: /^Home$/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /^Tokens$/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Coins$/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /^Swap$/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /^Pools$/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /^NFTs$/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Markets$/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Items$/i })).toBeVisible()
 
     // Capture final state with all nav items visible
     await captureScreenshot(page, {

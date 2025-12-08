@@ -1,55 +1,34 @@
-# DeFi Protocols on Jeju
+# DeFi Protocols
 
-Guide to integrating with DeFi protocols deployed on Jeju.
+## Uniswap V4
 
-## Available Protocols
+Singleton architecture with custom hooks.
 
-### Uniswap V4
+**Deploy**:
+```bash
+bun run scripts/deploy-uniswap-v4.ts
+```
 
-Next-generation AMM with custom hooks.
+**Localnet**:
+```typescript
+PoolManager: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+WETH: '0x4200000000000000000000000000000000000006'
+```
 
-**Status**: Coming soon  
-**Documentation**: [Uniswap V4 Docs](https://docs.uniswap.org/contracts/v4/overview)
+Docs: https://docs.uniswap.org/contracts/v4/overview
 
-### Synthetix V3
+## Paymaster Integration
 
-Decentralized perpetuals and synthetic assets.
-
-**Status**: Coming soon  
-**Documentation**: [Synthetix V3 Docs](https://docs.synthetix.io/v/v3/)
-
-### Compound V3
-
-Efficient lending and borrowing.
-
-**Status**: Coming soon  
-**Documentation**: [Compound V3 Docs](https://docs.compound.finance/)
-
-## Integration Guide
-
-### Using Liquidity Paymaster
-
-The liquidity paymaster enables gasless transactions paid in elizaOS tokens.
+Gasless transactions with elizaOS tokens:
 
 ```solidity
-// Your contract
 contract MyDeFiApp {
     address public revenueWallet;
     
     function swap(...) external {
-        // Your logic here
-        // Revenue automatically credited to revenueWallet
-        // when users pay gas with elizaOS via paymaster
+        // Revenue credited to revenueWallet when users pay gas via paymaster
     }
 }
 ```
 
-See [Contract Addresses](/contracts) for deployed protocol addresses.
-
-## Resources
-
-- [Quick Start](./quick-start.md)
-- [Deploy Contracts](./deploy-contracts.md)
-- [Contract Addresses](/contracts)
-
-
+See [Contract Addresses](/contracts) for deployed addresses.

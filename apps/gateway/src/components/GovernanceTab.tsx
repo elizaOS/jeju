@@ -50,40 +50,6 @@ export default function GovernanceTab() {
       )}
 
       <CreateQuestForm />
-
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-            Parameter to Change
-          </label>
-          <select className="input">
-            <option value="">Select parameter...</option>
-            <option value="geographicBonusBPS">Geographic Bonus</option>
-            <option value="tokenDiversityBonusBPS">Token Diversity Bonus</option>
-            <option value="volumeBonusPerThousandRequests">Volume Bonus Rate</option>
-          </select>
-        </div>
-
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-            Proposed Value
-          </label>
-          <input className="input" type="number" placeholder="New value (basis points)" />
-        </div>
-
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-            Metric Question
-          </label>
-          <input
-            className="input"
-            type="text"
-            placeholder="e.g., 'Network uptime will improve'"
-          />
-          <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
-            This creates two prediction markets: one for change scenario, one for status quo
-          </p>
-        </div>
-
     </div>
   );
 }

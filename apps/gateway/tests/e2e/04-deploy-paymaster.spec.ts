@@ -19,7 +19,7 @@ test.describe('Gateway Deploy Paymaster', () => {
   test('should select token for paymaster', async ({ page }) => {
     const tokenSelect = page.locator('select[name*="token"], button:has-text("Select Token")').first();
     
-    if (await tokenSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await tokenSelect.isVisible({ timeout: 5000 })) {
       await tokenSelect.click();
       await expect(page.getByText(/elizaOS|CLANKER|VIRTUAL/i)).toBeVisible();
     }

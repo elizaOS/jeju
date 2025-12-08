@@ -39,6 +39,7 @@ services:
       - prometheus
     networks:
       - jeju-monitoring
+      - indexer_default
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -46,6 +47,8 @@ networks:
   jeju-monitoring:
     name: jeju-monitoring
     driver: bridge
+  indexer_default:
+    external: true
 
 volumes:
   prometheus-data:

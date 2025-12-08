@@ -46,7 +46,7 @@ test.describe('Add Liquidity Flow', () => {
       
       // Check for deployment warning
       const warning = page.getByText(/No paymaster deployed/i);
-      const warningExists = await warning.isVisible().catch(() => false);
+      const warningExists = await warning.isVisible();
       
       if (warningExists) {
         await expect(page.getByText(/Deploy one first/i)).toBeVisible();
@@ -61,7 +61,7 @@ test.describe('Add Liquidity Flow', () => {
     
     // ETH amount input should appear if paymaster deployed
     const amountInput = page.getByPlaceholder('1.0');
-    const inputExists = await amountInput.isVisible().catch(() => false);
+    const inputExists = await amountInput.isVisible();
     
     if (inputExists) {
       await expect(amountInput).toBeVisible();
@@ -81,7 +81,7 @@ test.describe('Add Liquidity Flow', () => {
     
     // Check if LP position card appears
     const lpCard = page.getByText(/Your elizaOS LP Position/i);
-    const hasPosition = await lpCard.isVisible().catch(() => false);
+    const hasPosition = await lpCard.isVisible();
     
     if (hasPosition) {
       await expect(page.getByText('ETH Shares')).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('Add Liquidity Flow', () => {
     await page.getByText('VIRTUAL').click();
     
     const lpCard = page.getByText(/Your VIRTUAL LP Position/i);
-    const hasPosition = await lpCard.isVisible().catch(() => false);
+    const hasPosition = await lpCard.isVisible();
     
     if (hasPosition) {
       // Pending fees should be displayed (even if 0)
@@ -123,7 +123,7 @@ test.describe('LP Dashboard Flow', () => {
   test('should show positions for all tokens with liquidity', async ({ page }) => {
     // Check for position cards or empty state
     const noPositionsMsg = page.getByText(/No LP Positions/i);
-    const hasNoPositions = await noPositionsMsg.isVisible().catch(() => false);
+    const hasNoPositions = await noPositionsMsg.isVisible();
     
     if (hasNoPositions) {
       await expect(page.getByText(/Add liquidity to earn fees/i)).toBeVisible();

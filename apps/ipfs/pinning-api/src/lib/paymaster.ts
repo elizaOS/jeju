@@ -7,7 +7,7 @@ import { Address, createPublicClient, http, parseAbi, encodePacked } from 'viem'
 
 const JEJU_CHAIN = {
   id: 1337,
-  name: 'Jeju L3',
+  name: 'Jeju',
   network: 'jeju',
   nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
   rpcUrls: {
@@ -50,48 +50,40 @@ export async function getAvailablePaymasters(minStake: bigint = MIN_STAKE_THRESH
     return [];
   }
 
-  try {
-    const client = getPublicClient();
-    
-    const paymasters = await client.readContract({
-      address: PAYMASTER_FACTORY_ADDRESS,
-      abi: PAYMASTER_FACTORY_ABI,
-      functionName: 'getAllPaymasters',
-    }) as Address[];
+  const client = getPublicClient();
+  
+  const paymasters = await client.readContract({
+    address: PAYMASTER_FACTORY_ADDRESS,
+    abi: PAYMASTER_FACTORY_ABI,
+    functionName: 'getAllPaymasters',
+  }) as Address[];
 
-    const paymasterDetails = await Promise.all(
-      paymasters.map(async (paymasterAddr) => {
-        try {
-          const [token, stake] = await Promise.all([
-            client.readContract({
-              address: paymasterAddr,
-              abi: PAYMASTER_ABI,
-              functionName: 'token',
-            }),
-            client.readContract({
-              address: PAYMASTER_FACTORY_ADDRESS,
-              abi: PAYMASTER_FACTORY_ABI,
-              functionName: 'paymasterStake',
-              args: [paymasterAddr],
-            }),
-          ]);
+  const paymasterDetails = await Promise.all(
+    paymasters.map(async (paymasterAddr) => {
+      const [token, stake] = await Promise.all([
+        client.readContract({
+          address: paymasterAddr,
+          abi: PAYMASTER_ABI,
+          functionName: 'token',
+        }),
+        client.readContract({
+          address: PAYMASTER_FACTORY_ADDRESS,
+          abi: PAYMASTER_FACTORY_ABI,
+          functionName: 'paymasterStake',
+          args: [paymasterAddr],
+        }),
+      ]);
 
-          return {
-            address: paymasterAddr,
-            token: token as Address,
-            stake: stake as bigint,
-            available: (stake as bigint) >= minStake,
-          };
-        } catch {
-          return null;
-        }
-      })
-    );
+      return {
+        address: paymasterAddr,
+        token: token as Address,
+        stake: stake as bigint,
+        available: (stake as bigint) >= minStake,
+      };
+    })
+  );
 
-    return paymasterDetails.filter((pm): pm is PaymasterInfo => pm !== null && pm.available);
-  } catch {
-    return [];
-  }
+  return paymasterDetails.filter((pm) => pm.available);
 }
 
 export async function getPaymasterForToken(tokenAddress: Address): Promise<Address | null> {
@@ -99,27 +91,23 @@ export async function getPaymasterForToken(tokenAddress: Address): Promise<Addre
     return null;
   }
 
-  try {
-    const client = getPublicClient();
-    
-    const paymaster = await client.readContract({
-      address: PAYMASTER_FACTORY_ADDRESS,
-      abi: PAYMASTER_FACTORY_ABI,
-      functionName: 'getPaymasterByToken',
-      args: [tokenAddress],
-    }) as Address;
+  const client = getPublicClient();
+  
+  const paymaster = await client.readContract({
+    address: PAYMASTER_FACTORY_ADDRESS,
+    abi: PAYMASTER_FACTORY_ABI,
+    functionName: 'getPaymasterByToken',
+    args: [tokenAddress],
+  }) as Address;
 
-    const stake = await client.readContract({
-      address: PAYMASTER_FACTORY_ADDRESS,
-      abi: PAYMASTER_FACTORY_ABI,
-      functionName: 'paymasterStake',
-      args: [paymaster],
-    }) as bigint;
+  const stake = await client.readContract({
+    address: PAYMASTER_FACTORY_ADDRESS,
+    abi: PAYMASTER_FACTORY_ABI,
+    functionName: 'paymasterStake',
+    args: [paymaster],
+  }) as bigint;
 
-    return stake >= MIN_STAKE_THRESHOLD ? paymaster : null;
-  } catch {
-    return null;
-  }
+  return stake >= MIN_STAKE_THRESHOLD ? paymaster : null;
 }
 
 export function generatePaymasterData(

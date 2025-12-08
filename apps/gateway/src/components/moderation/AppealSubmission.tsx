@@ -17,29 +17,19 @@ interface AppealSubmissionProps {
   onSuccess?: () => void;
 }
 
-// REAL IPFS upload
-import { uploadToIPFS } from '../../../lib/ipfs';
+import { uploadToIPFS } from '../../lib/ipfs';
 
 const useIPFSUpload = () => {
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const upload = async (file: File): Promise<string> => {
     setUploading(true);
-    setError(null);
-
-    try {
-      const hash = await uploadToIPFS(file);
-      return hash;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-      throw err;
-    } finally {
-      setUploading(false);
-    }
+    const hash = await uploadToIPFS(file);
+    setUploading(false);
+    return hash;
   };
 
-  return { upload, uploading, error };
+  return { upload, uploading };
 };
 
 const GOVERNANCE_ABI = [
@@ -96,13 +86,8 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
     if (!file) return;
 
     setEvidenceFile(file);
-
-    try {
-      const hash = await uploadToIPFS(file);
-      setEvidenceHash(hash);
-    } catch (error) {
-      console.error('Evidence upload failed:', error);
-    }
+    const hash = await uploadToIPFS(file);
+    setEvidenceHash(hash);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,8 +103,7 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
       return;
     }
 
-    // Submit appeal with evidence hash as string (IPFS CID)
-    writeContract({
+      writeContract({
       address: MODERATION_CONTRACTS.RegistryGovernance as `0x${string}`,
       abi: GOVERNANCE_ABI,
       functionName: 'submitAppeal',
@@ -132,8 +116,6 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
     setTimeout(() => onSuccess?.(), 2000);
   }
 
-  // Check if appeal window is still open (7 days after execution)
-  // proposal is a tuple: [proposalType, targetAgentId, proposer, status, approvalCount, votingEnds, executeAfter, reason]
   const proposalData = proposal as readonly [number, bigint, `0x${string}`, number, bigint, bigint, bigint, string] | undefined;
   const appealDeadline = proposalData ? Number(proposalData[6]) + 7 * 24 * 3600 : 0;
   const canAppeal = appealDeadline > Math.floor(Date.now() / 1000);
@@ -154,7 +136,6 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
     return <div className="animate-pulse">Loading proposal...</div>;
   }
 
-  // Destructure proposal tuple: [proposalType, targetAgentId, proposer, status, approvalCount, votingEnds, executeAfter, reason]
   const [, targetAgentId, , status, , , , reason] = proposalData;
 
   return (

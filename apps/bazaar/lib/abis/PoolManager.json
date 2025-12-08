@@ -1,0 +1,84 @@
+[
+  {
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "components": [
+          { "name": "currency0", "type": "address" },
+          { "name": "currency1", "type": "address" },
+          { "name": "fee", "type": "uint24" },
+          { "name": "tickSpacing", "type": "int24" },
+          { "name": "hooks", "type": "address" }
+        ]
+      },
+      { "name": "sqrtPriceX96", "type": "uint160" },
+      { "name": "hookData", "type": "bytes" }
+    ],
+    "outputs": [{ "name": "tick", "type": "int24" }],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getSlot0",
+    "inputs": [
+      { "name": "poolId", "type": "bytes32" }
+    ],
+    "outputs": [
+      { "name": "sqrtPriceX96", "type": "uint160" },
+      { "name": "tick", "type": "int24" },
+      { "name": "protocolFee", "type": "uint24" },
+      { "name": "lpFee", "type": "uint24" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getLiquidity",
+    "inputs": [
+      { "name": "poolId", "type": "bytes32" }
+    ],
+    "outputs": [
+      { "name": "liquidity", "type": "uint128" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPoolKey",
+    "inputs": [
+      { "name": "poolId", "type": "bytes32" }
+    ],
+    "outputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "components": [
+          { "name": "currency0", "type": "address" },
+          { "name": "currency1", "type": "address" },
+          { "name": "fee", "type": "uint24" },
+          { "name": "tickSpacing", "type": "int24" },
+          { "name": "hooks", "type": "address" }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "Initialize",
+    "inputs": [
+      { "name": "poolId", "type": "bytes32", "indexed": true },
+      { "name": "currency0", "type": "address", "indexed": true },
+      { "name": "currency1", "type": "address", "indexed": true },
+      { "name": "fee", "type": "uint24", "indexed": false },
+      { "name": "tickSpacing", "type": "int24", "indexed": false },
+      { "name": "hooks", "type": "address", "indexed": false }
+    ]
+  }
+]
+
+
+

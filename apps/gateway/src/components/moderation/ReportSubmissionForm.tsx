@@ -11,30 +11,19 @@ import { parseEther } from 'viem';
 import { Upload, AlertTriangle, FileText, Image } from 'lucide-react';
 import { MODERATION_CONTRACTS, MODERATION_CONFIG } from '../../config/moderation';
 
-// REAL IPFS upload hook
-import { uploadToIPFS } from '../../../lib/ipfs';
+import { uploadToIPFS } from '../../lib/ipfs';
 
 const useIPFSUpload = () => {
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const upload = async (file: File): Promise<string> => {
     setUploading(true);
-    setError(null);
-
-    try {
-      // REAL IPFS upload via Pinata
-      const hash = await uploadToIPFS(file);
-      return hash;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-      throw err;
-    } finally {
-      setUploading(false);
-    }
+    const hash = await uploadToIPFS(file);
+    setUploading(false);
+    return hash;
   };
 
-  return { upload, uploading, error };
+  return { upload, uploading };
 };
 
 interface ReportSubmissionFormProps {
@@ -87,22 +76,15 @@ export default function ReportSubmissionForm({
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Upload evidence to IPFS
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setEvidenceFile(file);
-
-    try {
-      const hash = await uploadToIPFS(file);
-      setEvidenceHash(hash);
-    } catch (error) {
-      console.error('Evidence upload failed:', error);
-    }
+    const hash = await uploadToIPFS(file);
+    setEvidenceHash(hash);
   };
 
-  // Submit report
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -159,7 +141,6 @@ export default function ReportSubmissionForm({
     });
   };
 
-  // Success handler
   if (isSuccess) {
     setTimeout(() => onSuccess?.(), 2000);
   }

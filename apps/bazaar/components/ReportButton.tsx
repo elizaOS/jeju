@@ -1,20 +1,14 @@
-/**
- * Report Button Component
- * Quick report action for traders
- */
-
 'use client';
 
-import { useState } from 'react';
 import { Flag } from 'lucide-react';
 import { Address } from 'viem';
 import { useAccount, useReadContract } from 'wagmi';
 import { MODERATION_CONTRACTS } from '../lib/moderation-contracts';
 
 interface ReportButtonProps {
-  targetAddress: Address;
-  context?: string; // e.g., "Suspicious trade behavior"
-  variant?: 'icon' | 'button' | 'text';
+  targetAddress: Address
+  context?: string
+  variant?: 'icon' | 'button' | 'text'
 }
 
 const IDENTITY_REGISTRY_ABI = [
@@ -28,7 +22,6 @@ const IDENTITY_REGISTRY_ABI = [
 ] as const;
 
 export default function ReportButton({ targetAddress, context, variant = 'icon' }: ReportButtonProps) {
-  const [showModal, setShowModal] = useState(false);
   const { address: userAddress } = useAccount();
 
   // Get target agent ID

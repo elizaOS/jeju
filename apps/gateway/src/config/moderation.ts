@@ -1,28 +1,12 @@
-/**
- * Moderation System Configuration
- * 
- * CURRENT: Placeholder zero addresses
- * 
- * TO MAKE REAL: After deploying moderation contracts:
- * ```
- * export const MODERATION_CONTRACTS = {
- *   BanManager: import.meta.env.VITE_BAN_MANAGER_ADDRESS as const,
- *   ReputationLabelManager: import.meta.env.VITE_REPUTATION_LABEL_MANAGER_ADDRESS as const,
- *   // ... load from .env.local
- * } as const;
- * ```
- * 
- * REASON: Moderation contracts separate deployment from Gateway core
- * IMPACT: Moderation features unavailable (reports, bans, appeals)
- * CORE GATEWAY FEATURES UNAFFECTED: Bridge, paymaster, LP, nodes, registry all work
- */
+const ZERO = '0x0000000000000000000000000000000000000000';
+
 export const MODERATION_CONTRACTS = {
-  BanManager: '0x0000000000000000000000000000000000000000',
-  ReputationLabelManager: '0x0000000000000000000000000000000000000000',
-  ReportingSystem: '0x0000000000000000000000000000000000000000',
-  Predimarket: '0x0000000000000000000000000000000000000000',
-  RegistryGovernance: '0x0000000000000000000000000000000000000000',
-  IdentityRegistry: '0x0000000000000000000000000000000000000000',
+  BanManager: import.meta.env.VITE_BAN_MANAGER_ADDRESS || ZERO,
+  ReputationLabelManager: import.meta.env.VITE_REPUTATION_LABEL_MANAGER_ADDRESS || ZERO,
+  ReportingSystem: import.meta.env.VITE_REPORTING_SYSTEM_ADDRESS || ZERO,
+  Predimarket: import.meta.env.VITE_PREDIMARKET_ADDRESS || ZERO,
+  RegistryGovernance: import.meta.env.VITE_REGISTRY_GOVERNANCE_ADDRESS || ZERO,
+  IdentityRegistry: import.meta.env.VITE_IDENTITY_REGISTRY_ADDRESS || ZERO,
 } as const;
 
 export const MODERATION_CONFIG = {

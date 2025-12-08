@@ -1,87 +1,49 @@
 /**
  * ERC-8004 Registry Integration for Indexer
- * User access control for query services
  */
 
-import { Address, createPublicClient, http, parseAbi } from 'viem';
+import { ethers } from 'ethers';
 
-const JEJU_CHAIN = {
-  id: 1337,
-  name: 'Jeju L3',
-  network: 'jeju',
-  nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-  rpcUrls: {
-    default: { http: [process.env.RPC_URL || 'http://localhost:9545'] },
-    public: { http: [process.env.RPC_URL || 'http://localhost:9545'] },
-  },
-};
-
-const IDENTITY_REGISTRY_ABI = parseAbi([
+const IDENTITY_REGISTRY_ABI = [
   'function getAgentId(address agentAddress) external view returns (uint256)',
-]);
+];
 
-const BAN_MANAGER_ABI = parseAbi([
+const BAN_MANAGER_ABI = [
   'function isBanned(uint256 agentId) external view returns (bool)',
   'function getBanReason(uint256 agentId) external view returns (string memory)',
-]);
-
-const IDENTITY_REGISTRY_ADDRESS = (process.env.IDENTITY_REGISTRY_ADDRESS ||
-  '0x0000000000000000000000000000000000000000') as Address;
-
-const BAN_MANAGER_ADDRESS = (process.env.BAN_MANAGER_ADDRESS ||
-  '0x0000000000000000000000000000000000000000') as Address;
+];
 
 export interface BanCheckResult {
   allowed: boolean;
   reason?: string;
 }
 
-function getPublicClient() {
-  return createPublicClient({
-    chain: JEJU_CHAIN,
-    transport: http(),
-  });
+function getProvider() {
+  const rpcUrl = process.env.RPC_URL;
+  if (!rpcUrl) throw new Error('RPC_URL environment variable is required');
+  return new ethers.JsonRpcProvider(rpcUrl);
 }
 
-export async function checkUserBan(userAddress: Address): Promise<BanCheckResult> {
-  if (BAN_MANAGER_ADDRESS === '0x0000000000000000000000000000000000000000') {
+export async function checkUserBan(userAddress: string): Promise<BanCheckResult> {
+  const banManagerAddress = process.env.BAN_MANAGER_ADDRESS;
+  const identityRegistryAddress = process.env.IDENTITY_REGISTRY_ADDRESS;
+  
+  if (!banManagerAddress || !identityRegistryAddress) {
     return { allowed: true };
   }
 
-  try {
-    const client = getPublicClient();
-    
-    const agentId = await client.readContract({
-      address: IDENTITY_REGISTRY_ADDRESS,
-      abi: IDENTITY_REGISTRY_ABI,
-      functionName: 'getAgentId',
-      args: [userAddress],
-    } as any);
+  const provider = getProvider();
+  
+  const identityRegistry = new ethers.Contract(identityRegistryAddress, IDENTITY_REGISTRY_ABI, provider);
+  const banManager = new ethers.Contract(banManagerAddress, BAN_MANAGER_ABI, provider);
 
-    const isBanned = await client.readContract({
-      address: BAN_MANAGER_ADDRESS,
-      abi: BAN_MANAGER_ABI,
-      functionName: 'isBanned',
-      args: [agentId],
-    } as any);
+  const agentId = await identityRegistry.getAgentId(userAddress);
+  const isBanned = await banManager.isBanned(agentId);
 
-    if (isBanned) {
-      const reason = await client.readContract({
-        address: BAN_MANAGER_ADDRESS,
-        abi: BAN_MANAGER_ABI,
-        functionName: 'getBanReason',
-        args: [agentId],
-      } as any);
-
-      return {
-        allowed: false,
-        reason: reason as string,
-      };
-    }
-
-    return { allowed: true };
-  } catch (error) {
-    return { allowed: true };
+  if (isBanned) {
+    const reason = await banManager.getBanReason(agentId);
+    return { allowed: false, reason };
   }
-}
 
+  return { allowed: true };
+}

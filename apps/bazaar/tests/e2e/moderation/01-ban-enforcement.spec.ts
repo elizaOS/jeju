@@ -14,20 +14,20 @@ test.describe('Ban Enforcement in Bazaar', () => {
   });
 
   test('should have ReputationBadge component available', async ({ page }) => {
-    await page.goto('/tokens');
+    await page.goto('/coins');
 
     // Check that page loads without errors
-    await expect(page.getByRole('heading', { name: /Tokens/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Coins/i })).toBeVisible();
     
     // ReputationBadge would show on actual token pages with addresses
     // This test just verifies no critical errors
   });
 
   test('should have ReportButton component available', async ({ page }) => {
-    await page.goto('/tokens');
+    await page.goto('/coins');
 
     // Check that page loads without errors
-    await expect(page.getByRole('heading', { name: /Tokens/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Coins/i })).toBeVisible();
     
     // ReportButton would show on actual token detail pages
     // This test just verifies the page structure is correct

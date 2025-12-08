@@ -298,7 +298,7 @@
     },
     {
       "id": 9,
-      "title": "Most Active Contracts (by interactions)",
+      "title": "Most Active Contracts (by events)",
       "type": "table",
       "gridPos": {
         "h": 10,
@@ -312,7 +312,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  LEFT(c.address, 10) || '...' as \"Contract\",\n  c.contract_type as \"Type\",\n  COUNT(DISTINCT ci.caller_id) as \"Unique Users\",\n  SUM(ci.interaction_count) as \"Total Interactions\",\n  MAX(ci.last_interaction) as \"Last Active\"\nFROM contract c\nJOIN contract_interaction ci ON c.id = ci.contract_id\nGROUP BY c.address, c.contract_type\nORDER BY \"Total Interactions\" DESC\nLIMIT 20",
+          "rawSql": "SELECT \n  LEFT(c.address, 10) || '...' as \"Contract\",\n  c.contract_type as \"Type\",\n  COUNT(*) as \"Total Events\",\n  MAX(de.timestamp) as \"Last Active\"\nFROM contract c\nJOIN decoded_event de ON c.id = de.address_id\nGROUP BY c.address, c.contract_type\nORDER BY \"Total Events\" DESC\nLIMIT 20",
           "format": "table"
         }
       ],
@@ -342,7 +342,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT \n  pa.date as time,\n  pa.event_name as metric,\n  pa.event_count as value\nFROM protocol_activity pa\nWHERE $__timeFilter(pa.date)\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', de.timestamp) as time,\n  de.event_name as metric,\n  COUNT(*) as value\nFROM decoded_event de\nWHERE $__timeFilter(de.timestamp)\nGROUP BY time, de.event_name\nORDER BY time",
           "format": "time_series"
         }
       ],

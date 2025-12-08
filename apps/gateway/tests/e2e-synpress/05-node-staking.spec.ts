@@ -5,7 +5,7 @@
 
 import { testWithSynpress } from '@synthetixio/synpress';
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright';
-import basicSetup from '../fixtures/synpress-wallet';
+import { basicSetup } from '../fixtures/synpress-wallet';
 import { connectWallet, approveTransaction } from '../helpers/wallet-helpers';
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup));
@@ -47,7 +47,7 @@ test.describe('Node Staking Flow', () => {
     
     // Either shows nodes or empty state
     const emptyState = page.getByText(/No Nodes Yet/i);
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
+    const hasEmpty = await emptyState.isVisible();
     
     if (hasEmpty) {
       await expect(page.getByText(/Stake tokens and register a node/i)).toBeVisible();
@@ -187,7 +187,7 @@ test.describe('Node Staking Flow', () => {
     
     // Check for max nodes warning
     const maxWarning = page.getByText(/reached the maximum of 5 nodes/i);
-    const hasMax = await maxWarning.isVisible().catch(() => false);
+    const hasMax = await maxWarning.isVisible();
     
     if (hasMax) {
       // Submit button should be disabled

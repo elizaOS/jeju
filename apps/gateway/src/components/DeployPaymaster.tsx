@@ -44,13 +44,6 @@ export default function DeployPaymaster({ tokenAddress: propTokenAddress }: { to
     <div className="card">
       <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Deploy Paymaster</h2>
 
-      <div style={{ padding: '1rem', background: '#dbeafe', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid #3b82f6' }}>
-        <p style={{ fontSize: '0.875rem', margin: 0, color: '#1e40af' }}>
-          <strong>🚀 Deploy for ANY token:</strong> elizaOS, CLANKER, VIRTUAL, CLANKERMON, or any registered ERC20. 
-          Factory deploys Vault + Distributor + Paymaster in one transaction.
-        </p>
-      </div>
-
       <TokenSelector
         tokens={tokenOptions}
         selectedToken={selectedToken?.symbol}
@@ -73,12 +66,12 @@ export default function DeployPaymaster({ tokenAddress: propTokenAddress }: { to
       )}
 
       {selectedToken && !deployment && !config && (
-        <div style={{ padding: '1rem', background: '#fee2e2', borderRadius: '8px', marginTop: '1rem' }}>
-          <p style={{ color: '#dc2626', margin: 0 }}>
-            <strong>❌ Token not registered</strong>
+        <div style={{ padding: '1rem', background: '#eff6ff', borderRadius: '8px', marginTop: '1rem' }}>
+          <p style={{ color: '#1e40af', margin: 0 }}>
+            <strong>ℹ️ Token not yet registered</strong>
           </p>
-          <p style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.5rem' }}>
-            Register {selectedToken.symbol} in the TokenRegistry first (see "Registered Tokens" tab).
+          <p style={{ fontSize: '0.75rem', color: '#1e40af', marginTop: '0.5rem' }}>
+            You can deploy a paymaster for {selectedToken.symbol} now, or register it in TokenRegistry first for better protocol integration.
           </p>
         </div>
       )}

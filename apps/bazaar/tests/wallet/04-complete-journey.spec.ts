@@ -1,6 +1,6 @@
 import { testWithSynpress } from '@synthetixio/synpress'
 import { MetaMask, metaMaskFixtures } from '@synthetixio/synpress/playwright'
-import basicSetup from '../../test/wallet-setup/jeju.setup'
+import { basicSetup } from '../../synpress.config'
 
 const test = testWithSynpress(metaMaskFixtures(basicSetup))
 const { expect } = test
@@ -12,7 +12,7 @@ test.describe('Complete User Journey with Synpress', () => {
     await page.goto('/')
     
     const connectButton = page.getByRole('button', { name: /Connect Wallet/i })
-    if (await connectButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await connectButton.isVisible({ timeout: 5000 })) {
       await connectButton.click()
       await page.waitForTimeout(1000)
       await metamask.connectToDapp()
@@ -26,6 +26,8 @@ test.describe('Complete User Journey with Synpress', () => {
       { path: '/swap', heading: /Swap/i },
       { path: '/pools', heading: /Pools/i },
       { path: '/liquidity', heading: /Add Liquidity/i },
+      { path: '/markets', heading: /Prediction Markets/i },
+      { path: '/portfolio', heading: /Your Portfolio/i },
       { path: '/nfts', heading: /NFT Marketplace/i },
       { path: '/my-nfts', heading: /My NFTs/i },
       { path: '/games', heading: /Onchain Games/i },
@@ -40,7 +42,7 @@ test.describe('Complete User Journey with Synpress', () => {
   test('should interact with all navigation links', async ({ page }) => {
     await page.goto('/');
 
-    const navLinks = ['Tokens', 'Swap', 'Pools', 'NFTs'];
+    const navLinks = ['Tokens', 'Swap', 'Pools', 'Markets', 'NFTs'];
     
     for (const linkText of navLinks) {
       const link = page.getByRole('link', { name: new RegExp(`^${linkText}$`, 'i') });
@@ -51,7 +53,6 @@ test.describe('Complete User Journey with Synpress', () => {
       
       await expect(page).toHaveURL(new RegExp(`/${linkText.toLowerCase()}`));
       
-      // Return home
       await page.goto('/');
       await page.waitForTimeout(300);
     }
@@ -70,6 +71,15 @@ test.describe('Complete User Journey with Synpress', () => {
     await expect(page.getByRole('heading', { name: /Create Token/i })).toBeVisible();
     await expect(page.getByText(/Please connect your wallet/i)).not.toBeVisible();
 
+    // Markets
+    await page.goto('/markets');
+    await expect(page.getByRole('heading', { name: /Prediction Markets/i })).toBeVisible();
+    
+    // Portfolio
+    await page.goto('/portfolio');
+    await expect(page.getByRole('heading', { name: /Your Portfolio/i })).toBeVisible();
+    await expect(page.getByTestId('connect-wallet-message')).not.toBeVisible();
+
     // My NFTs
     await page.goto('/my-nfts');
     await expect(page.getByRole('heading', { name: /My NFTs/i })).toBeVisible();
@@ -83,4 +93,5 @@ test.describe('Complete User Journey with Synpress', () => {
     expect(buttonText).not.toContain('Connect Wallet');
   });
 });
+
 

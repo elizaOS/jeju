@@ -1,43 +1,17 @@
-import { defineConfig, devices } from '@playwright/test';
+import { createJejuSynpressConfig, createJejuWalletSetup } from '../../tests/shared/synpress.config.base';
 
 const BAZAAR_PORT = parseInt(process.env.BAZAAR_PORT || '4006');
 
-export default defineConfig({
+// Export Playwright config - assumes server already running
+export default createJejuSynpressConfig({
+  appName: 'bazaar',
+  port: BAZAAR_PORT,
   testDir: './tests/wallet',
-  fullyParallel: false,
-  workers: 1,
-  retries: 0,
-
-  reporter: [
-    ['list'],
-    ['json', { outputFile: 'test-results-synpress.json' }],
-  ],
-
-  timeout: 180000, // 3 minutes for DeFi operations
-
-  expect: {
-    timeout: 15000,
-  },
-
-  use: {
-    baseURL: `http://localhost:${BAZAAR_PORT}`,
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    viewport: { width: 1280, height: 720 },
-  },
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
-
-  webServer: {
-    command: 'bun run dev',
-    url: `http://localhost:${BAZAAR_PORT}`,
-    reuseExistingServer: true,
-    timeout: 120000,
+  overrides: {
+    timeout: 180000, // 3 minutes for trading and market operations
+    webServer: undefined, // Server must be started manually
   },
 });
+
+// Export wallet setup for Synpress
+export const basicSetup = createJejuWalletSetup();
