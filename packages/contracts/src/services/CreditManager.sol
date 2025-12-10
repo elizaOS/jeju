@@ -148,7 +148,7 @@ contract CreditManager is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @notice Deposit JEJU tokens to build credit balance (preferred payment token)
+     * @notice Deposit JEJU tokens to build credit balance
      * @param amount Amount in JEJU (18 decimals)
      */
     function depositJEJU(uint256 amount) external whenNotPaused {
@@ -312,7 +312,7 @@ contract CreditManager is Ownable, Pausable, ReentrancyGuard {
         } else if (token == address(elizaOS)) {
             ethValue = (tokenAmount * 1e14) / 1e18; // elizaOS has 18 decimals
         } else if (address(jeju) != address(0) && token == address(jeju)) {
-            ethValue = (tokenAmount * 2e14) / 1e18; // JEJU has 18 decimals, preferred token
+            ethValue = (tokenAmount * 2e14) / 1e18; // JEJU has 18 decimals
         } else {
             revert UnsupportedToken(token);
         }
@@ -481,7 +481,7 @@ contract CreditManager is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @notice Set JEJU token address (preferred payment token for Jeju Network)
+     * @notice Set JEJU token address
      * @param _jeju JEJU token contract address
      */
     function setJejuToken(address _jeju) external onlyOwner {
