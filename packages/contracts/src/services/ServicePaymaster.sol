@@ -7,17 +7,8 @@ import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/Pac
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {BasePaymaster} from "@account-abstraction/contracts/core/BasePaymaster.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-
-interface IPriceOracle {
-    function getPrice(address token) external view returns (uint256 priceUSD, uint256 decimals);
-    function isPriceFresh(address token) external view returns (bool);
-}
-
-interface ICloudServiceRegistry {
-    function getServiceCost(string calldata serviceName, address user) external view returns (uint256 cost);
-    function recordUsage(address user, string calldata serviceName, uint256 cost) external;
-    function isServiceAvailable(string calldata serviceName) external view returns (bool);
-}
+import {IPriceOracle} from "../interfaces/IPriceOracle.sol";
+import {ICloudServiceRegistry} from "../interfaces/IServices.sol";
 
 /**
  * @title CloudPaymaster
@@ -125,8 +116,9 @@ contract CloudPaymaster is BasePaymaster, Pausable {
         address _usdc,
         address _serviceRegistry,
         address _priceOracle,
-        address _revenueWallet
-    ) BasePaymaster(_entryPoint) {
+        address _revenueWallet,
+        address _owner
+    ) BasePaymaster(_entryPoint, _owner) {
         require(_elizaOS != address(0), "Invalid elizaOS");
         require(_usdc != address(0), "Invalid USDC");
         require(_serviceRegistry != address(0), "Invalid registry");
@@ -360,7 +352,7 @@ contract CloudPaymaster is BasePaymaster, Pausable {
      * @notice Deposits ETH into EntryPoint for gas sponsorship
      */
     function depositToEntryPoint() external payable onlyOwner {
-        entryPoint.depositTo{value: msg.value}(address(this));
+        entryPoint().depositTo{value: msg.value}(address(this));
         emit EntryPointFunded(msg.value);
     }
 
@@ -370,7 +362,7 @@ contract CloudPaymaster is BasePaymaster, Pausable {
      * @param amount Amount to withdraw
      */
     function withdrawFromEntryPoint(address payable to, uint256 amount) external onlyOwner {
-        entryPoint.withdrawTo(to, amount);
+        entryPoint().withdrawTo(to, amount);
     }
 
     /**

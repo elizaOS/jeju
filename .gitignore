@@ -96,3 +96,7 @@ test-results
 **/*.cpython-314.pyc
 
 cache/packages/deployment/.keys/
+
+# Root-owned build artifacts (delete with sudo rm -rf)
+packages/contracts/out-root-owned/
+packages/contracts/cache-root-owned/

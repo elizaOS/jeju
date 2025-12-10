@@ -57,6 +57,14 @@ export {
   SimpleOracleAbi,
   HyperlaneOracleAbi,
   SuperchainOracleAbi,
+  // Game ABIs (Hyperscape / forkable game infrastructure)
+  // Note: Games use standard Jeju BanManager for moderation
+  GoldAbi,
+  ItemsAbi,
+  GameIntegrationAbi,
+  PlayerTradeEscrowAbi,
+  // Paymaster ABIs (ERC-4337 Account Abstraction)
+  SponsoredPaymasterAbi,
   // Full JSON exports
   ERC20AbiJson,
   ERC20FactoryAbiJson,
@@ -68,6 +76,11 @@ export {
   SimpleOracleAbiJson,
   HyperlaneOracleAbiJson,
   SuperchainOracleAbiJson,
+  GoldAbiJson,
+  ItemsAbiJson,
+  GameIntegrationAbiJson,
+  PlayerTradeEscrowAbiJson,
+  SponsoredPaymasterAbiJson,
 } from './abis';
 
 // ============================================================================
@@ -81,6 +94,7 @@ export {
   erc20FactoryDeployments,
   identitySystemDeployments,
   paymasterDeployments,
+  gameSystemDeployments,
   // Helper functions
   getUniswapV4,
   getBazaarMarketplace,
@@ -88,6 +102,14 @@ export {
   getIdentityRegistry,
   getContractAddresses,
   getContractAddressesByNetwork,
+  // Game system helpers
+  getGameSystem,
+  getGameGold,
+  getGameItems,
+  getGameIntegration,
+  // Paymaster / AA helpers
+  getPaymasterSystem,
+  getSponsoredPaymaster,
   // Raw deployments
   rawDeployments,
 } from './deployments';
@@ -103,4 +125,31 @@ export { CHAIN_IDS, NETWORK_BY_CHAIN_ID, ZERO_ADDRESS } from './types';
 // ============================================================================
 
 export { isValidAddress } from './types';
+
+// ============================================================================
+// Account Abstraction (ERC-4337)
+// ============================================================================
+
+export {
+  // Constants
+  ENTRYPOINT_V07_ADDRESS,
+  DEFAULT_GAS_LIMITS,
+  // Types
+  type PaymasterData,
+  type SponsoredPaymasterConfig,
+  type LiquidityPaymasterConfig,
+  type MultiTokenPaymasterConfig,
+  // Paymaster data builders
+  getSponsoredPaymasterData,
+  getLiquidityPaymasterData,
+  getMultiTokenPaymasterData,
+  // Helpers
+  parsePaymasterAddress,
+  isSponsoredPaymaster,
+  calculateRequiredDeposit,
+  // Minimal ABIs (full ABIs are in ./abis)
+  SponsoredPaymasterAbi as SponsoredPaymasterMinimalAbi,
+  LiquidityPaymasterAbi as LiquidityPaymasterMinimalAbi,
+  EntryPointAbi as EntryPointMinimalAbi,
+} from './aa';
 

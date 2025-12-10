@@ -188,7 +188,7 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
      * @param _l1StakeManager L1 stake manager address for XLP verification
      * @param _chainId Chain ID of this deployment
      */
-    constructor(IEntryPoint _entryPoint, address _l1StakeManager, uint256 _chainId) BasePaymaster(_entryPoint) {
+    constructor(IEntryPoint _entryPoint, address _l1StakeManager, uint256 _chainId, address _owner) BasePaymaster(_entryPoint, _owner) {
         require(_l1StakeManager != address(0), "Invalid stake manager");
         l1StakeManager = _l1StakeManager;
         chainId = _chainId;

@@ -7,21 +7,8 @@ import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/Pac
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {BasePaymaster} from "@account-abstraction/contracts/core/BasePaymaster.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-
-interface ILiquidityVault {
-    function provideETHForGas(uint256 amount) external returns (bool);
-    function availableETH() external view returns (uint256);
-    function distributeFees(uint256 ethPoolFees, uint256 elizaPoolFees) external;
-}
-
-interface IFeeDistributor {
-    function distributeFees(uint256 amount, address appAddress) external;
-}
-
-interface IPriceOracle {
-    function getElizaOSPerETH() external view returns (uint256);
-    function isPriceFresh() external view returns (bool);
-}
+import {ILiquidityVault, IFeeDistributor} from "../interfaces/IPaymaster.sol";
+import {IElizaOSPriceOracle} from "../interfaces/IPriceOracle.sol";
 
 /**
  * @title LiquidityPaymaster
@@ -66,7 +53,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
     IFeeDistributor public immutable feeDistributor;
 
     /// @notice Oracle providing elizaOS/ETH exchange rate
-    IPriceOracle public priceOracle;
+    IElizaOSPriceOracle public priceOracle;
 
     /// @notice Additional fee margin added to cover price volatility (in basis points)
     /// @dev Default 10% = 1000 basis points. Changes have 24h timelock for user protection.
@@ -136,8 +123,9 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
         address _paymentToken,
         address _liquidityVault,
         address _feeDistributor,
-        address _priceOracle
-    ) BasePaymaster(_entryPoint) {
+        address _priceOracle,
+        address _owner
+    ) BasePaymaster(_entryPoint, _owner) {
         require(_paymentToken != address(0), "Invalid payment token");
         require(_liquidityVault != address(0), "Invalid vault");
         require(_feeDistributor != address(0), "Invalid distributor");
@@ -146,7 +134,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
         paymentToken = IERC20(_paymentToken);
         liquidityVault = ILiquidityVault(_liquidityVault);
         feeDistributor = IFeeDistributor(_feeDistributor);
-        priceOracle = IPriceOracle(_priceOracle);
+        priceOracle = IElizaOSPriceOracle(_priceOracle);
     }
 
     // ============ Paymaster Core ============
@@ -219,7 +207,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
         }
 
         // Check our EntryPoint deposit is sufficient
-        uint256 currentDeposit = entryPoint.balanceOf(address(this));
+        uint256 currentDeposit = entryPoint().balanceOf(address(this));
         if (currentDeposit < maxCost + minEntryPointBalance) {
             revert InsufficientLiquidity();
         }
@@ -339,7 +327,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
     function fundFromVault(uint256 amount) external onlyOwner {
         require(liquidityVault.provideETHForGas(amount), "Vault transfer failed");
         // ETH is now in this contract, deposit to EntryPoint
-        entryPoint.depositTo{value: amount}(address(this));
+        entryPoint().depositTo{value: amount}(address(this));
         emit EntryPointFunded(amount);
     }
 
@@ -360,11 +348,11 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
      * @custom:security Permissionless design allows keepers or users to maintain system
      */
     function refillEntryPointDeposit() external {
-        uint256 currentBalance = entryPoint.balanceOf(address(this));
+        uint256 currentBalance = entryPoint().balanceOf(address(this));
         if (currentBalance < minEntryPointBalance) {
             uint256 needed = (minEntryPointBalance * 2) - currentBalance; // Refill to 2x min
             require(liquidityVault.provideETHForGas(needed), "Vault transfer failed");
-            entryPoint.depositTo{value: needed}(address(this));
+            entryPoint().depositTo{value: needed}(address(this));
             emit EntryPointFunded(needed);
         }
     }
@@ -381,7 +369,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
      *      - Vault has available ETH liquidity
      */
     function isOperational() external view returns (bool) {
-        return !paused() && entryPoint.balanceOf(address(this)) >= minEntryPointBalance && priceOracle.isPriceFresh()
+        return !paused() && entryPoint().balanceOf(address(this)) >= minEntryPointBalance && priceOracle.isPriceFresh()
             && liquidityVault.availableETH() > 0;
     }
 
@@ -398,7 +386,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
         view
         returns (uint256 entryPointBalance, uint256 vaultLiquidity, bool oracleFresh, bool operational)
     {
-        entryPointBalance = entryPoint.balanceOf(address(this));
+        entryPointBalance = entryPoint().balanceOf(address(this));
         vaultLiquidity = liquidityVault.availableETH();
         oracleFresh = priceOracle.isPriceFresh();
         operational = this.isOperational();
@@ -462,7 +450,7 @@ contract LiquidityPaymaster is BasePaymaster, Pausable {
      */
     function setPriceOracle(address newOracle) external onlyOwner {
         require(newOracle != address(0), "Invalid oracle");
-        priceOracle = IPriceOracle(newOracle);
+        priceOracle = IElizaOSPriceOracle(newOracle);
         emit PriceOracleUpdated(newOracle);
     }
 
