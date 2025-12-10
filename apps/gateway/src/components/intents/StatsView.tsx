@@ -1,8 +1,3 @@
-/**
- * @fileoverview StatsView - OIF analytics dashboard
- * Migrated from apps/intents/viewer
- */
-
 import { Activity, DollarSign, Users, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 import { useOIFStats } from '../../hooks/useIntentAPI';
 
@@ -95,6 +90,14 @@ export function StatsView() {
       </div>
 
       {/* Chain Breakdown */}
+      <ChainVolumeBreakdown totalVolume={parseFloat(stats?.totalVolumeUsd || '0')} />
+    </div>
+  );
+}
+
+function ChainVolumeBreakdown({ totalVolume }: { totalVolume: number }) {
+  if (totalVolume === 0) {
+    return (
       <div style={{
         background: 'var(--surface)',
         border: '1px solid var(--border-accent)',
@@ -105,12 +108,32 @@ export function StatsView() {
         <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: 'var(--text-primary)' }}>
           Volume by Chain
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <ChainBar name="Ethereum" percentage={45} color="var(--chain-ethereum)" volume="$2.25M" />
-          <ChainBar name="Arbitrum" percentage={30} color="var(--chain-arbitrum)" volume="$1.5M" />
-          <ChainBar name="Optimism" percentage={15} color="var(--chain-optimism)" volume="$750K" />
-          <ChainBar name="Jeju" percentage={10} color="var(--chain-jeju)" volume="$500K" />
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+          <p>No volume data yet</p>
+          <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            Chain volume breakdown will appear as intents are processed
+          </p>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border-accent)',
+      borderRadius: '16px',
+      padding: '24px',
+      backdropFilter: 'blur(8px)',
+    }}>
+      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: 'var(--text-primary)' }}>
+        Volume by Chain
+      </h3>
+      <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)' }}>
+        <p>Total Volume: ${formatLargeNumber(totalVolume)}</p>
+        <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+          Detailed per-chain breakdown requires indexer integration
+        </p>
       </div>
     </div>
   );
@@ -188,41 +211,6 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function ChainBar({ name, percentage, color, volume }: {
-  name: string;
-  percentage: number;
-  color: string;
-  volume: string;
-}) {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
-          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{name}</span>
-        </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <span style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{volume}</span>
-          <span style={{ color: 'var(--text-secondary)' }}>{percentage}%</span>
-        </div>
-      </div>
-      <div style={{
-        height: '8px',
-        background: 'var(--accent-primary-soft)',
-        borderRadius: '4px',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          height: '100%',
-          width: `${percentage}%`,
-          background: `linear-gradient(90deg, ${color}, ${color}aa)`,
-          borderRadius: '4px',
-          transition: 'width 0.5s ease',
-        }} />
-      </div>
-    </div>
-  );
-}
 
 function formatLargeNumber(num: number): string {
   if (num >= 1000000000) return `${(num / 1000000000).toFixed(2)}B`;

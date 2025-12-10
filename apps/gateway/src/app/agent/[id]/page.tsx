@@ -1,8 +1,3 @@
-/**
- * Agent Profile Page
- * Shows complete agent information, reputation, bans, labels, reports
- */
-
 'use client';
 
 import { use } from 'react';

@@ -100,4 +100,29 @@ export function getL1RpcUrl(network?: NetworkType): string {
   return process.env.JEJU_L1_RPC_URL || config.l1RpcUrl;
 }
 
+// Vendor Apps Config
+
+export interface VendorAppConfig {
+  name: string;
+  url: string;
+  path: string;
+  description?: string;
+  private: boolean;
+  optional: boolean;
+  branch: string;
+}
+
+export interface VendorAppsConfig {
+  apps: VendorAppConfig[];
+}
+
+/**
+ * Loads the vendor apps configuration
+ */
+export function loadVendorAppsConfig(): VendorAppsConfig {
+  const configPath = resolve(CONFIG_DIR, 'vendor-apps.json');
+  const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+  return raw as VendorAppsConfig;
+}
+
 

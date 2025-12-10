@@ -32,6 +32,14 @@ export enum VotePosition {
   NO = 1
 }
 
+export enum ReputationTier {
+  UNTRUSTED = 0,    // 0-1000 score: Can't report alone
+  LOW = 1,          // 1001-3000: Needs 3 users for quorum
+  MEDIUM = 2,       // 3001-6000: Needs 2 users for quorum  
+  HIGH = 3,         // 6001-8000: Can report alone, normal stake
+  TRUSTED = 4       // 8001-10000: Can report alone, reduced stake
+}
+
 // ============ Interfaces ============
 
 export interface BanRecord {

@@ -16,7 +16,7 @@ bun install
 bun run dev
 ```
 
-No configuration needed.
+No configuration needed. Private vendor apps (hyperscape, babylon, cloud, etc.) are automatically cloned if you have access.
 
 ## What Starts
 
@@ -113,10 +113,9 @@ Cross-chain intent system with ERC-7683 compatible contracts.
 ### Quick Start
 
 ```bash
-# Start intent services
-cd apps/intents/aggregator && bun run src/index.ts  # Port 4010
-cd apps/intents/solver && bun run src/index.ts      # Port 4011
-cd apps/intents/viewer && bun run dev               # Port 5173
+# Intent functionality is now part of Gateway
+cd apps/gateway && bun run dev          # UI + A2A Server (ports 4001, 4003)
+cd apps/gateway && bun run dev:solver   # Standalone solver agent
 ```
 
 ### Deploy OIF Contracts
@@ -139,12 +138,11 @@ PRIVATE_KEY=$DEPLOYER_PRIVATE_KEY forge script script/DeployOIF.s.sol \
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| Aggregator | 4010 | REST API, A2A, MCP |
+| Gateway A2A | 4003 | REST API, A2A, MCP |
 | WebSocket | 4012 | Real-time updates |
-| Solver | 4011 | Intent fulfillment |
-| Viewer | 5173 | Web UI |
+| Gateway UI | 4001 | Web UI |
 
-See `apps/intents/README.md` for full documentation.
+See `apps/gateway/README.md` for full documentation.
 
 ## Ethereum Interop Layer (EIL)
 

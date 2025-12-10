@@ -1,8 +1,3 @@
-/**
- * @fileoverview Create governance quest form
- * @module gateway/components/CreateQuestForm
- */
-
 import { useState } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther } from 'viem';

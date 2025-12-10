@@ -1,8 +1,3 @@
-/**
- * @fileoverview RoutesView - Display available cross-chain routes
- * Migrated from apps/intents/viewer
- */
-
 import { ArrowRight, Activity, Clock, CheckCircle } from 'lucide-react';
 import { useRoutes } from '../../hooks/useIntentAPI';
 import type { IntentRoute } from '@jejunetwork/types/oif';

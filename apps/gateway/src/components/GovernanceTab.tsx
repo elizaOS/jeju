@@ -1,8 +1,3 @@
-/**
- * @fileoverview Futarchy governance tab
- * @module gateway/components/GovernanceTab
- */
-
 import { Vote } from 'lucide-react';
 import CreateQuestForm from './CreateQuestForm';
 import { useVotingPower } from '../hooks/useGovernance';

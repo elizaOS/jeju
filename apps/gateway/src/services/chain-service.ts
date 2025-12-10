@@ -1,8 +1,3 @@
-/**
- * @fileoverview Chain Service - Fetches real on-chain data for OIF
- * Migrated from apps/intents/aggregator
- */
-
 import { createPublicClient, http, type PublicClient, type Address, type Chain, type Abi } from 'viem';
 import { arbitrum, arbitrumSepolia, optimism, optimismSepolia, mainnet, sepolia } from 'viem/chains';
 

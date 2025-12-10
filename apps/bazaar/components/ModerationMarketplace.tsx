@@ -7,13 +7,15 @@ import {
   Shield, 
   AlertTriangle, 
   TrendingUp, 
+  TrendingDown,
   Users, 
   Clock, 
   DollarSign,
   ThumbsUp,
   ThumbsDown,
   Gavel,
-  Flame
+  Flame,
+  Trophy
 } from 'lucide-react';
 
 // ============ Types ============
@@ -387,7 +389,7 @@ export default function ModerationMarketplace() {
   const { address, isConnected } = useAccount();
   const [stakeAmount, setStakeAmount] = useState('0.01');
   const [activeCases, setActiveCases] = useState<BanCase[]>([]);
-  const [selectedTab, setSelectedTab] = useState<'cases' | 'stake' | 'report'>('cases');
+  const [selectedTab, setSelectedTab] = useState<'cases' | 'stake' | 'report' | 'leaderboard'>('cases');
 
   // Read stake info
   const { data: stakeInfo, refetch: refetchStake } = useReadContract({
@@ -403,6 +405,70 @@ export default function ModerationMarketplace() {
     address: MODERATION_MARKETPLACE_ADDRESS,
     abi: MODERATION_MARKETPLACE_ABI,
     functionName: 'canReport',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!MODERATION_MARKETPLACE_ADDRESS }
+  });
+
+  // Read moderator reputation
+  const { data: moderatorRep, refetch: refetchRep } = useReadContract({
+    address: MODERATION_MARKETPLACE_ADDRESS,
+    abi: [
+      {
+        name: 'getModeratorReputation',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'moderator', type: 'address' }],
+        outputs: [
+          {
+            type: 'tuple',
+            components: [
+              { name: 'successfulBans', type: 'uint256' },
+              { name: 'unsuccessfulBans', type: 'uint256' },
+              { name: 'totalSlashedFrom', type: 'uint256' },
+              { name: 'totalSlashedOthers', type: 'uint256' },
+              { name: 'reputationScore', type: 'uint256' },
+              { name: 'lastReportTimestamp', type: 'uint256' },
+              { name: 'reportCooldownUntil', type: 'uint256' },
+            ],
+          },
+        ],
+      },
+    ] as const,
+    functionName: 'getModeratorReputation',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!MODERATION_MARKETPLACE_ADDRESS }
+  });
+
+  // Read moderator P&L
+  const { data: moderatorPnL } = useReadContract({
+    address: MODERATION_MARKETPLACE_ADDRESS,
+    abi: [
+      {
+        name: 'getModeratorPnL',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'moderator', type: 'address' }],
+        outputs: [{ name: '', type: 'int256' }],
+      },
+    ] as const,
+    functionName: 'getModeratorPnL',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!MODERATION_MARKETPLACE_ADDRESS }
+  });
+
+  // Read reputation tier
+  const { data: repTier } = useReadContract({
+    address: MODERATION_MARKETPLACE_ADDRESS,
+    abi: [
+      {
+        name: 'getReputationTier',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'user', type: 'address' }],
+        outputs: [{ name: '', type: 'uint8' }],
+      },
+    ] as const,
+    functionName: 'getReputationTier',
     args: address ? [address] : undefined,
     query: { enabled: !!address && !!MODERATION_MARKETPLACE_ADDRESS }
   });
@@ -465,8 +531,9 @@ export default function ModerationMarketplace() {
     if (isSuccess) {
       refetchStake();
       refetchCases();
+      refetchRep();
     }
-  }, [isSuccess, refetchStake, refetchCases]);
+  }, [isSuccess, refetchStake, refetchCases, refetchRep]);
 
   const stake = stakeInfo as StakeInfo | undefined;
   const isStaked = stake?.isStaked ?? false;
@@ -494,7 +561,7 @@ export default function ModerationMarketplace() {
         </p>
         
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white/10 rounded-lg p-3">
             <div className="text-sm text-purple-200">Your Stake</div>
             <div className="text-xl font-bold">
@@ -506,19 +573,61 @@ export default function ModerationMarketplace() {
             <div className="text-xl font-bold">{caseIds?.length || 0}</div>
           </div>
           <div className="bg-white/10 rounded-lg p-3">
-            <div className="text-sm text-purple-200">Can Report</div>
-            <div className="text-xl font-bold">{canReport ? 'Yes' : 'No'}</div>
+            <div className="text-sm text-purple-200">Win Rate</div>
+            <div className="text-xl font-bold">
+              {moderatorRep ? (
+                <>
+                  {Number(moderatorRep.successfulBans) + Number(moderatorRep.unsuccessfulBans) > 0
+                    ? Math.round((Number(moderatorRep.successfulBans) / (Number(moderatorRep.successfulBans) + Number(moderatorRep.unsuccessfulBans))) * 100)
+                    : 50}%
+                </>
+              ) : '50%'}
+            </div>
+            {moderatorRep && (
+              <div className="text-xs text-purple-200">
+                {moderatorRep.successfulBans.toString()}W / {moderatorRep.unsuccessfulBans.toString()}L
+              </div>
+            )}
+          </div>
+          <div className="bg-white/10 rounded-lg p-3">
+            <div className="text-sm text-purple-200">Mod P&L</div>
+            <div className={`text-xl font-bold ${moderatorPnL && moderatorPnL >= 0n ? 'text-green-300' : 'text-red-300'}`}>
+              {moderatorPnL ? (
+                <>
+                  {Number(moderatorPnL) >= 0 ? '+' : ''}{formatEther(moderatorPnL)}
+                </>
+              ) : '0'} ETH
+            </div>
           </div>
         </div>
+
+        {/* Reputation Tier Badge */}
+        {repTier !== undefined && (
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-purple-200 text-sm">Reputation Tier:</span>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              repTier === 4 ? 'bg-green-400 text-green-900' :
+              repTier === 3 ? 'bg-blue-400 text-blue-900' :
+              repTier === 2 ? 'bg-yellow-400 text-yellow-900' :
+              repTier === 1 ? 'bg-orange-400 text-orange-900' :
+              'bg-red-400 text-red-900'
+            }`}>
+              {['Untrusted', 'Low', 'Medium', 'High', 'Trusted'][repTier] || 'Unknown'}
+            </span>
+            {repTier <= 1 && (
+              <span className="text-xs text-purple-200">(Need higher rep or multiple reporters)</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        {(['cases', 'stake', 'report'] as const).map((tab) => (
+      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
+        {(['cases', 'stake', 'report', 'leaderboard'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setSelectedTab(tab)}
-            className={`px-4 py-2 font-medium transition-colors ${
+            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
               selectedTab === tab
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -527,6 +636,7 @@ export default function ModerationMarketplace() {
             {tab === 'cases' && <span className="flex items-center gap-2"><Gavel size={16} /> Cases</span>}
             {tab === 'stake' && <span className="flex items-center gap-2"><Shield size={16} /> Stake</span>}
             {tab === 'report' && <span className="flex items-center gap-2"><AlertTriangle size={16} /> Report</span>}
+            {tab === 'leaderboard' && <span className="flex items-center gap-2"><Trophy size={16} /> Leaderboard</span>}
           </button>
         ))}
       </div>
@@ -632,6 +742,115 @@ export default function ModerationMarketplace() {
           <ReportForm canReport={canReport ?? false} isLoading={isLoading} />
         </div>
       )}
+
+      {selectedTab === 'leaderboard' && (
+        <div className="space-y-6">
+          {/* Your Stats */}
+          {moderatorRep && (
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6">
+              <h3 className="font-semibold text-purple-900 mb-4 flex items-center gap-2">
+                <Trophy size={20} className="text-yellow-500" />
+                Your Moderation Stats
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-sm text-gray-500">Successful Bans</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {moderatorRep.successfulBans.toString()}
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-sm text-gray-500">Failed Reports</div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {moderatorRep.unsuccessfulBans.toString()}
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-sm text-gray-500">Total Earned</div>
+                  <div className="text-2xl font-bold text-green-600 flex items-center gap-1">
+                    <TrendingUp size={18} />
+                    {formatEther(moderatorRep.totalSlashedOthers)}
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="text-sm text-gray-500">Total Lost</div>
+                  <div className="text-2xl font-bold text-red-600 flex items-center gap-1">
+                    <TrendingDown size={18} />
+                    {formatEther(moderatorRep.totalSlashedFrom)}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Reputation Score Bar */}
+              <div className="mt-4">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Reputation Score</span>
+                  <span className="font-semibold">{moderatorRep.reputationScore.toString()} / 10000</span>
+                </div>
+                <div className="h-3 rounded-full overflow-hidden bg-gray-200">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500"
+                    style={{ width: `${Number(moderatorRep.reputationScore) / 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs mt-1 text-gray-400">
+                  <span>Untrusted</span>
+                  <span>Low</span>
+                  <span>Medium</span>
+                  <span>High</span>
+                  <span>Trusted</span>
+                </div>
+              </div>
+
+              {/* Net P&L */}
+              <div className="mt-4 p-4 bg-white rounded-lg shadow-sm">
+                <div className="text-sm text-gray-500 mb-1">Net Profit/Loss</div>
+                <div className={`text-3xl font-bold flex items-center gap-2 ${
+                  moderatorPnL && moderatorPnL >= 0n ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {moderatorPnL && moderatorPnL >= 0n ? (
+                    <TrendingUp size={24} />
+                  ) : (
+                    <TrendingDown size={24} />
+                  )}
+                  {moderatorPnL ? (
+                    <>
+                      {Number(moderatorPnL) >= 0 ? '+' : ''}{formatEther(moderatorPnL)} ETH
+                    </>
+                  ) : '0 ETH'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Info Card */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+              <Shield size={18} />
+              How Reputation Works
+            </h4>
+            <ul className="space-y-2 text-sm text-blue-700">
+              <li>• <strong>Win:</strong> +200 reputation, earn 90% of opponent's stake</li>
+              <li>• <strong>Lose:</strong> -600 reputation (3x the gain)</li>
+              <li>• <strong>Get Slashed:</strong> -1800 reputation (3x loss penalty)</li>
+              <li>• <strong>High Rep (6000+):</strong> Can report alone, lower stake required</li>
+              <li>• <strong>Trusted (8000+):</strong> 50% stake discount, instant reports</li>
+              <li>• <strong>Low Rep (0-3000):</strong> Need 2-3 reporters for quorum</li>
+            </ul>
+          </div>
+
+          {/* Top Moderators - Coming Soon */}
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-500">
+              <Trophy size={20} />
+              Top Moderators
+            </h3>
+            <p className="text-gray-400 text-sm text-center py-4">
+              Global leaderboard coming soon.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -671,16 +890,38 @@ function CaseCardWrapper({
   );
 }
 
-// Report form component
+// Report form component with evidence upload
 function ReportForm({ canReport, isLoading }: { canReport: boolean; isLoading: boolean }) {
   const [target, setTarget] = useState('');
   const [reason, setReason] = useState('');
+  const [category, setCategory] = useState('SCAMMING');
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [evidenceHash, setEvidenceHash] = useState<`0x${string}` | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { writeContract } = useWriteContract();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setEvidenceFile(file);
+    setUploading(true);
+    setUploadError(null);
+    
+    // Import dynamically to avoid SSR issues
+    const { uploadToIPFS, cidToBytes32 } = await import('../lib/ipfs');
+    const cid = await uploadToIPFS(file);
+    setEvidenceHash(cidToBytes32(cid));
+    setUploading(false);
+  };
 
   const handleSubmit = () => {
     if (!MODERATION_MARKETPLACE_ADDRESS || !target || !reason) return;
-    
-    const evidenceHash = `0x${'0'.repeat(64)}` as `0x${string}`; // Placeholder
+    if (!evidenceHash) {
+      setUploadError('Please upload evidence before submitting');
+      return;
+    }
     
     writeContract({
       address: MODERATION_MARKETPLACE_ADDRESS,
@@ -710,7 +951,7 @@ function ReportForm({ canReport, isLoading }: { canReport: boolean; isLoading: b
       </h3>
       
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Target Address</label>
+        <label className="block text-sm text-gray-600 mb-1">Target Address *</label>
         <input
           type="text"
           placeholder="0x..."
@@ -721,9 +962,56 @@ function ReportForm({ canReport, isLoading }: { canReport: boolean; isLoading: b
       </div>
 
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Reason</label>
+        <label className="block text-sm text-gray-600 mb-1">Category *</label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+        >
+          <option value="SCAMMING">Scamming</option>
+          <option value="HACKING">Hacking</option>
+          <option value="CSAM">CSAM (Illegal Content)</option>
+          <option value="SPAM">Spam/Bot Activity</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-600 mb-1">Evidence * (Upload to IPFS)</label>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+          {!evidenceFile ? (
+            <>
+              <p className="text-sm text-gray-500 mb-2">Upload screenshots, videos, or documents</p>
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                accept="image/*,video/*,.pdf,.txt"
+                className="hidden"
+                id="evidence-upload"
+              />
+              <label
+                htmlFor="evidence-upload"
+                className="inline-block px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg cursor-pointer text-sm"
+              >
+                Choose File
+              </label>
+            </>
+          ) : (
+            <div className="text-left">
+              <div className="font-medium text-sm">{evidenceFile.name}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {uploading ? 'Uploading to IPFS...' : evidenceHash ? `Hash: ${evidenceHash.slice(0, 18)}...` : 'Ready'}
+              </div>
+            </div>
+          )}
+        </div>
+        {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm text-gray-600 mb-1">Reason *</label>
         <textarea
-          placeholder="Describe the violation..."
+          placeholder="Describe the violation in detail..."
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
@@ -739,10 +1027,10 @@ function ReportForm({ canReport, isLoading }: { canReport: boolean; isLoading: b
 
       <button
         onClick={handleSubmit}
-        disabled={isLoading || !target || !reason}
+        disabled={isLoading || uploading || !target || !reason || !evidenceHash}
         className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Submitting...' : 'Submit Report'}
+        {uploading ? 'Uploading Evidence...' : isLoading ? 'Submitting...' : 'Submit Report'}
       </button>
     </div>
   );

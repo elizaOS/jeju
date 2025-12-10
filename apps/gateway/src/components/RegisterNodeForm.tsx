@@ -1,8 +1,3 @@
-/**
- * @fileoverview Form for registering nodes with multi-token staking
- * @module gateway/components/RegisterNodeForm
- */
-
 import { useState, useMemo } from 'react';
 import { parseEther } from 'viem';
 import TokenSelector from './TokenSelector';

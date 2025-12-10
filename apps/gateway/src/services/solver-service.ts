@@ -1,8 +1,3 @@
-/**
- * @fileoverview Solver Service - Manages solver discovery and liquidity tracking
- * Migrated from apps/intents/aggregator
- */
-
 import type { Solver, SolverLeaderboardEntry, SolverLiquidity, SupportedChainId } from '@jejunetwork/types/oif';
 import * as chainService from './chain-service';
 
@@ -38,6 +33,12 @@ export class SolverService {
     const chainInfo = await chainService.fetchSolverInfo(address);
     
     if (chainInfo && chainInfo.isActive) {
+      const totalFills = Number(chainInfo.totalFills);
+      const successfulFills = Number(chainInfo.successfulFills);
+      const failedFills = totalFills - successfulFills;
+      const successRate = totalFills > 0 ? (successfulFills / totalFills) * 100 : 0;
+      const reputation = Math.min(100, successRate);
+
       const solver: Solver = {
         address,
         name: `Solver ${address.slice(0, 8)}`,
@@ -45,13 +46,13 @@ export class SolverService {
         supportedChains: chainInfo.supportedChains.map(c => Number(c) as SupportedChainId),
         supportedTokens: {},
         liquidity: [],
-        reputation: Math.min(100, Number(chainInfo.successfulFills) / Math.max(1, Number(chainInfo.totalFills)) * 100),
-        totalFills: Number(chainInfo.totalFills),
-        successfulFills: Number(chainInfo.successfulFills),
-        failedFills: Number(chainInfo.totalFills) - Number(chainInfo.successfulFills),
-        successRate: Number(chainInfo.successfulFills) / Math.max(1, Number(chainInfo.totalFills)) * 100,
-        avgResponseMs: 200,
-        avgFillTimeMs: 30000,
+        reputation,
+        totalFills,
+        successfulFills,
+        failedFills,
+        successRate,
+        avgResponseMs: 0,
+        avgFillTimeMs: 0,
         totalVolumeUsd: '0',
         totalFeesEarnedUsd: '0',
         status: 'active',

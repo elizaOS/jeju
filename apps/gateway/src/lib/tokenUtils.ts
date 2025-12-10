@@ -1,7 +1,3 @@
-/**
- * Token utility functions for paymaster dashboard
- */
-
 export function formatTokenAmount(
   amount: bigint | string | number,
   decimals: number | string,

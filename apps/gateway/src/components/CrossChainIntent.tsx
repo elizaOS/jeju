@@ -1,8 +1,3 @@
-/**
- * @fileoverview CrossChainIntent component for creating OIF intents
- * Allows users to create cross-chain swaps via the Open Intents Framework
- */
-
 import { useState, useMemo } from 'react';
 import { useAccount, useChainId, useBalance } from 'wagmi';
 import { parseEther, formatEther, type Address } from 'viem';

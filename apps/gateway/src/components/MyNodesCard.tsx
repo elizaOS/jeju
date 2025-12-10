@@ -1,8 +1,3 @@
-/**
- * @fileoverview Display operator's staked nodes with performance and rewards
- * @module gateway/components/MyNodesCard
- */
-
 import { useNodeStaking, useNodeInfo, useNodeRewards } from '../hooks/useNodeStaking';
 import { useProtocolTokens } from '../hooks/useProtocolTokens';
 import { formatTokenAmount, formatUSD } from '../lib/tokenUtils';

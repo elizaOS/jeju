@@ -181,22 +181,22 @@ export default function RegisteredAppsList({ onSelectApp }: RegisteredAppsListPr
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.5rem', marginBottom: '1rem' }}>
-        <div style={{ position: 'relative', minWidth: 0 }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 0 }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
             className="input"
             type="text"
             placeholder="Search agents..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ paddingLeft: '2.5rem' }}
+            style={{ paddingLeft: '2.5rem', width: '100%' }}
           />
         </div>
-        <select className="input" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} style={{ width: 'auto', minWidth: '120px' }}>
+        <select className="input" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} style={{ width: 'auto', minWidth: '120px', flex: '0 1 auto' }}>
           {CATEGORY_FILTERS.map((cat) => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
         </select>
-        <button onClick={fetchApps} className="button button-secondary" style={{ padding: '0.75rem' }}>
+        <button onClick={fetchApps} className="button button-secondary" style={{ padding: '0.75rem', flexShrink: 0 }}>
           <RefreshCw size={16} />
         </button>
       </div>

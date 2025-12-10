@@ -1,14 +1,3 @@
-/**
- * EIL Hooks for Gateway
- * Re-exports shared implementation with Gateway-specific config
- * 
- * Gateway shows:
- * - XLP staking dashboard
- * - All EIL liquidity
- * - Paymaster liquidity
- * - Staking rewards
- */
-
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { useState, useCallback, useEffect } from 'react';
 import { parseEther, type Address } from 'viem';
@@ -60,8 +49,6 @@ import {
 // Load config from JSON
 import eilConfig from '@jejunetwork/config/eil';
 
-// ============ Type Definitions ============
-
 type EILChainConfig = {
   name: string;
   crossChainPaymaster: string;
@@ -95,8 +82,6 @@ function getNetworkConfig(): EILNetworkConfig {
   return config.localnet;
 }
 
-// ============ EIL Config Hook ============
-
 export function useEILConfig() {
   const { chain } = useAccount();
   const chainId = chain?.id?.toString() || '420691';
@@ -128,8 +113,6 @@ export function useEILConfig() {
     supportedTokens: (eilConfig as EILConfig).supportedTokens as Address[],
   };
 }
-
-// ============ Cross-Chain Swap Hook ============
 
 export function useCrossChainSwap(paymasterAddress: Address | undefined) {
   const { address: userAddress } = useAccount();
@@ -195,8 +178,6 @@ export function useCrossChainSwap(paymasterAddress: Address | undefined) {
   };
 }
 
-// ============ XLP Position Hook ============
-
 export function useXLPPosition(stakeManagerAddress: Address | undefined) {
   const { address } = useAccount();
   const [position, setPosition] = useState<XLPPosition | null>(null);
@@ -238,8 +219,6 @@ export function useXLPPosition(stakeManagerAddress: Address | undefined) {
 
   return { position };
 }
-
-// ============ XLP Registration Hook ============
 
 export function useXLPRegistration(stakeManagerAddress: Address | undefined) {
   const [status, setStatus] = useState<StakeStatus>('idle');
@@ -311,8 +290,6 @@ export function useXLPRegistration(stakeManagerAddress: Address | undefined) {
     hash
   };
 }
-
-// ============ XLP Liquidity Hook ============
 
 export function useXLPLiquidity(paymasterAddress: Address | undefined) {
   const { address } = useAccount();
@@ -391,11 +368,6 @@ export function useXLPLiquidity(paymasterAddress: Address | undefined) {
   };
 }
 
-// ============ App Token Preference Hooks ============
-
-/**
- * Hook for registering app token preferences
- */
 export function useAppTokenPreference(preferenceAddress: Address | undefined) {
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -454,9 +426,6 @@ export function useAppTokenPreference(preferenceAddress: Address | undefined) {
   };
 }
 
-/**
- * Hook for reading app token preferences
- */
 export function useAppPreference(preferenceAddress: Address | undefined, appAddress: Address | undefined) {
   const { data: preferenceData } = useReadContract({
     address: preferenceAddress,
@@ -490,9 +459,6 @@ export function useAppPreference(preferenceAddress: Address | undefined, appAddr
   };
 }
 
-/**
- * Hook for getting the best gas payment token for an app
- */
 export function useBestGasToken(
   paymasterAddress: Address | undefined,
   appAddress: Address | undefined,
@@ -515,34 +481,20 @@ export function useBestGasToken(
   };
 }
 
-// ============ Fee Estimate Hook ============
-
 export function useSwapFeeEstimate(
   sourceChainId: number,
   destinationChainId: number,
   amount: bigint
 ) {
-  const [estimate, setEstimate] = useState({
-    networkFee: parseEther('0.001'),
-    xlpFee: parseEther('0.0005'),
-    totalFee: parseEther('0.0015'),
-    estimatedTime: 10,
-    isLoading: false
-  });
+  const isCrossChain = sourceChainId !== destinationChainId;
+  const xlpFee = amount * 5n / 10000n;
 
-  useEffect(() => {
-    const xlpFee = amount * 5n / 10000n;
-    const networkFee = parseEther('0.001');
-    const crossChainPremium = sourceChainId !== destinationChainId ? parseEther('0.0005') : 0n;
-    
-    setEstimate({
-      networkFee: networkFee + crossChainPremium,
-      xlpFee,
-      totalFee: networkFee + crossChainPremium + xlpFee,
-      estimatedTime: sourceChainId === destinationChainId ? 0 : 10,
-      isLoading: false
-    });
-  }, [sourceChainId, destinationChainId, amount]);
-
-  return estimate;
+  return {
+    networkFee: 0n,
+    xlpFee,
+    totalFee: xlpFee,
+    estimatedTime: isCrossChain ? 0 : 0,
+    isLoading: false,
+    isEstimate: true,
+  };
 }

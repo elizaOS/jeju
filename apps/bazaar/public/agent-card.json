@@ -156,6 +156,69 @@
       "description": "Place a bet on a prediction market",
       "tags": ["action", "markets", "trading"],
       "examples": ["Bet on YES", "Place bet", "Buy shares"]
+    },
+    {
+      "id": "check-ban-status",
+      "name": "Check Ban Status",
+      "description": "Check if an address is banned or on notice in the moderation system",
+      "tags": ["query", "moderation", "ban"],
+      "examples": ["Is this address banned?", "Check ban status", "Am I banned?"]
+    },
+    {
+      "id": "get-moderator-stats",
+      "name": "Get Moderator Stats",
+      "description": "Get moderation statistics for an address including reputation, P&L, and win rate",
+      "tags": ["query", "moderation", "reputation"],
+      "examples": ["My moderator stats", "Show reputation", "What's my win rate?"]
+    },
+    {
+      "id": "get-moderation-cases",
+      "name": "Get Moderation Cases",
+      "description": "List moderation cases (ban proposals) from the marketplace",
+      "tags": ["query", "moderation", "cases"],
+      "examples": ["Show active cases", "List moderation cases", "What bans are pending?"]
+    },
+    {
+      "id": "get-moderation-case",
+      "name": "Get Moderation Case",
+      "description": "Get details of a specific moderation case by ID",
+      "tags": ["query", "moderation", "cases"],
+      "examples": ["Show case details", "Tell me about this case"]
+    },
+    {
+      "id": "get-moderation-stats",
+      "name": "Get Moderation Stats",
+      "description": "Get overall moderation system statistics",
+      "tags": ["query", "moderation", "stats"],
+      "examples": ["Moderation stats", "How many cases?", "Total staked"]
+    },
+    {
+      "id": "prepare-stake",
+      "name": "Prepare Moderation Stake",
+      "description": "Prepare transaction to stake ETH and become a moderator",
+      "tags": ["action", "moderation", "stake"],
+      "examples": ["Stake to moderate", "Become a moderator", "Stake 0.1 ETH"]
+    },
+    {
+      "id": "prepare-report",
+      "name": "Prepare Report",
+      "description": "Prepare transaction to report a user for bad behavior",
+      "tags": ["action", "moderation", "report"],
+      "examples": ["Report this user", "File a report", "Report scammer"]
+    },
+    {
+      "id": "prepare-vote",
+      "name": "Prepare Vote",
+      "description": "Prepare transaction to vote on a moderation case",
+      "tags": ["action", "moderation", "vote"],
+      "examples": ["Vote to ban", "Vote to clear", "Cast my vote"]
+    },
+    {
+      "id": "prepare-challenge",
+      "name": "Prepare Challenge",
+      "description": "Prepare transaction to challenge a ban decision",
+      "tags": ["action", "moderation", "challenge"],
+      "examples": ["Challenge this ban", "Appeal the decision", "Contest the ban"]
     }
   ]
 }

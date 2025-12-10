@@ -1,8 +1,3 @@
-/**
- * @fileoverview CreateIntentModal - Modal for creating cross-chain intents
- * Migrated from apps/intents/viewer
- */
-
 import { useState, useCallback } from 'react';
 import { X, ArrowRight, Zap, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { useAccount, useWriteContract, useSwitchChain, useChainId } from 'wagmi';
@@ -14,34 +9,8 @@ interface CreateIntentModalProps {
   onClose: () => void;
 }
 
-// InputSettler ABI for createIntent
 const INPUT_SETTLER_ABI = [
-  {
-    type: 'function',
-    name: 'createIntent',
-    inputs: [
-      {
-        name: 'order',
-        type: 'tuple',
-        components: [
-          { name: 'sourceChainId', type: 'uint256' },
-          { name: 'targetChainId', type: 'uint256' },
-          { name: 'sourceToken', type: 'address' },
-          { name: 'targetToken', type: 'address' },
-          { name: 'sourceAmount', type: 'uint256' },
-          { name: 'targetAddress', type: 'address' },
-          { name: 'deadline', type: 'uint256' },
-          { name: 'data', type: 'bytes' },
-          { name: 'resolver', type: 'address' },
-          { name: 'resolverFee', type: 'uint256' },
-          { name: 'refundAddress', type: 'address' },
-          { name: 'nonce', type: 'uint256' },
-        ],
-      },
-    ],
-    outputs: [{ name: 'intentId', type: 'bytes32' }],
-    stateMutability: 'payable',
-  },
+  { type: 'function', name: 'createIntent', inputs: [{ name: 'order', type: 'tuple', components: [{ name: 'sourceChainId', type: 'uint256' }, { name: 'targetChainId', type: 'uint256' }, { name: 'sourceToken', type: 'address' }, { name: 'targetToken', type: 'address' }, { name: 'sourceAmount', type: 'uint256' }, { name: 'targetAddress', type: 'address' }, { name: 'deadline', type: 'uint256' }, { name: 'data', type: 'bytes' }, { name: 'resolver', type: 'address' }, { name: 'resolverFee', type: 'uint256' }, { name: 'refundAddress', type: 'address' }, { name: 'nonce', type: 'uint256' }] }], outputs: [{ name: 'intentId', type: 'bytes32' }], stateMutability: 'payable' },
 ] as const;
 
 type TxStatus = 'idle' | 'preparing' | 'pending' | 'confirming' | 'success' | 'error';
@@ -72,7 +41,6 @@ export function CreateIntentModal({ onClose }: CreateIntentModalProps) {
   });
 
   const bestQuote = quotes?.[0];
-  
   const inputSettlerAddress = oifConfig.inputSettlers[sourceChain as keyof typeof oifConfig.inputSettlers];
   const isCorrectChain = chain?.id === sourceChain;
   const canSubmit = isConnected && inputSettlerAddress && parseFloat(amount) > 0;
@@ -83,14 +51,10 @@ export function CreateIntentModal({ onClose }: CreateIntentModalProps) {
     setError(null);
     setTxStatus('preparing');
     
-    // Switch chain if needed
-    if (!isCorrectChain) {
-      setTxStatus('preparing');
-      await switchChain({ chainId: sourceChain });
-    }
+    if (!isCorrectChain) await switchChain({ chainId: sourceChain });
 
     const amountWei = parseEther(amount);
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour deadline
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const nonce = BigInt(Date.now());
 
     const order = {
@@ -109,7 +73,6 @@ export function CreateIntentModal({ onClose }: CreateIntentModalProps) {
     };
 
     setTxStatus('pending');
-
     const hash = await writeContractAsync({
       address: inputSettlerAddress,
       abi: INPUT_SETTLER_ABI,
@@ -119,7 +82,6 @@ export function CreateIntentModal({ onClose }: CreateIntentModalProps) {
     });
 
     setTxStatus('confirming');
-
     setTimeout(() => {
       setTxStatus('success');
       setIntentId(hash);
@@ -127,295 +89,91 @@ export function CreateIntentModal({ onClose }: CreateIntentModalProps) {
   }, [address, amount, destChain, inputSettlerAddress, isCorrectChain, sourceChain, switchChain, token, writeContractAsync]);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border-accent)',
-          borderRadius: '20px',
-          padding: '32px',
-          width: '100%',
-          maxWidth: '480px',
-          boxShadow: '0 20px 60px var(--shadow-md)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={onClose}>
+      <div className="card" style={{ margin: 0, padding: 'clamp(1rem, 4vw, 2rem)', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1rem' }}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>Create Intent</h2>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-              Cross-chain swap via OIF
-            </p>
+            <h2 style={{ fontSize: 'clamp(1.125rem, 4vw, 1.25rem)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Create Intent</h2>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0' }}>Cross-chain swap via OIF</p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              padding: '8px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={20} />
-          </button>
+          <button onClick={onClose} className="button button-ghost" style={{ padding: '0.5rem', flexShrink: 0 }}><X size={20} /></button>
         </div>
 
-        {/* Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Source Chain */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              From
-            </label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <select
-                value={sourceChain}
-                onChange={(e) => setSourceChain(Number(e.target.value))}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  background: 'var(--surface-hover)',
-                  border: '1px solid var(--border-accent)',
-                  borderRadius: '10px',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                }}
-              >
-                {chains?.map((c) => (
-                  <option key={c.chainId} value={c.chainId}>
-                    {c.name}
-                  </option>
-                ))}
+            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>From</label>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <select className="input" value={sourceChain} onChange={(e) => setSourceChain(Number(e.target.value))} style={{ flex: '1 1 140px', minWidth: 0 }}>
+                {chains?.map((c) => <option key={c.chainId} value={c.chainId}>{c.name}</option>)}
               </select>
-              <input
-                type="text"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.0"
-                style={{
-                  width: '120px',
-                  padding: '12px 16px',
-                  background: 'var(--surface-hover)',
-                  border: '1px solid var(--border-accent)',
-                  borderRadius: '10px',
-                  color: 'var(--text-primary)',
-                  fontSize: '16px',
-                  fontFamily: 'monospace',
-                  textAlign: 'right',
-                }}
-              />
+              <input className="input" type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.0" style={{ width: '110px', fontFamily: 'var(--font-mono)', textAlign: 'right', flexShrink: 0 }} />
             </div>
           </div>
 
-          {/* Arrow */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'var(--surface-hover)',
-              border: '1px solid var(--border-accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <ArrowRight size={18} color="var(--text-secondary)" style={{ transform: 'rotate(90deg)' }} />
+            <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'var(--surface-hover)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowRight size={16} color="var(--text-muted)" style={{ transform: 'rotate(90deg)' }} />
             </div>
           </div>
 
-          {/* Destination Chain */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              To
-            </label>
-            <select
-              value={destChain}
-              onChange={(e) => setDestChain(Number(e.target.value))}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                background: 'var(--surface-hover)',
-                border: '1px solid var(--border-accent)',
-                borderRadius: '10px',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-              }}
-            >
-              {chains?.filter(c => c.chainId !== sourceChain).map((c) => (
-                <option key={c.chainId} value={c.chainId}>
-                  {c.name}
-                </option>
-              ))}
+            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>To</label>
+            <select className="input" value={destChain} onChange={(e) => setDestChain(Number(e.target.value))}>
+              {chains?.filter(c => c.chainId !== sourceChain).map((c) => <option key={c.chainId} value={c.chainId}>{c.name}</option>)}
             </select>
           </div>
 
-          {/* Quote Info */}
           {bestQuote && (
-            <div style={{
-              padding: '16px',
-              background: 'var(--surface-hover)',
-              borderRadius: '12px',
-              border: '1px solid var(--border-accent)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>You&apos;ll receive</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {(parseFloat(bestQuote.outputAmount) / 1e18).toFixed(4)} ETH
-                </span>
+            <div style={{ padding: '1rem', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>You'll receive</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{(parseFloat(bestQuote.outputAmount) / 1e18).toFixed(4)} ETH</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Fee</span>
-                <span style={{ fontFamily: 'monospace', color: 'var(--warning)' }}>
-                  {(bestQuote.feePercent / 100).toFixed(2)}%
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Fee</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--warning)' }}>{(bestQuote.feePercent / 100).toFixed(2)}%</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Est. Time</span>
-                <span style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>
-                  ~{bestQuote.estimatedFillTimeSeconds}s
-                </span>
+                <span style={{ color: 'var(--text-secondary)' }}>Est. Time</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>~{bestQuote.estimatedFillTimeSeconds}s</span>
               </div>
             </div>
           )}
 
-          {quotesLoading && (
-            <div style={{
-              padding: '16px',
-              background: 'var(--surface-hover)',
-              borderRadius: '12px',
-              textAlign: 'center',
-              color: 'var(--text-secondary)',
-              fontSize: '13px',
-            }}>
-              Fetching quotes...
-            </div>
-          )}
+          {quotesLoading && <div style={{ padding: '1rem', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Fetching quotes...</div>}
 
-          {/* Status Messages */}
           {!isConnected && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px',
-              background: 'var(--warning-soft)',
-              border: '1px solid var(--warning)',
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: 'var(--warning)',
-            }}>
-              <AlertCircle size={16} />
-              Connect wallet to create intent
-            </div>
+            <div className="banner banner-warning" style={{ fontSize: '0.75rem' }}><AlertCircle size={16} />Connect wallet to create intent</div>
           )}
 
           {isConnected && !isCorrectChain && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px',
-              background: 'var(--warning-soft)',
-              border: '1px solid var(--warning)',
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: 'var(--warning)',
-            }}>
-              <AlertCircle size={16} />
-              Switch to source chain to create intent
-            </div>
+            <div className="banner banner-warning" style={{ fontSize: '0.75rem' }}><AlertCircle size={16} />Switch to source chain to create intent</div>
           )}
 
           {error && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px',
-              background: 'var(--error-soft)',
-              border: '1px solid var(--error)',
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: 'var(--error)',
-            }}>
-              <AlertCircle size={16} />
-              {error}
-            </div>
+            <div className="banner" style={{ background: 'var(--error-soft)', border: '1px solid var(--error)', color: 'var(--error)', fontSize: '0.75rem' }}><AlertCircle size={16} />{error}</div>
           )}
 
           {txStatus === 'success' && intentId && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px',
-              background: 'var(--success-soft)',
-              border: '1px solid var(--success)',
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: 'var(--success)',
-            }}>
-              <CheckCircle size={16} />
-              Intent created! ID: {intentId.slice(0, 10)}...
-            </div>
+            <div className="banner banner-success" style={{ fontSize: '0.75rem' }}><CheckCircle size={16} />Intent created! ID: {intentId.slice(0, 10)}...</div>
           )}
 
-          {/* Submit Button */}
           <button
+            className="button"
             onClick={handleSubmit}
             disabled={!canSubmit || txStatus === 'pending' || txStatus === 'confirming'}
-            style={{
-              width: '100%',
-              padding: '16px',
-              background: canSubmit && txStatus === 'idle'
-                ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))'
-                : 'var(--border)',
-              border: 'none',
-              borderRadius: '12px',
-              color: canSubmit ? 'white' : 'var(--text-muted)',
-              fontSize: '16px',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              cursor: canSubmit && txStatus === 'idle' ? 'pointer' : 'not-allowed',
-            }}
+            style={{ width: '100%', padding: '1rem' }}
           >
             {txStatus === 'pending' || txStatus === 'confirming' ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                {txStatus === 'pending' ? 'Confirm in wallet...' : 'Confirming...'}
-              </>
+              <><Loader2 size={18} className="animate-spin" />{txStatus === 'pending' ? 'Confirm in wallet...' : 'Confirming...'}</>
             ) : txStatus === 'success' ? (
-              <>
-                <CheckCircle size={18} />
-                Intent Created
-              </>
+              <><CheckCircle size={18} />Intent Created</>
             ) : !isConnected ? (
               'Connect Wallet'
             ) : !isCorrectChain ? (
               'Switch Network'
             ) : (
-              <>
-                <Zap size={18} />
-                Create Intent
-              </>
+              <><Zap size={18} />Create Intent</>
             )}
           </button>
         </div>
@@ -423,5 +181,3 @@ export function CreateIntentModal({ onClose }: CreateIntentModalProps) {
     </div>
   );
 }
-
-

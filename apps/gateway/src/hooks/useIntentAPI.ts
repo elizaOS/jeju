@@ -1,19 +1,6 @@
-/**
- * @fileoverview React hooks for OIF data fetching from aggregator API
- * Migrated from apps/intents/viewer - complements useOIF.ts (contract hooks)
- */
-
 import { useQuery } from '@tanstack/react-query';
-import type { 
-  Intent, 
-  IntentRoute, 
-  Solver, 
-  OIFStats, 
-  IntentQuote, 
-  SolverLeaderboardEntry 
-} from '@jejunetwork/types/oif';
+import type { Intent, IntentRoute, Solver, OIFStats, IntentQuote, SolverLeaderboardEntry } from '@jejunetwork/types/oif';
 
-// Aggregator API base URL - defaults to localhost in dev
 const API_BASE = import.meta.env.VITE_OIF_AGGREGATOR_URL || 'http://localhost:4010/api';
 
 async function fetchJSON<T>(path: string): Promise<T> {
@@ -22,14 +9,7 @@ async function fetchJSON<T>(path: string): Promise<T> {
   return res.json();
 }
 
-// ============ Intent Hooks ============
-
-export function useIntents(filters?: {
-  status?: string;
-  sourceChain?: number;
-  destinationChain?: number;
-  limit?: number;
-}) {
+export function useIntents(filters?: { status?: string; sourceChain?: number; destinationChain?: number; limit?: number }) {
   return useQuery({
     queryKey: ['intents', filters],
     queryFn: () => {
@@ -51,13 +31,7 @@ export function useIntent(intentId: string) {
   });
 }
 
-export function useIntentQuote(params: {
-  sourceChain: number;
-  destinationChain: number;
-  sourceToken: string;
-  destinationToken: string;
-  amount: string;
-}) {
+export function useIntentQuote(params: { sourceChain: number; destinationChain: number; sourceToken: string; destinationToken: string; amount: string }) {
   return useQuery({
     queryKey: ['quote', params],
     queryFn: async () => {
@@ -72,13 +46,7 @@ export function useIntentQuote(params: {
   });
 }
 
-// ============ Route Hooks ============
-
-export function useRoutes(filters?: {
-  sourceChain?: number;
-  destinationChain?: number;
-  active?: boolean;
-}) {
+export function useRoutes(filters?: { sourceChain?: number; destinationChain?: number; active?: boolean }) {
   return useQuery({
     queryKey: ['routes', filters],
     queryFn: () => {
@@ -99,13 +67,7 @@ export function useRoute(routeId: string) {
   });
 }
 
-// ============ Solver Hooks ============
-
-export function useSolvers(filters?: {
-  chainId?: number;
-  minReputation?: number;
-  active?: boolean;
-}) {
+export function useSolvers(filters?: { chainId?: number; minReputation?: number; active?: boolean }) {
   return useQuery({
     queryKey: ['solvers', filters],
     queryFn: () => {
@@ -133,31 +95,21 @@ export function useSolverLeaderboard(sortBy: 'volume' | 'fills' | 'reputation' =
   });
 }
 
-// ============ Stats Hooks ============
-
 export function useOIFStats() {
   return useQuery({
     queryKey: ['oif-stats'],
     queryFn: () => fetchJSON<OIFStats>('/stats'),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 }
 
 export function useChainStats(chainId: number) {
   return useQuery({
     queryKey: ['chain-stats', chainId],
-    queryFn: () => fetchJSON<{
-      chainId: number;
-      totalIntents: number;
-      totalVolume: string;
-      activeRoutes: number;
-      activeSolvers: number;
-    }>(`/stats/chain/${chainId}`),
+    queryFn: () => fetchJSON<{ chainId: number; totalIntents: number; totalVolume: string; activeRoutes: number; activeSolvers: number }>(`/stats/chain/${chainId}`),
     enabled: !!chainId,
   });
 }
-
-// ============ Config Hooks ============
 
 export function useSupportedChains() {
   return useQuery({
@@ -170,12 +122,7 @@ export function useSupportedChains() {
 export function useSupportedTokens(chainId?: number) {
   return useQuery({
     queryKey: ['supported-tokens', chainId],
-    queryFn: () => fetchJSON<Array<{ address: string; symbol: string; decimals: number }>>(
-      `/config/tokens${chainId ? `?chainId=${chainId}` : ''}`
-    ),
+    queryFn: () => fetchJSON<Array<{ address: string; symbol: string; decimals: number }>>(`/config/tokens${chainId ? `?chainId=${chainId}` : ''}`),
     staleTime: Infinity,
   });
 }
-
-
-

@@ -218,7 +218,6 @@ async function main() {
     { name: 'storage', owner: wallet.address },
     { name: 'indexer', owner: wallet.address },
     { name: 'cloud', owner: wallet.address },
-    { name: 'intents', owner: wallet.address },
     { name: 'docs', owner: wallet.address },
     { name: 'monitoring', owner: wallet.address },
   ];

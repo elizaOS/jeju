@@ -28,3 +28,29 @@
 [submodule "packages/contracts/lib/optimism"]
 	path = packages/contracts/lib/optimism
 	url = https://github.com/ethereum-optimism/optimism
+
+# Vendor apps (private - will skip for users without access)
+[submodule "vendor/hyperscape"]
+	path = vendor/hyperscape
+	url = git@github.com:elizaos/hyperscape.git
+	ignore = untracked
+
+[submodule "vendor/babylon"]
+	path = vendor/babylon
+	url = git@github.com:elizaos/babylon.git
+	ignore = untracked
+
+[submodule "vendor/cloud"]
+	path = vendor/cloud
+	url = git@github.com:elizaos/cloud.git
+	ignore = untracked
+
+[submodule "vendor/otc-agent"]
+	path = vendor/otc-agent
+	url = git@github.com:elizaos/otc-agent.git
+	ignore = untracked
+
+[submodule "vendor/launchpad"]
+	path = vendor/launchpad
+	url = git@github.com:elizaos/launchpad.git
+	ignore = untracked

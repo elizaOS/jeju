@@ -20,6 +20,14 @@ export interface V4Contracts {
   stateView?: Address
 }
 
+export interface XLPContracts {
+  v2Factory?: Address
+  v3Factory?: Address
+  router?: Address
+  positionManager?: Address
+  weth?: Address
+}
+
 export interface NFTContracts {
   hyperscapeItems?: Address
   hyperscapeGold?: Address
@@ -105,4 +113,42 @@ export function getTokenFactoryContracts(chainId: number): TokenFactoryContracts
 export function hasTokenFactory(chainId: number): boolean {
   const contracts = getTokenFactoryContracts(chainId)
   return !!contracts?.erc20Factory && isValidAddress(contracts.erc20Factory)
+}
+
+// XLP AMM Contracts (V2 + V3)
+// These will be populated after deployment
+export const XLP_CONTRACTS: Record<number, XLPContracts> = {
+  1337: {
+    v2Factory: ZERO_ADDRESS as Address,
+    v3Factory: ZERO_ADDRESS as Address,
+    router: ZERO_ADDRESS as Address,
+    positionManager: ZERO_ADDRESS as Address,
+    weth: ZERO_ADDRESS as Address,
+  },
+  [JEJU_CHAIN_ID]: {
+    v2Factory: ZERO_ADDRESS as Address,
+    v3Factory: ZERO_ADDRESS as Address,
+    router: ZERO_ADDRESS as Address,
+    positionManager: ZERO_ADDRESS as Address,
+    weth: ZERO_ADDRESS as Address,
+  },
+}
+
+export function getXLPContracts(chainId: number): XLPContracts | undefined {
+  return XLP_CONTRACTS[chainId]
+}
+
+export function hasXLPV2(chainId: number): boolean {
+  const contracts = getXLPContracts(chainId)
+  return !!contracts?.v2Factory && isValidAddress(contracts.v2Factory)
+}
+
+export function hasXLPV3(chainId: number): boolean {
+  const contracts = getXLPContracts(chainId)
+  return !!contracts?.v3Factory && isValidAddress(contracts.v3Factory)
+}
+
+export function hasXLPRouter(chainId: number): boolean {
+  const contracts = getXLPContracts(chainId)
+  return !!contracts?.router && isValidAddress(contracts.router)
 }

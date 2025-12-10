@@ -277,7 +277,72 @@ contract JejuTokenTest is Test {
     }
     
     function test_Version() public view {
-        assertEq(jeju.version(), "1.0.0");
+        assertEq(jeju.version(), "1.1.0");
+    }
+    
+    // ============ Ban Exemption Tests ============
+    
+    function test_BannedUserCanTransferToExemptAddress() public {
+        address moderationMarketplace = address(0x999);
+        uint256 amount = 1000 * 1e18;
+        
+        // Fund alice
+        vm.prank(owner);
+        jeju.transfer(alice, amount);
+        
+        // Set moderation marketplace as exempt
+        vm.prank(owner);
+        jeju.setBanExempt(moderationMarketplace, true);
+        
+        // Ban alice
+        vm.prank(governance);
+        banManager.applyAddressBan(alice, keccak256("test"), "Test ban");
+        
+        // Alice should be able to transfer TO the exempt address (for staking/appeals)
+        vm.prank(alice);
+        jeju.transfer(moderationMarketplace, amount);
+        
+        assertEq(jeju.balanceOf(moderationMarketplace), amount);
+    }
+    
+    function test_BannedUserCannotTransferToNonExemptAddress() public {
+        uint256 amount = 1000 * 1e18;
+        
+        // Fund alice
+        vm.prank(owner);
+        jeju.transfer(alice, amount);
+        
+        // Ban alice
+        vm.prank(governance);
+        banManager.applyAddressBan(alice, keccak256("test"), "Test ban");
+        
+        // Alice should NOT be able to transfer to non-exempt bob
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(JejuToken.BannedUser.selector, alice));
+        jeju.transfer(bob, amount);
+    }
+    
+    function test_SetBanExempt() public {
+        address moderationMarketplace = address(0x999);
+        
+        // Initially not exempt
+        assertFalse(jeju.banExempt(moderationMarketplace));
+        
+        // Set exempt
+        vm.prank(owner);
+        jeju.setBanExempt(moderationMarketplace, true);
+        assertTrue(jeju.banExempt(moderationMarketplace));
+        
+        // Remove exemption
+        vm.prank(owner);
+        jeju.setBanExempt(moderationMarketplace, false);
+        assertFalse(jeju.banExempt(moderationMarketplace));
+    }
+    
+    function test_SetBanExempt_OnlyOwner() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        jeju.setBanExempt(address(0x999), true);
     }
     
     // ============ Edge Cases ============

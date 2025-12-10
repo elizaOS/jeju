@@ -1,20 +1,8 @@
-/**
- * JNS Tab Component
- * 
- * Portal for Jeju Name Service:
- * - Search and register names
- * - Manage owned names
- * - Set resolver records
- * - Primary name selection
- */
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { formatEther, type Address } from 'viem';
 import { Tag, Search, ExternalLink, Settings, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { useJNSLookup, useJNSRegister, useJNSResolver, useJNSReverse, type JNSRegistration, type JNSPriceQuote } from '../hooks/useJNS';
-
-// ============ Sub-components ============
 
 function NameSearchCard() {
   const { address } = useAccount();
@@ -77,36 +65,20 @@ function NameSearchCard() {
         Search & Register Names
       </h3>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        <input
-          type="text"
-          placeholder="Enter name (e.g., myapp)"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value.toLowerCase())}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          style={{
-            flex: 1,
-            padding: '0.75rem',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            fontSize: '1rem',
-          }}
-        />
-        <span style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 0.75rem',
-          background: 'var(--surface-active)',
-          borderRadius: '8px',
-          fontWeight: '500',
-        }}>
-          .jeju
-        </span>
-        <button
-          className="button"
-          onClick={handleSearch}
-          disabled={searching || !searchName}
-        >
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 200px', display: 'flex', gap: '0.5rem', minWidth: 0 }}>
+          <input
+            className="input"
+            type="text"
+            placeholder="Enter name (e.g., myapp)"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value.toLowerCase())}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            style={{ flex: 1, minWidth: 0 }}
+          />
+          <span style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: 'var(--surface-active)', borderRadius: 'var(--radius-md)', fontWeight: 600, flexShrink: 0 }}>.jeju</span>
+        </div>
+        <button className="button" onClick={handleSearch} disabled={searching || !searchName} style={{ flexShrink: 0 }}>
           {searching ? 'Searching...' : 'Search'}
         </button>
       </div>
@@ -156,16 +128,11 @@ function NameSearchCard() {
                   Registration Duration
                 </label>
                 <select
+                  className="input"
                   value={duration}
                   onChange={(e) => {
                     setDuration(Number(e.target.value));
                     handleSearch();
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
                   }}
                 >
                   <option value={1}>1 Year</option>
@@ -244,11 +211,24 @@ function NameSearchCard() {
 function MyNamesCard() {
   const { address } = useAccount();
   const { renew, loading: renewing } = useJNSRegister();
-  const { setPrimaryName } = useJNSReverse();
-  
-  // Mock data - in production, fetch from indexer or events
-  const [myNames] = useState<JNSRegistration[]>([]);
-  const [primaryName] = useState<string | null>(null);
+  const { setPrimaryName, getPrimaryName } = useJNSReverse();
+  const { getOwnerNames } = useJNSLookup();
+  const [myNames, setMyNames] = useState<JNSRegistration[]>([]);
+  const [primaryName, setPrimaryNameState] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!address) return;
+    
+    setLoading(true);
+    Promise.all([
+      getOwnerNames(address),
+      getPrimaryName(address),
+    ]).then(([names, primary]) => {
+      setMyNames(names);
+      setPrimaryNameState(primary);
+    }).finally(() => setLoading(false));
+  }, [address, getOwnerNames, getPrimaryName]);
 
   if (!address) {
     return (
@@ -269,7 +249,9 @@ function MyNamesCard() {
         My Names
       </h3>
 
-      {myNames.length === 0 ? (
+      {loading ? (
+        <p style={{ color: 'var(--text-secondary)' }}>Loading your names...</p>
+      ) : myNames.length === 0 ? (
         <p style={{ color: 'var(--text-secondary)' }}>You don't own any names yet. Register one above.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -343,7 +325,7 @@ function NameManagerCard() {
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  const loadResolverData = async () => {
+  const loadResolverData = useCallback(async () => {
     if (!selectedName) return;
     
     setLoading(true);
@@ -364,13 +346,13 @@ function NameManagerCard() {
     });
     
     setLoading(false);
-  };
+  }, [selectedName, resolve, getText, getAppInfo]);
 
   useEffect(() => {
     if (selectedName) {
       loadResolverData();
     }
-  }, [selectedName]);
+  }, [selectedName, loadResolverData]);
 
   if (!address) return null;
 
@@ -383,16 +365,11 @@ function NameManagerCard() {
 
       <div style={{ marginBottom: '1rem' }}>
         <input
+          className="input"
           type="text"
           placeholder="Enter name to manage (e.g., myapp)"
           value={selectedName}
           onChange={(e) => setSelectedName(e.target.value.toLowerCase())}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-          }}
         />
       </div>
 
@@ -401,111 +378,43 @@ function NameManagerCard() {
       {resolverData && !loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Address
-            </label>
+            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Address</label>
             {editMode ? (
-              <input
-                type="text"
-                value={resolverData.addr || ''}
-                onChange={(e) => setResolverData({ ...resolverData, addr: e.target.value as Address })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.875rem',
-                }}
-              />
+              <input className="input" type="text" value={resolverData.addr || ''} onChange={(e) => setResolverData({ ...resolverData, addr: e.target.value as Address })} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }} />
             ) : (
-              <p style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                {resolverData.addr || 'Not set'}
-              </p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.875rem', wordBreak: 'break-all' }}>{resolverData.addr || 'Not set'}</p>
             )}
           </div>
-
           <div>
-            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              URL
-            </label>
+            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>URL</label>
             {editMode ? (
-              <input
-                type="text"
-                value={resolverData.url}
-                onChange={(e) => setResolverData({ ...resolverData, url: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                }}
-              />
+              <input className="input" type="text" value={resolverData.url} onChange={(e) => setResolverData({ ...resolverData, url: e.target.value })} />
             ) : (
-              <p>{resolverData.url || 'Not set'}</p>
+              <p style={{ wordBreak: 'break-all' }}>{resolverData.url || 'Not set'}</p>
             )}
           </div>
-
           <div>
-            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Description
-            </label>
+            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Description</label>
             {editMode ? (
-              <textarea
-                value={resolverData.description}
-                onChange={(e) => setResolverData({ ...resolverData, description: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  minHeight: '80px',
-                }}
-              />
+              <textarea className="input" value={resolverData.description} onChange={(e) => setResolverData({ ...resolverData, description: e.target.value })} style={{ minHeight: '80px', resize: 'vertical' }} />
             ) : (
               <p>{resolverData.description || 'Not set'}</p>
             )}
           </div>
-
           <div>
-            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              App Endpoint
-            </label>
+            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>App Endpoint</label>
             {editMode ? (
-              <input
-                type="text"
-                value={resolverData.endpoint}
-                onChange={(e) => setResolverData({ ...resolverData, endpoint: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                }}
-              />
+              <input className="input" type="text" value={resolverData.endpoint} onChange={(e) => setResolverData({ ...resolverData, endpoint: e.target.value })} />
             ) : (
-              <p>{resolverData.endpoint || 'Not set'}</p>
+              <p style={{ wordBreak: 'break-all' }}>{resolverData.endpoint || 'Not set'}</p>
             )}
           </div>
-
           <div>
-            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              A2A Endpoint
-            </label>
+            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>A2A Endpoint</label>
             {editMode ? (
-              <input
-                type="text"
-                value={resolverData.a2aEndpoint}
-                onChange={(e) => setResolverData({ ...resolverData, a2aEndpoint: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                }}
-              />
+              <input className="input" type="text" value={resolverData.a2aEndpoint} onChange={(e) => setResolverData({ ...resolverData, a2aEndpoint: e.target.value })} />
             ) : (
-              <p>{resolverData.a2aEndpoint || 'Not set'}</p>
+              <p style={{ wordBreak: 'break-all' }}>{resolverData.a2aEndpoint || 'Not set'}</p>
             )}
           </div>
 
@@ -595,27 +504,22 @@ function RegisteredAppsCard() {
   );
 }
 
-// ============ Main Component ============
-
 export default function JNSTab() {
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🏷️ Jeju Name Service</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Register decentralized names for your apps and services. Names point to hosted apps,
-          ERC-8004 agents, and resolver records.
+        <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', marginBottom: '0.5rem' }}>🏷️ Jeju Name Service</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+          Register decentralized names for your apps and services.
         </p>
       </div>
 
       <div style={{ display: 'grid', gap: '1.5rem' }}>
         <NameSearchCard />
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1rem' }}>
           <MyNamesCard />
           <NameManagerCard />
         </div>
-
         <RegisteredAppsCard />
       </div>
     </div>

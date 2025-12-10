@@ -1,8 +1,3 @@
-/**
- * Label Proposal Interface
- * Propose reputation labels (HACKER/SCAMMER/TRUSTED) via futarchy
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -93,6 +88,7 @@ export default function LabelProposalInterface({ targetAgentId, onSuccess }: Lab
   });
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceHash, setEvidenceHash] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const { upload: uploadToIPFS, uploading } = useIPFSUpload();
   const { writeContract, data: hash, isPending } = useWriteContract();
@@ -109,14 +105,15 @@ export default function LabelProposalInterface({ targetAgentId, onSuccess }: Lab
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!formData.targetAgentId || !formData.selectedLabel) {
-      alert('Please fill all fields');
+      setError('Please fill all fields');
       return;
     }
 
     if (!evidenceHash) {
-      alert('Please upload evidence');
+      setError('Please upload evidence');
       return;
     }
 
@@ -244,6 +241,12 @@ export default function LabelProposalInterface({ targetAgentId, onSuccess }: Lab
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          {error}
         </div>
       )}
 

@@ -1,8 +1,3 @@
-/**
- * @fileoverview IntentsView - List and filter cross-chain intents
- * Migrated from apps/intents/viewer
- */
-
 import { useState } from 'react';
 import { Clock, CheckCircle, XCircle, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
 import { useIntents } from '../../hooks/useIntentAPI';
@@ -33,46 +28,25 @@ export function IntentsView() {
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '24px',
-      }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {['', 'open', 'pending', 'filled', 'expired'].map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            style={{
-              padding: '8px 16px',
-              background: statusFilter === status ? 'var(--border-accent)' : 'transparent',
-              border: `1px solid ${statusFilter === status ? 'var(--accent-primary)' : 'var(--border-accent)'}`,
-              borderRadius: '8px',
-              color: statusFilter === status ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className={`pill ${statusFilter === status ? 'pill-active' : ''}`}
           >
             {status || 'All'}
           </button>
         ))}
       </div>
 
-      {/* Intent List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-            Loading intents...
-          </div>
+          <div className="empty-state"><div className="spinner" style={{ margin: '0 auto 1rem' }} /><p>Loading intents...</p></div>
         ) : intents?.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-            No intents found
-          </div>
+          <div className="empty-state"><p>No intents found</p></div>
         ) : (
-          intents?.map((intent) => (
-            <IntentCard key={intent.intentId} intent={intent} />
-          ))
+          intents?.map((intent) => <IntentCard key={intent.intentId} intent={intent} />)
         )}
       </div>
     </div>
@@ -83,84 +57,43 @@ function IntentCard({ intent }: { intent: Intent }) {
   const status = STATUS_CONFIG[intent.status];
   const sourceChain = CHAIN_NAMES[intent.sourceChainId] || `Chain ${intent.sourceChainId}`;
   const destChain = intent.outputs[0] ? CHAIN_NAMES[intent.outputs[0].chainId] || `Chain ${intent.outputs[0].chainId}` : '—';
-
   const inputAmount = intent.inputs[0] ? formatAmount(intent.inputs[0].amount) : '—';
   const outputAmount = intent.outputs[0] ? formatAmount(intent.outputs[0].amount) : '—';
 
   return (
-    <div
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border-accent)',
-        borderRadius: '12px',
-        padding: '20px',
-        backdropFilter: 'blur(8px)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left: ID and Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
-              background: `${status.color}20`,
-              border: `1px solid ${status.color}40`,
-              borderRadius: '6px',
-              color: status.color,
-              fontSize: '12px',
-              fontWeight: 500,
-            }}
-          >
-            {status.icon}
-            {status.label}
-          </div>
-          <div>
-            <div style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              {intent.intentId.slice(0, 10)}...{intent.intentId.slice(-8)}
+    <div className="card" style={{ padding: '1rem', marginBottom: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Top row: Status + ID */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: `${status.color}20`, border: `1px solid ${status.color}40`, borderRadius: '6px', color: status.color, fontSize: '0.75rem', fontWeight: 500, flexShrink: 0 }}>
+              {status.icon}{status.label}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {formatTime(intent.createdAt)}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {intent.intentId.slice(0, 10)}...{intent.intentId.slice(-8)}
+              </div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>{formatTime(intent.createdAt)}</div>
             </div>
           </div>
+          <button className="button button-ghost" style={{ flexShrink: 0, padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}>
+            <ExternalLink size={12} />View
+          </button>
         </div>
 
-        {/* Center: Route */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Route */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '0.75rem', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)', flexWrap: 'wrap' }}>
           <ChainBadge name={sourceChain} amount={inputAmount} />
-          <ArrowRight size={20} color="var(--text-secondary)" />
+          <ArrowRight size={18} color="var(--text-muted)" />
           <ChainBadge name={destChain} amount={outputAmount} />
         </div>
 
-        {/* Right: Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {intent.solver && (
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Solver: <span style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>
-                {intent.solver.slice(0, 8)}...
-              </span>
-            </div>
-          )}
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 12px',
-              background: 'transparent',
-              border: '1px solid var(--border-accent)',
-              borderRadius: '6px',
-              color: 'var(--text-secondary)',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            <ExternalLink size={12} />
-            View
-          </button>
-        </div>
+        {/* Solver info */}
+        {intent.solver && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+            Solver: <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>{intent.solver.slice(0, 8)}...{intent.solver.slice(-4)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -168,22 +101,9 @@ function IntentCard({ intent }: { intent: Intent }) {
 
 function ChainBadge({ name, amount }: { name: string; amount: string }) {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{
-        fontSize: '16px',
-        fontWeight: 600,
-        fontFamily: 'monospace',
-        color: 'var(--text-primary)',
-      }}>
-        {amount}
-      </div>
-      <div style={{
-        fontSize: '12px',
-        color: 'var(--text-secondary)',
-        marginTop: '2px',
-      }}>
-        {name}
-      </div>
+    <div style={{ textAlign: 'center', minWidth: '80px' }}>
+      <div style={{ fontSize: '1.125rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{amount}</div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{name}</div>
     </div>
   );
 }
@@ -197,14 +117,9 @@ function formatAmount(amount: string): string {
 
 function formatTime(timestamp: number | undefined): string {
   if (!timestamp) return 'Unknown';
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-
+  const diff = Date.now() - timestamp;
   if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return date.toLocaleDateString();
+  return new Date(timestamp).toLocaleDateString();
 }
-
-

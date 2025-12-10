@@ -1,39 +1,8 @@
-/**
- * Storage SDK Payment Integration
- *
- * Enables multi-token payment for storage services via ERC-4337 paymasters:
- * - Pay with ANY registered token (elizaOS, USDC, VIRTUAL, etc.)
- * - Paymaster handles token-to-ETH conversion automatically
- * - Credit-based prepayment for zero-latency operations
- *
- * Architecture:
- * ┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
- * │   User      │───▶│ CreditManager    │───▶│ StorageLedger   │
- * │ (any token) │    │ (multi-token)    │    │ (storage)       │
- * └─────────────┘    └──────────────────┘    └─────────────────┘
- *       │                    │
- *       ▼                    ▼
- * ┌─────────────┐    ┌──────────────────┐
- * │ Paymaster   │◀───│ PaymasterFactory │
- * │ (gas sponsor)    │ (token registry) │
- * └─────────────┘    └──────────────────┘
- */
-
-import {
-  Contract,
-  JsonRpcProvider,
-  Wallet,
-  formatEther,
-  parseEther,
-} from 'ethers';
+import { Contract, JsonRpcProvider, Wallet, formatEther, parseEther } from 'ethers';
 import type { Address } from 'viem';
 import { ZERO_ADDRESS, STORAGE_PRICING, type X402PaymentRequirement } from './x402';
 
 const PREFERRED_TOKEN_SYMBOL = 'JEJU';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface StoragePaymentConfig {
   rpcUrl: string;
@@ -70,10 +39,6 @@ export interface PaymentResult {
   gasSponsored: boolean;
   creditRemaining: bigint;
 }
-
-// ============================================================================
-// ABIs
-// ============================================================================
 
 const CREDIT_MANAGER_ABI = [
   'function getBalance(address user, address token) view returns (uint256)',
@@ -115,10 +80,6 @@ const ERC20_ABI = [
   'function allowance(address owner, address spender) view returns (uint256)',
 ];
 
-// ============================================================================
-// Payment Client
-// ============================================================================
-
 export class StoragePaymentClient {
   private provider: JsonRpcProvider;
   private config: StoragePaymentConfig;
@@ -129,50 +90,23 @@ export class StoragePaymentClient {
   constructor(config: StoragePaymentConfig) {
     this.config = config;
     this.provider = new JsonRpcProvider(config.rpcUrl);
-
-    this.creditManager = new Contract(
-      config.creditManagerAddress,
-      CREDIT_MANAGER_ABI,
-      this.provider
-    );
-
-    this.paymasterFactory =
-      config.paymasterFactoryAddress !== ZERO_ADDRESS
-        ? new Contract(config.paymasterFactoryAddress, PAYMASTER_FACTORY_ABI, this.provider)
-        : null;
-
-    this.ledgerManager =
-      config.ledgerManagerAddress !== ZERO_ADDRESS
-        ? new Contract(config.ledgerManagerAddress, LEDGER_MANAGER_ABI, this.provider)
-        : null;
+    this.creditManager = new Contract(config.creditManagerAddress, CREDIT_MANAGER_ABI, this.provider);
+    this.paymasterFactory = config.paymasterFactoryAddress !== ZERO_ADDRESS
+      ? new Contract(config.paymasterFactoryAddress, PAYMASTER_FACTORY_ABI, this.provider)
+      : null;
+    this.ledgerManager = config.ledgerManagerAddress !== ZERO_ADDRESS
+      ? new Contract(config.ledgerManagerAddress, LEDGER_MANAGER_ABI, this.provider)
+      : null;
   }
-
-  // ============ Credit System ============
 
   async getCreditBalances(userAddress: string): Promise<CreditBalance> {
-    const [usdcBalance, elizaBalance, ethBalance] = await this.creditManager.getAllBalances(
-      userAddress
-    );
-    const totalEthEquivalent =
-      ethBalance + (usdcBalance * parseEther('0.00033')) / 1000000n + (elizaBalance * parseEther('0.0001')) / parseEther('1');
-    return {
-      usdc: usdcBalance,
-      elizaOS: elizaBalance,
-      eth: ethBalance,
-      total: totalEthEquivalent,
-    };
+    const [usdcBalance, elizaBalance, ethBalance] = await this.creditManager.getAllBalances(userAddress);
+    const totalEthEquivalent = ethBalance + (usdcBalance * parseEther('0.00033')) / 1000000n + (elizaBalance * parseEther('0.0001')) / parseEther('1');
+    return { usdc: usdcBalance, elizaOS: elizaBalance, eth: ethBalance, total: totalEthEquivalent };
   }
 
-  async hasSufficientCredit(
-    userAddress: string,
-    tokenAddress: string,
-    amount: bigint
-  ): Promise<{ sufficient: boolean; available: bigint }> {
-    const [sufficient, available] = await this.creditManager.hasSufficientCredit(
-      userAddress,
-      tokenAddress,
-      amount
-    );
+  async hasSufficientCredit(userAddress: string, tokenAddress: string, amount: bigint): Promise<{ sufficient: boolean; available: bigint }> {
+    const [sufficient, available] = await this.creditManager.hasSufficientCredit(userAddress, tokenAddress, amount);
     return { sufficient, available };
   }
 
@@ -180,8 +114,6 @@ export class StoragePaymentClient {
     if (!this.ledgerManager) return 0n;
     return this.ledgerManager.getAvailableBalance(userAddress);
   }
-
-  // ============ Paymaster System ============
 
   async getAvailablePaymasters(gasEstimateWei: bigint): Promise<PaymasterOption[]> {
     if (!this.paymasterFactory) return [];
@@ -227,77 +159,41 @@ export class StoragePaymentClient {
     });
   }
 
-  /**
-   * Select optimal paymaster based on user's token balances
-   * Selects JEJU if available, otherwise cheapest option
-   */
-  async selectOptimalPaymaster(
-    userAddress: string,
-    gasEstimateWei: bigint
-  ): Promise<PaymasterOption | null> {
+  async selectOptimalPaymaster(userAddress: string, gasEstimateWei: bigint): Promise<PaymasterOption | null> {
     const options = await this.getAvailablePaymasters(gasEstimateWei);
 
-    // First, try to find JEJU paymaster if user has JEJU balance
     const jejuPaymaster = options.find(o => o.tokenSymbol === PREFERRED_TOKEN_SYMBOL && o.isAvailable);
     if (jejuPaymaster) {
       const tokenContract = new Contract(jejuPaymaster.tokenAddress, ERC20_ABI, this.provider);
       const userBalance = (await tokenContract.balanceOf(userAddress)) as bigint;
-      if (userBalance >= jejuPaymaster.estimatedCost) {
-        return jejuPaymaster;
-      }
+      if (userBalance >= jejuPaymaster.estimatedCost) return jejuPaymaster;
     }
 
-    // Fall back to any other available paymaster
     for (const option of options) {
       if (!option.isAvailable) continue;
-
       const tokenContract = new Contract(option.tokenAddress, ERC20_ABI, this.provider);
       const userBalance = (await tokenContract.balanceOf(userAddress)) as bigint;
-
-      if (userBalance >= option.estimatedCost) {
-        return option;
-      }
+      if (userBalance >= option.estimatedCost) return option;
     }
 
     return null;
   }
 
-  // ============ Payment Methods ============
-
-  async payForStorage(
-    signer: Wallet,
-    amountRequired: bigint,
-    preferredToken?: string
-  ): Promise<PaymentResult> {
+  async payForStorage(signer: Wallet, amountRequired: bigint, preferredToken?: string): Promise<PaymentResult> {
     const userAddress = signer.address;
 
-    // 1. Check credit balance first (zero latency)
     const credits = await this.getCreditBalances(userAddress);
     if (credits.total >= amountRequired) {
-      return {
-        success: true,
-        txHash: '0x0',
-        tokenUsed: ZERO_ADDRESS,
-        amountPaid: amountRequired,
-        gasSponsored: true,
-        creditRemaining: credits.total - amountRequired,
-      };
+      return { success: true, txHash: '0x0', tokenUsed: ZERO_ADDRESS, amountPaid: amountRequired, gasSponsored: true, creditRemaining: credits.total - amountRequired };
     }
 
-    // 2. Try paymaster-sponsored payment
     const paymaster = preferredToken
-      ? (await this.getAvailablePaymasters(amountRequired)).find(
-          (p) => p.tokenAddress === preferredToken
-        )
+      ? (await this.getAvailablePaymasters(amountRequired)).find((p) => p.tokenAddress === preferredToken)
       : await this.selectOptimalPaymaster(userAddress, amountRequired);
 
     if (paymaster) {
       const tokenContract = new Contract(paymaster.tokenAddress, ERC20_ABI, signer);
-
-      const currentAllowance = (await tokenContract.allowance(
-        userAddress,
-        paymaster.address
-      )) as bigint;
+      const currentAllowance = (await tokenContract.allowance(userAddress, paymaster.address)) as bigint;
 
       if (currentAllowance < paymaster.estimatedCost) {
         const approveFn = tokenContract.getFunction('approve');
@@ -305,36 +201,18 @@ export class StoragePaymentClient {
         await approveTx.wait();
       }
 
-      // Transfer tokens to paymaster for sponsorship
       const transferFn = tokenContract.getFunction('transfer');
       const transferTx = await transferFn(paymaster.address, paymaster.estimatedCost);
       const receipt = await transferTx.wait();
 
-      return {
-        success: true,
-        txHash: receipt.hash,
-        tokenUsed: paymaster.tokenAddress,
-        amountPaid: paymaster.estimatedCost,
-        gasSponsored: true,
-        creditRemaining: 0n,
-      };
+      return { success: true, txHash: receipt.hash, tokenUsed: paymaster.tokenAddress, amountPaid: paymaster.estimatedCost, gasSponsored: true, creditRemaining: 0n };
     }
 
-    // 3. Fall back to direct ETH payment
-    if (!this.ledgerManager) {
-      throw new Error('No payment method available - no credit, paymaster, or ledger');
-    }
+    if (!this.ledgerManager) throw new Error('No payment method available - no credit, paymaster, or ledger');
 
     const ledgerBalance = await this.getLedgerBalance(userAddress);
     if (ledgerBalance >= amountRequired) {
-      return {
-        success: true,
-        txHash: '0x0',
-        tokenUsed: ZERO_ADDRESS,
-        amountPaid: amountRequired,
-        gasSponsored: false,
-        creditRemaining: ledgerBalance - amountRequired,
-      };
+      return { success: true, txHash: '0x0', tokenUsed: ZERO_ADDRESS, amountPaid: amountRequired, gasSponsored: false, creditRemaining: ledgerBalance - amountRequired };
     }
 
     const depositAmount = amountRequired - ledgerBalance;
@@ -343,14 +221,7 @@ export class StoragePaymentClient {
     const tx = await depositFn({ value: depositAmount });
     const receipt = await tx.wait();
 
-    return {
-      success: true,
-      txHash: receipt.hash,
-      tokenUsed: ZERO_ADDRESS,
-      amountPaid: depositAmount,
-      gasSponsored: false,
-      creditRemaining: 0n,
-    };
+    return { success: true, txHash: receipt.hash, tokenUsed: ZERO_ADDRESS, amountPaid: depositAmount, gasSponsored: false, creditRemaining: 0n };
   }
 
   async depositCredits(signer: Wallet, tokenAddress: string, amount: bigint): Promise<string> {
@@ -383,41 +254,16 @@ export class StoragePaymentClient {
     }
   }
 
-  // ============ x402 Payment Requirements ============
-
-  createPaymentRequirement(
-    resource: string,
-    amountWei: bigint,
-    description: string,
-    network: string = 'jeju'
-  ): X402PaymentRequirement {
-    const accepts: X402PaymentRequirement['accepts'] = [
-      {
-        scheme: 'exact',
-        network,
-        maxAmountRequired: amountWei.toString(),
-        asset: ZERO_ADDRESS,
-        payTo: this.config.ledgerManagerAddress,
-        resource,
-        description,
-      },
-    ];
-
+  createPaymentRequirement(resource: string, amountWei: bigint, description: string, network: string = 'jeju'): X402PaymentRequirement {
     return {
       x402Version: 1,
       error: 'Payment required to access storage service',
-      accepts,
+      accepts: [{ scheme: 'exact', network, maxAmountRequired: amountWei.toString(), asset: ZERO_ADDRESS, payTo: this.config.ledgerManagerAddress, resource, description }],
     };
   }
 
-  // ============ Cost Estimation ============
-
   estimateStorageCost(sizeGB: number, durationMonths: number, tier: 'hot' | 'warm' | 'cold' = 'warm'): bigint {
-    const pricePerGBMonth = tier === 'hot'
-      ? STORAGE_PRICING.HOT_TIER_PER_GB_MONTH
-      : tier === 'warm'
-        ? STORAGE_PRICING.WARM_TIER_PER_GB_MONTH
-        : STORAGE_PRICING.COLD_TIER_PER_GB_MONTH;
+    const pricePerGBMonth = tier === 'hot' ? STORAGE_PRICING.HOT_TIER_PER_GB_MONTH : tier === 'warm' ? STORAGE_PRICING.WARM_TIER_PER_GB_MONTH : STORAGE_PRICING.COLD_TIER_PER_GB_MONTH;
     return BigInt(Math.ceil(sizeGB * durationMonths)) * pricePerGBMonth;
   }
 
@@ -426,10 +272,8 @@ export class StoragePaymentClient {
   }
 
   estimateRetrievalCost(sizeGB: number): bigint {
-    return BigInt(Math.ceil(sizeGB * 1000)) * STORAGE_PRICING.RETRIEVAL_PER_GB / 1000n;
+    return (BigInt(Math.ceil(sizeGB * 1000)) * STORAGE_PRICING.RETRIEVAL_PER_GB) / 1000n;
   }
-
-  // ============ Utilities ============
 
   private formatTokenAmount(amount: bigint, decimals: number, symbol: string): string {
     const divisor = 10n ** BigInt(decimals);
@@ -439,48 +283,24 @@ export class StoragePaymentClient {
   }
 }
 
-// ============================================================================
-// Factory
-// ============================================================================
-
 export function createStoragePaymentClient(config?: Partial<StoragePaymentConfig>): StoragePaymentClient {
   const fullConfig: StoragePaymentConfig = {
     rpcUrl: config?.rpcUrl || process.env.JEJU_RPC_URL || 'http://127.0.0.1:9545',
     bundlerUrl: config?.bundlerUrl || process.env.BUNDLER_URL,
-    creditManagerAddress: (config?.creditManagerAddress ||
-      process.env.CREDIT_MANAGER_ADDRESS ||
-      ZERO_ADDRESS) as Address,
-    paymasterFactoryAddress: (config?.paymasterFactoryAddress ||
-      process.env.PAYMASTER_FACTORY_ADDRESS ||
-      ZERO_ADDRESS) as Address,
-    ledgerManagerAddress: (config?.ledgerManagerAddress ||
-      process.env.LEDGER_MANAGER_ADDRESS ||
-      ZERO_ADDRESS) as Address,
-    tokenRegistryAddress: (config?.tokenRegistryAddress ||
-      process.env.TOKEN_REGISTRY_ADDRESS ||
-      ZERO_ADDRESS) as Address,
-    entryPointAddress: (config?.entryPointAddress ||
-      process.env.ENTRY_POINT_ADDRESS ||
-      '0x0000000071727De22E5E9d8BAf0edAc6f37da032') as Address,
+    creditManagerAddress: (config?.creditManagerAddress || process.env.CREDIT_MANAGER_ADDRESS || ZERO_ADDRESS) as Address,
+    paymasterFactoryAddress: (config?.paymasterFactoryAddress || process.env.PAYMASTER_FACTORY_ADDRESS || ZERO_ADDRESS) as Address,
+    ledgerManagerAddress: (config?.ledgerManagerAddress || process.env.LEDGER_MANAGER_ADDRESS || ZERO_ADDRESS) as Address,
+    tokenRegistryAddress: (config?.tokenRegistryAddress || process.env.TOKEN_REGISTRY_ADDRESS || ZERO_ADDRESS) as Address,
+    entryPointAddress: (config?.entryPointAddress || process.env.ENTRY_POINT_ADDRESS || '0x0000000071727De22E5E9d8BAf0edAc6f37da032') as Address,
   };
-
   return new StoragePaymentClient(fullConfig);
 }
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
 
 export function formatStorageCost(weiAmount: bigint): string {
   const eth = formatEther(weiAmount);
   const ethNum = parseFloat(eth);
-
-  if (ethNum < 0.0001) {
-    return `~$${(ethNum * 3000 * 100).toFixed(2)} cents`;
-  }
-
+  if (ethNum < 0.0001) return `~$${(ethNum * 3000 * 100).toFixed(2)} cents`;
   return `${ethNum.toFixed(6)} ETH (~$${(ethNum * 3000).toFixed(2)})`;
 }
 
 export { ZERO_ADDRESS };
-

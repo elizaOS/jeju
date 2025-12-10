@@ -165,6 +165,65 @@ const MODERATION_MARKETPLACE_ABI = [
       },
     ],
   },
+  {
+    name: 'getModeratorReputation',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'moderator', type: 'address' }],
+    outputs: [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'successfulBans', type: 'uint256' },
+          { name: 'unsuccessfulBans', type: 'uint256' },
+          { name: 'totalSlashedFrom', type: 'uint256' },
+          { name: 'totalSlashedOthers', type: 'uint256' },
+          { name: 'reputationScore', type: 'uint256' },
+          { name: 'lastReportTimestamp', type: 'uint256' },
+          { name: 'reportCooldownUntil', type: 'uint256' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'getReputationTier',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'uint8' }],
+  },
+  {
+    name: 'getRequiredStakeForReporter',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'reporter', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getQuorumRequired',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'reporter', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getModeratorPnL',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'moderator', type: 'address' }],
+    outputs: [{ name: '', type: 'int256' }],
+  },
+  {
+    name: 'checkQuorumStatus',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'target', type: 'address' }],
+    outputs: [
+      { name: 'reached', type: 'bool' },
+      { name: 'currentCount', type: 'uint256' },
+      { name: 'requiredCount', type: 'uint256' },
+    ],
+  },
 ] as const;
 
 const JEJU_TOKEN_ABI = [
@@ -390,6 +449,172 @@ export function getBanTypeLabel(banType: BanType): string {
   }
 }
 
+// ============ Reputation Types ============
+
+export enum ReputationTier {
+  UNTRUSTED = 0,
+  LOW = 1,
+  MEDIUM = 2,
+  HIGH = 3,
+  TRUSTED = 4
+}
+
+export interface ModeratorReputation {
+  successfulBans: bigint;
+  unsuccessfulBans: bigint;
+  totalSlashedFrom: bigint;
+  totalSlashedOthers: bigint;
+  reputationScore: bigint;
+  lastReportTimestamp: bigint;
+  reportCooldownUntil: bigint;
+  tier: ReputationTier;
+  netPnL: bigint;
+  winRate: number;
+}
+
+export interface QuorumStatus {
+  reached: boolean;
+  currentCount: bigint;
+  requiredCount: bigint;
+}
+
+// ============ Reputation Functions ============
+
+/**
+ * Get moderator reputation with full P&L stats
+ */
+export async function getModeratorReputation(userAddress: Address): Promise<ModeratorReputation | null> {
+  if (!MODERATION_MARKETPLACE_ADDRESS) return null;
+
+  const [rep, tier, pnl] = await Promise.all([
+    publicClient.readContract({
+      address: MODERATION_MARKETPLACE_ADDRESS,
+      abi: MODERATION_MARKETPLACE_ABI,
+      functionName: 'getModeratorReputation',
+      args: [userAddress],
+    }).catch(() => null),
+    publicClient.readContract({
+      address: MODERATION_MARKETPLACE_ADDRESS,
+      abi: MODERATION_MARKETPLACE_ABI,
+      functionName: 'getReputationTier',
+      args: [userAddress],
+    }).catch(() => 2), // Default MEDIUM
+    publicClient.readContract({
+      address: MODERATION_MARKETPLACE_ADDRESS,
+      abi: MODERATION_MARKETPLACE_ABI,
+      functionName: 'getModeratorPnL',
+      args: [userAddress],
+    }).catch(() => 0n),
+  ]);
+
+  if (!rep) return null;
+
+  const wins = Number(rep.successfulBans);
+  const losses = Number(rep.unsuccessfulBans);
+  const total = wins + losses;
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 50;
+
+  return {
+    successfulBans: rep.successfulBans,
+    unsuccessfulBans: rep.unsuccessfulBans,
+    totalSlashedFrom: rep.totalSlashedFrom,
+    totalSlashedOthers: rep.totalSlashedOthers,
+    reputationScore: rep.reputationScore,
+    lastReportTimestamp: rep.lastReportTimestamp,
+    reportCooldownUntil: rep.reportCooldownUntil,
+    tier: tier as ReputationTier,
+    netPnL: pnl as bigint,
+    winRate,
+  };
+}
+
+/**
+ * Get required stake for a reporter based on their reputation
+ */
+export async function getRequiredStakeForReporter(userAddress: Address): Promise<bigint | null> {
+  if (!MODERATION_MARKETPLACE_ADDRESS) return null;
+
+  return publicClient.readContract({
+    address: MODERATION_MARKETPLACE_ADDRESS,
+    abi: MODERATION_MARKETPLACE_ABI,
+    functionName: 'getRequiredStakeForReporter',
+    args: [userAddress],
+  }).catch(() => null);
+}
+
+/**
+ * Get quorum required for a reporter
+ */
+export async function getQuorumRequired(userAddress: Address): Promise<bigint | null> {
+  if (!MODERATION_MARKETPLACE_ADDRESS) return null;
+
+  return publicClient.readContract({
+    address: MODERATION_MARKETPLACE_ADDRESS,
+    abi: MODERATION_MARKETPLACE_ABI,
+    functionName: 'getQuorumRequired',
+    args: [userAddress],
+  }).catch(() => null);
+}
+
+/**
+ * Check quorum status for reporting a target
+ */
+export async function checkQuorumStatus(targetAddress: Address): Promise<QuorumStatus | null> {
+  if (!MODERATION_MARKETPLACE_ADDRESS) return null;
+
+  const result = await publicClient.readContract({
+    address: MODERATION_MARKETPLACE_ADDRESS,
+    abi: MODERATION_MARKETPLACE_ABI,
+    functionName: 'checkQuorumStatus',
+    args: [targetAddress],
+  }).catch(() => null);
+
+  if (!result) return null;
+
+  return {
+    reached: result[0],
+    currentCount: result[1],
+    requiredCount: result[2],
+  };
+}
+
+/**
+ * Get reputation tier label for display
+ */
+export function getReputationTierLabel(tier: ReputationTier): string {
+  switch (tier) {
+    case ReputationTier.UNTRUSTED: return 'Untrusted';
+    case ReputationTier.LOW: return 'Low';
+    case ReputationTier.MEDIUM: return 'Medium';
+    case ReputationTier.HIGH: return 'High';
+    case ReputationTier.TRUSTED: return 'Trusted';
+    default: return 'Unknown';
+  }
+}
+
+/**
+ * Get reputation tier color for styling
+ */
+export function getReputationTierColor(tier: ReputationTier): string {
+  switch (tier) {
+    case ReputationTier.UNTRUSTED: return 'text-red-600 bg-red-50';
+    case ReputationTier.LOW: return 'text-orange-600 bg-orange-50';
+    case ReputationTier.MEDIUM: return 'text-yellow-600 bg-yellow-50';
+    case ReputationTier.HIGH: return 'text-blue-600 bg-blue-50';
+    case ReputationTier.TRUSTED: return 'text-green-600 bg-green-50';
+    default: return 'text-gray-600 bg-gray-50';
+  }
+}
+
+/**
+ * Format P&L for display
+ */
+export function formatPnL(pnl: bigint): string {
+  const eth = Number(pnl) / 1e18;
+  const sign = eth >= 0 ? '+' : '';
+  return `${sign}${eth.toFixed(4)} ETH`;
+}
+
 /**
  * Clear ban cache (useful after transactions)
  */
@@ -401,16 +626,11 @@ export function clearBanCache(userAddress?: Address): void {
   }
 }
 
-/**
- * Check if user can transfer JEJU tokens
- * JEJU token has built-in ban enforcement - banned users cannot transfer
- */
 export async function checkJejuTransferAllowed(userAddress: Address): Promise<boolean> {
   if (!JEJU_TOKEN_ADDRESS) {
     return true; // No JEJU token configured, allow
   }
 
-  // First check if ban enforcement is enabled on the token
   const enforcementEnabled = await publicClient.readContract({
     address: JEJU_TOKEN_ADDRESS,
     abi: JEJU_TOKEN_ABI,

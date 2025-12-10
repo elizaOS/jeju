@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Zap } from 'lucide-react';
+
+const INDEXER_URL = import.meta.env.VITE_INDEXER_URL || 'http://localhost:4350/graphql';
 
 interface EILStatsData {
   totalVolumeEth: string;
@@ -8,8 +10,6 @@ interface EILStatsData {
   totalStakedEth: string;
   successRate: number;
   avgTimeSeconds: number;
-  last24hVolume: string;
-  last24hTransactions: number;
 }
 
 interface EILChainStats {
@@ -24,39 +24,129 @@ const CHAIN_ICONS: Record<number, string> = {
   1: '💎', 11155111: '🧪', 42161: '🟠', 10: '🔴', 420691: '🏝️', 420690: '🏝️',
 };
 
-export default function EILStats() {
-  const [stats, setStats] = useState<EILStatsData | null>(null);
-  const [chainStats, setChainStats] = useState<EILChainStats[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const CHAIN_NAMES: Record<number, string> = {
+  1: 'Ethereum', 11155111: 'Sepolia', 42161: 'Arbitrum', 10: 'Optimism', 420691: 'Jeju', 420690: 'Jeju Testnet',
+};
 
-  useEffect(() => {
-    async function fetchStats() {
-      setIsLoading(true);
-      const mockStats: EILStatsData = {
-        totalVolumeEth: '1234.56', totalTransactions: 5678, activeXLPs: 12, totalStakedEth: '500.00',
-        successRate: 99.2, avgTimeSeconds: 8.5, last24hVolume: '123.45', last24hTransactions: 456,
-      };
-      const mockChainStats: EILChainStats[] = [
-        { chainId: 420691, chainName: 'Jeju', totalVolume: '500.00', totalTransfers: 2000, activeXLPs: 10 },
-        { chainId: 1, chainName: 'Ethereum', totalVolume: '400.00', totalTransfers: 1500, activeXLPs: 8 },
-        { chainId: 42161, chainName: 'Arbitrum', totalVolume: '200.00', totalTransfers: 1000, activeXLPs: 6 },
-        { chainId: 10, chainName: 'Optimism', totalVolume: '134.56', totalTransfers: 1178, activeXLPs: 5 },
-      ];
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setStats(mockStats);
-      setChainStats(mockChainStats);
-      setIsLoading(false);
+async function fetchEILStats(): Promise<{ stats: EILStatsData; chainStats: EILChainStats[] }> {
+  const query = `
+    query EILStats {
+      xlps(where: { isActive_eq: true }) {
+        id
+        totalStaked
+        supportedChains
+        totalVouchersIssued
+        totalVouchersFulfilled
+        totalVouchersFailed
+        totalFeesEarned
+      }
+      crossChainVoucherRequests {
+        id
+        sourceAmount
+        sourceChain
+        status
+      }
     }
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  `;
+
+  const response = await fetch(INDEXER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!response.ok) {
+    return { stats: emptyStats(), chainStats: [] };
+  }
+
+  const { data, errors } = await response.json();
+  
+  if (errors || !data) {
+    return { stats: emptyStats(), chainStats: [] };
+  }
+
+  const xlps = data.xlps || [];
+  const requests = data.crossChainVoucherRequests || [];
+  
+  const activeXLPs = xlps.length;
+  const totalStakedWei = xlps.reduce((sum: bigint, x: { totalStaked: string }) => sum + BigInt(x.totalStaked || '0'), 0n);
+  const totalStakedEth = (Number(totalStakedWei) / 1e18).toFixed(2);
+  
+  const fulfilled = requests.filter((r: { status: string }) => r.status === 'FULFILLED').length;
+  const failed = requests.filter((r: { status: string }) => r.status === 'EXPIRED' || r.status === 'REFUNDED').length;
+  const totalCompleted = fulfilled + failed;
+  const successRate = totalCompleted > 0 ? Math.round((fulfilled / totalCompleted) * 1000) / 10 : 0;
+  
+  const totalVolumeWei = requests.reduce((sum: bigint, r: { sourceAmount: string }) => sum + BigInt(r.sourceAmount || '0'), 0n);
+  const totalVolumeEth = (Number(totalVolumeWei) / 1e18).toFixed(2);
+
+  const chainVolumes = new Map<number, { volume: bigint; transfers: number; xlps: Set<string> }>();
+  for (const req of requests) {
+    const chain = req.sourceChain;
+    const current = chainVolumes.get(chain) || { volume: 0n, transfers: 0, xlps: new Set<string>() };
+    current.volume += BigInt(req.sourceAmount || '0');
+    current.transfers += 1;
+    chainVolumes.set(chain, current);
+  }
+  
+  for (const xlp of xlps) {
+    for (const chainId of xlp.supportedChains || []) {
+      const chain = Number(chainId);
+      const current = chainVolumes.get(chain) || { volume: 0n, transfers: 0, xlps: new Set<string>() };
+      current.xlps.add(xlp.id);
+      chainVolumes.set(chain, current);
+    }
+  }
+
+  const chainStats: EILChainStats[] = Array.from(chainVolumes.entries()).map(([chainId, data]) => ({
+    chainId,
+    chainName: CHAIN_NAMES[chainId] || `Chain ${chainId}`,
+    totalVolume: (Number(data.volume) / 1e18).toFixed(2),
+    totalTransfers: data.transfers,
+    activeXLPs: data.xlps.size,
+  })).sort((a, b) => parseFloat(b.totalVolume) - parseFloat(a.totalVolume));
+
+  return {
+    stats: {
+      totalVolumeEth,
+      totalTransactions: requests.length,
+      activeXLPs,
+      totalStakedEth,
+      successRate,
+      avgTimeSeconds: 0,
+    },
+    chainStats,
+  };
+}
+
+function emptyStats(): EILStatsData {
+  return { totalVolumeEth: '0', totalTransactions: 0, activeXLPs: 0, totalStakedEth: '0', successRate: 0, avgTimeSeconds: 0 };
+}
+
+export default function EILStats() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['eil-stats'],
+    queryFn: fetchEILStats,
+    refetchInterval: 30000,
+  });
+
+  const stats = data?.stats || null;
+  const chainStats = data?.chainStats || [];
 
   if (isLoading) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
         <div className="spinner" style={{ margin: '0 auto' }} />
         <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>Loading EIL stats...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+        <p style={{ color: 'var(--error)' }}>Failed to load EIL stats</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Indexer may be unavailable</p>
       </div>
     );
   }
@@ -74,10 +164,9 @@ export default function EILStats() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-        <StatCard label="24h Volume" value={`${stats.last24hVolume} ETH`} subtext={`${stats.last24hTransactions} transfers`} variant="info" icon="📊" />
+        <StatCard label="Total Volume" value={`${stats.totalVolumeEth} ETH`} subtext={`${stats.totalTransactions} transfers`} variant="info" icon="📊" />
         <StatCard label="Active XLPs" value={stats.activeXLPs.toString()} subtext={`${stats.totalStakedEth} ETH staked`} variant="success" icon="🌊" />
-        <StatCard label="Success Rate" value={`${stats.successRate}%`} subtext={`${stats.totalTransactions.toLocaleString()} txns`} variant="accent" icon="✓" />
-        <StatCard label="Avg Time" value={`${stats.avgTimeSeconds}s`} variant="warning" icon="⚡" />
+        <StatCard label="Success Rate" value={stats.totalTransactions > 0 ? `${stats.successRate}%` : '-'} subtext={`${stats.totalTransactions.toLocaleString()} txns`} variant="accent" icon="✓" />
       </div>
 
       <div className="card" style={{ padding: '1rem' }}>

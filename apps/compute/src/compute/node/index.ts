@@ -2,7 +2,7 @@
  * Jeju Compute Node
  *
  * A decentralized compute marketplace node supporting:
- * - OpenAI-compatible inference API
+ * - Standard inference API
  * - SSH access for compute rentals
  * - Docker container management
  * - ERC-8004 registration

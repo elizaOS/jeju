@@ -1,13 +1,3 @@
-/**
- * JNS (Jeju Name Service) React Hooks
- * 
- * Provides hooks for:
- * - Name registration and management
- * - Name resolution
- * - Reverse resolution
- * - Price quotes
- */
-
 import { useState, useCallback } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { type Address, type Hash, namehash } from 'viem';
@@ -209,8 +199,6 @@ const JNS_REVERSE_REGISTRAR_ABI = [
   },
 ] as const;
 
-// ============ Types ============
-
 export interface JNSRegistration {
   name: string;
   owner: Address;
@@ -242,11 +230,6 @@ export interface JNSResolverData {
   appInfo: JNSAppInfo;
 }
 
-// ============ Hooks ============
-
-/**
- * Hook for checking name availability and getting price quotes
- */
 export function useJNSLookup() {
   const publicClient = usePublicClient();
   const { address } = useAccount();
@@ -340,16 +323,52 @@ export function useJNSLookup() {
     };
   }, [publicClient]);
 
+  const getOwnerNames = useCallback(async (ownerAddress: Address): Promise<JNSRegistration[]> => {
+    if (!publicClient || JNS_REGISTRAR === '0x0000000000000000000000000000000000000000') {
+      return [];
+    }
+
+    const INDEXER_URL = import.meta.env.VITE_INDEXER_URL || 'http://localhost:4350/graphql';
+    const query = `
+      query OwnerNames($owner: String!) {
+        jnsNames(where: { owner_eq: $owner }) {
+          name
+          owner
+          expiresAt
+        }
+      }
+    `;
+
+    const response = await fetch(INDEXER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { owner: ownerAddress.toLowerCase() } }),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const { data } = await response.json();
+    const names = data?.jnsNames || [];
+
+    return names.map((n: { name: string; owner: string; expiresAt: string }) => ({
+      name: n.name,
+      owner: n.owner as Address,
+      expiresAt: parseInt(n.expiresAt),
+      inGracePeriod: false,
+      isAvailable: false,
+    }));
+  }, [publicClient]);
+
   return {
     checkAvailability,
     getPrice,
     getRegistration,
+    getOwnerNames,
   };
 }
 
-/**
- * Hook for registering and managing names
- */
 export function useJNSRegister() {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -439,9 +458,6 @@ export function useJNSRegister() {
   };
 }
 
-/**
- * Hook for resolving names to addresses and records
- */
 export function useJNSResolver() {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -546,9 +562,6 @@ export function useJNSResolver() {
   };
 }
 
-/**
- * Hook for reverse resolution (address → name)
- */
 export function useJNSReverse() {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -583,9 +596,14 @@ export function useJNSReverse() {
     });
   }, [walletClient]);
 
+  const getPrimaryName = useCallback(async (addr: Address): Promise<string | null> => {
+    return reverseLookup(addr);
+  }, [reverseLookup]);
+
   return {
     reverseLookup,
     setPrimaryName,
+    getPrimaryName,
   };
 }
 

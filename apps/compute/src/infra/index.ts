@@ -34,6 +34,14 @@ export {
 } from './phala-gateway.js';
 
 export {
+  createPhalaProxy,
+  PhalaProxy,
+  type PhalaNodeState,
+  type ProxyConfig,
+  type ProxyStats,
+} from './phala-proxy.js';
+
+export {
   type DeploymentResult,
   decodeIPFSContenthash,
   type ENSConfig,

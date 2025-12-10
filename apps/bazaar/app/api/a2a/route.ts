@@ -6,6 +6,17 @@ import {
   PAYMENT_TIERS,
   type PaymentRequirements 
 } from '@/lib/x402';
+import {
+  checkBanStatus,
+  getModeratorStats,
+  getModerationCases,
+  getModerationCase,
+  getModerationStats,
+  prepareStakeTransaction,
+  prepareReportTransaction,
+  prepareVoteTransaction,
+  prepareChallengeTransaction,
+} from '@/lib/moderation-api';
 import { Address } from 'viem';
 
 const CORS_HEADERS = {
@@ -445,6 +456,143 @@ async function executeSkill(
           nfts: [],
           note: 'NFT ownership data coming soon',
           instructions: 'View your NFTs at /my-nfts',
+        },
+      };
+    }
+
+    // ============ MODERATION MARKETPLACE SKILLS ============
+
+    case 'check-ban-status': {
+      const address = params.address as string;
+      if (!address) throw new Error('Address required');
+      
+      const status = await checkBanStatus(address);
+      return {
+        message: status.isBanned 
+          ? `Address ${address.slice(0, 10)}... is ${status.isOnNotice ? 'on notice' : 'banned'}`
+          : `Address ${address.slice(0, 10)}... is not banned`,
+        data: { address, ...status },
+      };
+    }
+
+    case 'get-moderator-stats': {
+      const address = params.address as string;
+      if (!address) throw new Error('Address required');
+      
+      const stats = await getModeratorStats(address);
+      if (!stats) {
+        return {
+          message: `No moderator data for ${address.slice(0, 10)}...`,
+          data: { address, isStaked: false },
+        };
+      }
+      return {
+        message: `${stats.tier} tier moderator with ${stats.winRate}% win rate`,
+        data: stats,
+      };
+    }
+
+    case 'get-moderation-cases': {
+      const cases = await getModerationCases({
+        activeOnly: params.activeOnly as boolean,
+        resolvedOnly: params.resolvedOnly as boolean,
+        limit: params.limit as number || 20,
+      });
+      return {
+        message: `Found ${cases.length} moderation cases`,
+        data: { cases, count: cases.length },
+      };
+    }
+
+    case 'get-moderation-case': {
+      const caseId = params.caseId as string;
+      if (!caseId) throw new Error('Case ID required');
+      
+      const caseData = await getModerationCase(caseId);
+      if (!caseData) throw new Error('Case not found');
+      
+      return {
+        message: `Case ${caseData.status}: ${caseData.target.slice(0, 10)}... reported for ${caseData.reason.slice(0, 50)}`,
+        data: caseData,
+      };
+    }
+
+    case 'get-moderation-stats': {
+      const stats = await getModerationStats();
+      return {
+        message: `${stats.totalCases} total cases, ${stats.totalStaked} ETH staked`,
+        data: stats,
+      };
+    }
+
+    case 'prepare-stake': {
+      const amount = params.amount as string;
+      if (!amount) throw new Error('Amount required');
+      
+      const tx = prepareStakeTransaction(amount);
+      return {
+        message: `Prepared transaction to stake ${amount} ETH`,
+        data: {
+          action: 'sign-and-send',
+          transaction: tx,
+          note: 'Wait 24h after staking before voting power activates',
+        },
+      };
+    }
+
+    case 'prepare-report': {
+      const target = params.target as string;
+      const reason = params.reason as string;
+      const evidenceHash = params.evidenceHash as string;
+      
+      if (!target || !reason || !evidenceHash) {
+        throw new Error('target, reason, and evidenceHash required');
+      }
+      
+      const tx = prepareReportTransaction(target, reason, evidenceHash);
+      return {
+        message: `Prepared report against ${target.slice(0, 10)}...`,
+        data: {
+          action: 'sign-and-send',
+          transaction: tx,
+          warning: 'Your stake is at risk if the community votes to clear',
+        },
+      };
+    }
+
+    case 'prepare-vote': {
+      const caseId = params.caseId as string;
+      const voteYes = params.voteYes as boolean;
+      
+      if (!caseId || voteYes === undefined) {
+        throw new Error('caseId and voteYes required');
+      }
+      
+      const tx = prepareVoteTransaction(caseId, voteYes);
+      return {
+        message: `Prepared vote ${voteYes ? 'BAN' : 'CLEAR'} for case ${caseId.slice(0, 10)}...`,
+        data: {
+          action: 'sign-and-send',
+          transaction: tx,
+        },
+      };
+    }
+
+    case 'prepare-challenge': {
+      const caseId = params.caseId as string;
+      const stakeAmount = params.stakeAmount as string;
+      
+      if (!caseId || !stakeAmount) {
+        throw new Error('caseId and stakeAmount required');
+      }
+      
+      const tx = prepareChallengeTransaction(caseId, stakeAmount);
+      return {
+        message: `Prepared challenge for case ${caseId.slice(0, 10)}...`,
+        data: {
+          action: 'sign-and-send',
+          transaction: tx,
+          warning: 'Challenge stake at risk if ban upheld',
         },
       };
     }

@@ -1,8 +1,3 @@
-/**
- * @fileoverview Network-wide node staking statistics and health metrics
- * @module gateway/components/NetworkStatsCard
- */
-
 import { useNodeStaking } from '../hooks/useNodeStaking';
 import { formatUSD } from '../lib/tokenUtils';
 import { Globe, Server, TrendingUp, AlertTriangle } from 'lucide-react';

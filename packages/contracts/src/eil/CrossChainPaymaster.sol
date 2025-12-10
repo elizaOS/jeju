@@ -1400,9 +1400,199 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
      */
     function refillEntryPoint(uint256 amount) external onlyOwner {
         require(totalETHLiquidity >= amount, "Insufficient pool liquidity");
-        // Note: This uses aggregate pool, not individual XLP balance
-        // In production, implement pro-rata tracking
         entryPoint.depositTo{value: amount}(address(this));
+    }
+
+    // ============ Embedded AMM (XLP Liquidity) ============
+
+    /// @notice Swap fee in basis points (30 = 0.3%)
+    uint256 public swapFeeBps = 30;
+
+    /// @notice Total swap volume
+    uint256 public totalSwapVolume;
+
+    /// @notice Total swap fees collected
+    uint256 public totalSwapFees;
+
+    event Swap(
+        address indexed user,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 fee
+    );
+
+    event SwapFeeUpdated(uint256 oldFee, uint256 newFee);
+
+    /**
+     * @notice Swap tokens using XLP liquidity (constant-product AMM)
+     * @param tokenIn Input token address (address(0) for ETH)
+     * @param tokenOut Output token address (address(0) for ETH)
+     * @param amountIn Amount of input token
+     * @param minAmountOut Minimum output (slippage protection)
+     * @return amountOut Actual output amount
+     * @dev Uses xy=k formula with XLP liquidity as reserves
+     */
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut
+    ) external payable nonReentrant returns (uint256 amountOut) {
+        if (amountIn == 0) revert InsufficientAmount();
+        if (tokenIn == tokenOut) revert UnsupportedToken();
+
+        // CHECKS: Get reserves and validate
+        uint256 reserveIn = _getReserve(tokenIn);
+        uint256 reserveOut = _getReserve(tokenOut);
+
+        if (reserveIn == 0 || reserveOut == 0) revert InsufficientPoolLiquidity();
+
+        // Calculate output using xy=k with fee
+        amountOut = _getAmountOut(amountIn, reserveIn, reserveOut);
+
+        if (amountOut < minAmountOut) revert InsufficientAmount();
+        if (amountOut > reserveOut) revert InsufficientPoolLiquidity();
+
+        // Validate ETH payment if needed
+        uint256 refundAmount;
+        if (tokenIn == address(0)) {
+            if (msg.value < amountIn) revert InsufficientAmount();
+            refundAmount = msg.value - amountIn;
+        }
+
+        // Calculate fee
+        uint256 fee = (amountIn * swapFeeBps) / BASIS_POINTS;
+
+        // EFFECTS: Update all state BEFORE external calls
+        if (tokenIn == address(0)) {
+            totalETHLiquidity += amountIn;
+        } else {
+            totalTokenLiquidity[tokenIn] += amountIn;
+        }
+
+        if (tokenOut == address(0)) {
+            totalETHLiquidity -= amountOut;
+        } else {
+            totalTokenLiquidity[tokenOut] -= amountOut;
+        }
+
+        totalSwapVolume += amountIn;
+        totalSwapFees += fee;
+
+        // INTERACTIONS: External calls LAST
+        // Handle token input transfer
+        if (tokenIn != address(0)) {
+            IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        }
+
+        // Handle output transfer
+        if (tokenOut == address(0)) {
+            (bool success,) = msg.sender.call{value: amountOut}("");
+            if (!success) revert TransferFailed();
+        } else {
+            IERC20(tokenOut).safeTransfer(msg.sender, amountOut);
+        }
+
+        // Refund excess ETH last
+        if (refundAmount > 0) {
+            (bool refundSuccess,) = msg.sender.call{value: refundAmount}("");
+            if (!refundSuccess) revert TransferFailed();
+        }
+
+        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut, fee);
+    }
+
+    /**
+     * @notice Get expected output for a swap
+     * @param tokenIn Input token
+     * @param tokenOut Output token
+     * @param amountIn Input amount
+     * @return amountOut Expected output
+     * @return priceImpact Price impact in basis points
+     */
+    function getSwapQuote(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn
+    ) external view returns (uint256 amountOut, uint256 priceImpact) {
+        uint256 reserveIn = _getReserve(tokenIn);
+        uint256 reserveOut = _getReserve(tokenOut);
+
+        if (reserveIn == 0 || reserveOut == 0) return (0, 0);
+
+        amountOut = _getAmountOut(amountIn, reserveIn, reserveOut);
+
+        // Calculate price impact: (amountIn / reserveIn) * 10000
+        priceImpact = (amountIn * BASIS_POINTS) / reserveIn;
+    }
+
+    /**
+     * @notice Get reserves for a token pair
+     * @param token0 First token
+     * @param token1 Second token
+     * @return reserve0 Reserve of token0
+     * @return reserve1 Reserve of token1
+     */
+    function getReserves(address token0, address token1)
+        external
+        view
+        returns (uint256 reserve0, uint256 reserve1)
+    {
+        reserve0 = _getReserve(token0);
+        reserve1 = _getReserve(token1);
+    }
+
+    /**
+     * @notice Calculate output amount using constant-product formula
+     * @dev Implements xy=k with fee: amountOut = (amountIn * (1-fee) * reserveOut) / (reserveIn + amountIn * (1-fee))
+     */
+    function _getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) internal view returns (uint256) {
+        uint256 amountInWithFee = amountIn * (BASIS_POINTS - swapFeeBps);
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = (reserveIn * BASIS_POINTS) + amountInWithFee;
+        return numerator / denominator;
+    }
+
+    /**
+     * @notice Get reserve for a token
+     */
+    function _getReserve(address token) internal view returns (uint256) {
+        if (token == address(0)) {
+            return totalETHLiquidity;
+        }
+        return totalTokenLiquidity[token];
+    }
+
+    /**
+     * @notice Set swap fee (owner only)
+     * @param _feeBps Fee in basis points (max 100 = 1%)
+     */
+    function setSwapFee(uint256 _feeBps) external onlyOwner {
+        require(_feeBps <= 100, "Fee too high");
+        uint256 oldFee = swapFeeBps;
+        swapFeeBps = _feeBps;
+        emit SwapFeeUpdated(oldFee, _feeBps);
+    }
+
+    /**
+     * @notice Get AMM stats
+     */
+    function getAMMStats() external view returns (
+        uint256 ethReserve,
+        uint256 swapVolume,
+        uint256 swapFees,
+        uint256 currentFeeBps
+    ) {
+        ethReserve = totalETHLiquidity;
+        swapVolume = totalSwapVolume;
+        swapFees = totalSwapFees;
+        currentFeeBps = swapFeeBps;
     }
 
     // ============ Receive ETH ============
@@ -1412,6 +1602,6 @@ contract CrossChainPaymaster is BasePaymaster, ReentrancyGuard {
     }
 
     function version() external pure returns (string memory) {
-        return "2.0.0";
+        return "2.1.0";
     }
 }

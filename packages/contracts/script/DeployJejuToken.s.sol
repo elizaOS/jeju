@@ -23,7 +23,7 @@ import {TokenRegistry} from "../src/paymaster/TokenRegistry.sol";
  *
  * Environment Variables:
  *   PRIVATE_KEY or DEPLOYER_PRIVATE_KEY - Deployer private key
- *   BAN_MANAGER - Optional BanManager address (enables ban enforcement)
+ *   BAN_MANAGER - Optional BanManager address
  *   TOKEN_REGISTRY - Optional TokenRegistry address (registers for paymaster)
  *   PRICE_ORACLE - Oracle address for token registration
  *   ENABLE_FAUCET - Set to "true" for testnet/localnet

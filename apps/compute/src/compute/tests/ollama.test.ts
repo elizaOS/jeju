@@ -232,7 +232,7 @@ describe('Ollama Inference Engine', () => {
   });
 
   describe('Token counting', () => {
-    test('uses real GPT tokenizer', () => {
+    test('uses real tokenizer', () => {
       const config: ModelConfig = {
         name: 'llama2',
         backend: 'ollama',

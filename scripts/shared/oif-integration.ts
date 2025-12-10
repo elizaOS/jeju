@@ -401,7 +401,8 @@ let globalOIFClient: OIFClient | null = null;
  */
 export function getOIFClient(): OIFClient {
   if (!globalOIFClient) {
-    const aggregatorUrl = process.env.OIF_AGGREGATOR_URL || 'http://localhost:3002';
+    // OIF is now served by Gateway A2A server on /api
+    const aggregatorUrl = process.env.OIF_AGGREGATOR_URL || 'http://localhost:4003/api';
     globalOIFClient = new OIFClient({ aggregatorUrl });
   }
   return globalOIFClient;

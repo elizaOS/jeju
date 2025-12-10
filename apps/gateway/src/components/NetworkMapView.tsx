@@ -1,39 +1,3 @@
-/**
- * @fileoverview V2 Feature: Network map visualization with Leaflet
- * @module gateway/components/NetworkMapView
- * 
- * CURRENT: Placeholder with feature description
- * 
- * TO MAKE REAL:
- * ```
- * import { MapContainer, TileLayer, Marker } from 'react-leaflet';
- * import 'leaflet/dist/leaflet.css';
- * 
- * // Query node locations from contract
- * const nodes = useReadContracts({
- *   contracts: nodeIds.map(id => ({
- *     address: NODE_STAKING_MANAGER,
- *     functionName: 'getNodeInfo',
- *     args: [id]
- *   }))
- * });
- * 
- * return (
- *   <MapContainer center={[20, 0]} zoom={2}>
- *     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
- *     {nodes.map(node => (
- *       <Marker position={[node.lat, node.lng]}>
- *         <Popup>{node.rpcUrl}</Popup>
- *       </Marker>
- *     ))}
- *   </MapContainer>
- * );
- * ```
- * 
- * REASON: Marked as V2 feature, not critical for MVP
- * IMPACT: None on core node staking functionality
- */
-
 import { useRef } from 'react';
 
 export default function NetworkMapView() {

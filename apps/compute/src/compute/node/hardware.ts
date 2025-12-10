@@ -2,11 +2,23 @@
  * Hardware detection for compute nodes
  * 
  * Supports: Mac (Apple Silicon + Intel), Linux (CUDA/ROCm), Windows (CUDA)
+ * 
+ * Node Types:
+ * - CPU: Standard compute without GPU (can run small models, general compute)
+ * - GPU: GPU-enabled compute (required for large models)
+ * 
+ * TEE Status:
+ * - none: No TEE available
+ * - simulated: Using wallet signatures only (NOT SECURE)
+ * - dstack-simulator: Local dStack TEE simulator
+ * - intel-tdx: Real Intel TDX (Phala production)
+ * - amd-sev: Real AMD SEV
+ * - aws-nitro: AWS Nitro Enclaves
  */
 
 import { spawn } from 'node:child_process';
 import os from 'node:os';
-import type { HardwareInfo } from './types';
+import type { HardwareInfo, NodeType, TEEInfo } from './types';
 
 /**
  * Execute a command and return stdout
@@ -178,24 +190,87 @@ function getAppleSiliconMemory(): number | null {
 }
 
 /**
- * Detect TEE capabilities
+ * Detect TEE capabilities and status
  */
-async function detectTeeCapable(): Promise<boolean> {
-  // Check for Intel TDX
+async function detectTeeInfo(): Promise<{ capable: boolean; info: TEEInfo }> {
+  // Check for dStack simulator (local development)
+  if (process.env.DSTACK_SIMULATOR_ENDPOINT) {
+    return {
+      capable: true,
+      info: {
+        status: 'dstack-simulator',
+        isReal: false,
+        provider: 'phala',
+        attestationUrl: process.env.DSTACK_SIMULATOR_ENDPOINT,
+        warning: 'Running in dStack SIMULATOR - attestation is NOT cryptographically verified',
+      },
+    };
+  }
+
+  // Check for real Intel TDX (Phala production)
   if (process.platform === 'linux') {
     try {
       await exec('ls', ['/dev/tdx-guest']);
-      return true;
+      return {
+        capable: true,
+        info: {
+          status: 'intel-tdx',
+          isReal: true,
+          provider: 'phala',
+          attestationUrl: 'https://dcap.phala.network/verify',
+          warning: null,
+        },
+      };
     } catch {}
     
     // Check for AMD SEV
     try {
       await exec('ls', ['/dev/sev-guest']);
-      return true;
+      return {
+        capable: true,
+        info: {
+          status: 'amd-sev',
+          isReal: true,
+          provider: null,
+          attestationUrl: null,
+          warning: null,
+        },
+      };
     } catch {}
   }
+
+  // Check for AWS Nitro
+  if (process.env.AWS_NITRO_ENCLAVE === 'true') {
+    return {
+      capable: true,
+      info: {
+        status: 'aws-nitro',
+        isReal: true,
+        provider: 'aws',
+        attestationUrl: null,
+        warning: null,
+      },
+    };
+  }
   
-  return false;
+  // No TEE available - will use simulated attestation
+  return {
+    capable: false,
+    info: {
+      status: 'simulated',
+      isReal: false,
+      provider: null,
+      attestationUrl: null,
+      warning: '⚠️ SIMULATED TEE - Attestation uses wallet signatures only. NOT suitable for production!',
+    },
+  };
+}
+
+/**
+ * Determine node type based on hardware
+ */
+function determineNodeType(gpuType: string | null): NodeType {
+  return gpuType ? 'gpu' : 'cpu';
 }
 
 /**
@@ -222,61 +297,59 @@ export async function detectHardware(): Promise<HardwareInfo> {
   const platform = process.platform as 'darwin' | 'linux' | 'win32';
   const arch = process.arch as 'arm64' | 'x64';
 
-  // Base info
-  const baseInfo: HardwareInfo = {
-    platform,
-    arch,
-    cpus: os.cpus().length,
-    memory: os.totalmem(),
-    gpuType: null,
-    gpuVram: null,
-    cudaVersion: null,
-    mlxVersion: null,
-    hostname: os.hostname(),
-    macAddress: getMacAddress(),
-    cpuModel: getCpuModel(),
-    teeCapable: await detectTeeCapable(),
-    containerRuntime: await detectContainerRuntime(),
-  };
+  // Detect TEE info
+  const { capable: teeCapable, info: teeInfo } = await detectTeeInfo();
+
+  // Base info (will be updated with GPU detection)
+  let gpuType: string | null = null;
+  let gpuVram: number | null = null;
+  let cudaVersion: string | null = null;
+  let mlxVersion: string | null = null;
 
   // Try NVIDIA first (works on Linux and Windows)
   const nvidia = await detectNvidiaGpu();
   if (nvidia) {
-    return {
-      ...baseInfo,
-      gpuType: nvidia.type,
-      gpuVram: nvidia.vram,
-      cudaVersion: nvidia.cudaVersion,
-    };
-  }
-
-  // Try AMD ROCm (Linux only)
-  if (platform === 'linux') {
+    gpuType = nvidia.type;
+    gpuVram = nvidia.vram;
+    cudaVersion = nvidia.cudaVersion;
+  } else if (platform === 'linux') {
+    // Try AMD ROCm (Linux only)
     const amd = await detectAmdGpu();
     if (amd) {
-      return {
-        ...baseInfo,
-        gpuType: amd.type,
-        gpuVram: amd.vram,
-      };
+      gpuType = amd.type;
+      gpuVram = amd.vram;
     }
-  }
-
-  // Try Apple Silicon MLX
-  if (platform === 'darwin' && arch === 'arm64') {
+  } else if (platform === 'darwin' && arch === 'arm64') {
+    // Try Apple Silicon MLX
     const mlx = await detectMlx();
     const unifiedMemory = getAppleSiliconMemory();
     const chipName = await getAppleSiliconChip();
-
-    return {
-      ...baseInfo,
-      gpuType: chipName,
-      gpuVram: unifiedMemory,
-      mlxVersion: mlx?.version ?? null,
-    };
+    
+    gpuType = chipName;
+    gpuVram = unifiedMemory;
+    mlxVersion = mlx?.version ?? null;
   }
 
-  return baseInfo;
+  // Determine node type based on GPU availability
+  const nodeType = determineNodeType(gpuType);
+
+  return {
+    platform,
+    arch,
+    cpus: os.cpus().length,
+    memory: os.totalmem(),
+    gpuType,
+    gpuVram,
+    cudaVersion,
+    mlxVersion,
+    hostname: os.hostname(),
+    macAddress: getMacAddress(),
+    cpuModel: getCpuModel(),
+    teeCapable,
+    containerRuntime: await detectContainerRuntime(),
+    nodeType,
+    teeInfo,
+  };
 }
 
 /**

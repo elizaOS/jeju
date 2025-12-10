@@ -1,8 +1,8 @@
 {
   "protocolVersion": "0.3.0",
-  "name": "Gateway Portal - Protocol Infrastructure Hub",
-  "description": "Multi-token paymaster system, node staking, app registry, and protocol infrastructure",
-  "url": "http://localhost:4001/api/a2a",
+  "name": "Gateway Portal - Protocol Infrastructure & Governance Hub",
+  "description": "Multi-token paymaster system, node staking, app registry, cross-chain intents, and decentralized moderation governance",
+  "url": "http://localhost:4003/a2a",
   "preferredTransport": "http",
   "provider": {
     "organization": "Jeju Network",
@@ -11,8 +11,8 @@
   "version": "1.0.0",
   "capabilities": {
     "streaming": false,
-    "pushNotifications": false,
-    "stateTransitionHistory": false
+    "pushNotifications": true,
+    "stateTransitionHistory": true
   },
   "defaultInputModes": ["text", "data"],
   "defaultOutputModes": ["text", "data"],
@@ -51,6 +51,90 @@
       "description": "Find apps by category tag (game, marketplace, defi, etc.)",
       "tags": ["query", "registry", "discovery"],
       "examples": ["Show me games", "List marketplaces", "Find DeFi apps"]
+    },
+    {
+      "id": "check-ban-status",
+      "name": "Check Ban Status",
+      "description": "Check if an address is banned or on notice in the moderation system",
+      "tags": ["moderation", "ban", "query"],
+      "examples": ["Is 0x... banned?", "Check my ban status", "Am I on notice?"]
+    },
+    {
+      "id": "get-moderator-profile",
+      "name": "Get Moderator Profile",
+      "description": "Get full moderator profile including reputation, P&L, and voting power",
+      "tags": ["moderation", "reputation", "query"],
+      "examples": ["My moderator stats", "Show reputation for 0x...", "What's my win rate?"]
+    },
+    {
+      "id": "get-moderation-cases",
+      "name": "Get Moderation Cases",
+      "description": "List all moderation cases with voting status and outcomes",
+      "tags": ["moderation", "governance", "query"],
+      "examples": ["Show active cases", "List pending bans", "Recent moderation decisions"]
+    },
+    {
+      "id": "get-moderation-case",
+      "name": "Get Case Details",
+      "description": "Get full details of a specific moderation case including votes and evidence",
+      "tags": ["moderation", "query"],
+      "examples": ["Show case 0x...", "Case details", "What's the evidence?"]
+    },
+    {
+      "id": "get-reports",
+      "name": "Get Reports",
+      "description": "List submitted reports with status and voting period",
+      "tags": ["moderation", "reports", "query"],
+      "examples": ["Show pending reports", "List all reports", "My submitted reports"]
+    },
+    {
+      "id": "get-agent-labels",
+      "name": "Get Agent Labels",
+      "description": "Get reputation labels for an agent (HACKER, SCAMMER, TRUSTED, etc.)",
+      "tags": ["moderation", "labels", "query"],
+      "examples": ["What labels does agent #123 have?", "Is this agent trusted?"]
+    },
+    {
+      "id": "get-moderation-stats",
+      "name": "Get Moderation Stats",
+      "description": "Get system-wide moderation statistics including ban rates and stake totals",
+      "tags": ["moderation", "analytics", "query"],
+      "examples": ["Moderation stats", "How many bans?", "Total moderation stake"]
+    },
+    {
+      "id": "prepare-moderation-stake",
+      "name": "Prepare Moderation Stake",
+      "description": "Prepare transaction to stake ETH and become a moderator",
+      "tags": ["moderation", "stake", "action"],
+      "examples": ["Stake 0.1 ETH for moderation", "Become a moderator"]
+    },
+    {
+      "id": "prepare-report",
+      "name": "Prepare Report",
+      "description": "Prepare transaction to report a user for violations",
+      "tags": ["moderation", "report", "action"],
+      "examples": ["Report 0x... for scamming", "File a report"]
+    },
+    {
+      "id": "prepare-vote",
+      "name": "Prepare Vote",
+      "description": "Prepare transaction to vote BAN or CLEAR on a moderation case",
+      "tags": ["moderation", "vote", "action"],
+      "examples": ["Vote BAN on case 0x...", "Vote to clear"]
+    },
+    {
+      "id": "prepare-challenge",
+      "name": "Prepare Challenge",
+      "description": "Prepare transaction to challenge a ban decision",
+      "tags": ["moderation", "challenge", "action"],
+      "examples": ["Challenge my ban", "Contest this decision"]
+    },
+    {
+      "id": "prepare-appeal",
+      "name": "Prepare Appeal",
+      "description": "Prepare transaction to appeal a resolved ban (requires 10x stake)",
+      "tags": ["moderation", "appeal", "action"],
+      "examples": ["Appeal case 0x...", "Request re-review"]
     }
   ]
 }

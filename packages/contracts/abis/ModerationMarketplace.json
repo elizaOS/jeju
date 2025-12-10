@@ -71,6 +71,32 @@
     },
     {
       "type": "function",
+      "name": "INITIAL_REPUTATION",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "LOW_REP_QUORUM",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "MARKET_MAKER_SHARE_BPS",
       "inputs": [],
       "outputs": [
@@ -97,6 +123,19 @@
     },
     {
       "type": "function",
+      "name": "MAX_REPUTATION",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "MAX_VOTE_WEIGHT_BPS",
       "inputs": [],
       "outputs": [
@@ -110,7 +149,33 @@
     },
     {
       "type": "function",
+      "name": "MEDIUM_REP_QUORUM",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "MIN_QUORUM_BPS",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "MIN_REPORT_INTERVAL",
       "inputs": [],
       "outputs": [
         {
@@ -162,7 +227,111 @@
     },
     {
       "type": "function",
+      "name": "REPORT_COOLDOWN",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "REP_GAIN_PER_WIN",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "REP_LOSS_PER_LOSS",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "RE_REVIEW_MULTIPLIER",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "SLASH_REP_MULTIPLIER",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "TIER_HIGH",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "TIER_LOW",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "TIER_MEDIUM",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "TIER_TRUSTED",
       "inputs": [],
       "outputs": [
         {
@@ -189,6 +358,19 @@
     {
       "type": "function",
       "name": "TREASURY_SHARE_BPS",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "TRUSTED_STAKE_DISCOUNT_BPS",
       "inputs": [],
       "outputs": [
         {
@@ -230,6 +412,29 @@
         }
       ],
       "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "addEvidence",
+      "inputs": [
+        {
+          "name": "caseId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "evidenceHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
     },
     {
       "type": "function",
@@ -278,6 +483,30 @@
           "name": "",
           "type": "bool",
           "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "caseEvidence",
+      "inputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "category",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "timestamp",
+          "type": "uint256",
+          "internalType": "uint256"
         }
       ],
       "stateMutability": "view"
@@ -388,6 +617,35 @@
       ],
       "outputs": [],
       "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "checkQuorumStatus",
+      "inputs": [
+        {
+          "name": "target",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reached",
+          "type": "bool",
+          "internalType": "bool"
+        },
+        {
+          "name": "currentCount",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "requiredCount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
     },
     {
       "type": "function",
@@ -518,6 +776,179 @@
     },
     {
       "type": "function",
+      "name": "getCaseEvidence",
+      "inputs": [
+        {
+          "name": "caseId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "evidence",
+          "type": "tuple",
+          "internalType": "struct ModerationMarketplace.ReportEvidence",
+          "components": [
+            {
+              "name": "evidenceHashes",
+              "type": "bytes32[]",
+              "internalType": "bytes32[]"
+            },
+            {
+              "name": "notes",
+              "type": "string[]",
+              "internalType": "string[]"
+            },
+            {
+              "name": "category",
+              "type": "string",
+              "internalType": "string"
+            },
+            {
+              "name": "timestamp",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getModeratorPnL",
+      "inputs": [
+        {
+          "name": "moderator",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pnl",
+          "type": "int256",
+          "internalType": "int256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getModeratorReputation",
+      "inputs": [
+        {
+          "name": "moderator",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rep",
+          "type": "tuple",
+          "internalType": "struct ModerationMarketplace.ModeratorReputation",
+          "components": [
+            {
+              "name": "successfulBans",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "unsuccessfulBans",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "totalSlashedFrom",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "totalSlashedOthers",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "reputationScore",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "lastReportTimestamp",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "reportCooldownUntil",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getQuorumRequired",
+      "inputs": [
+        {
+          "name": "reporter",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "quorum",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getReputationTier",
+      "inputs": [
+        {
+          "name": "user",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "tier",
+          "type": "uint8",
+          "internalType": "enum ModerationMarketplace.ReputationTier"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getRequiredStakeForReporter",
+      "inputs": [
+        {
+          "name": "reporter",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "requiredStake",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "getStake",
       "inputs": [
         {
@@ -639,6 +1070,30 @@
     },
     {
       "type": "function",
+      "name": "hasReportedTarget",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "isBanned",
       "inputs": [
         {
@@ -703,6 +1158,55 @@
     },
     {
       "type": "function",
+      "name": "moderatorReputation",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "successfulBans",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "unsuccessfulBans",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "totalSlashedFrom",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "totalSlashedOthers",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "reputationScore",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "lastReportTimestamp",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "reportCooldownUntil",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "openCase",
       "inputs": [
         {
@@ -719,6 +1223,45 @@
           "name": "evidenceHash",
           "type": "bytes32",
           "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "caseId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "openCase",
+      "inputs": [
+        {
+          "name": "target",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "evidenceHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "internalType": "string"
         }
       ],
       "outputs": [
@@ -759,6 +1302,30 @@
           "name": "",
           "type": "bool",
           "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "pendingQuorumReports",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
         }
       ],
       "stateMutability": "view"
@@ -1204,6 +1771,31 @@
     },
     {
       "type": "event",
+      "name": "EvidenceAdded",
+      "inputs": [
+        {
+          "name": "caseId",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "evidenceHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
       "name": "OwnershipTransferred",
       "inputs": [
         {
@@ -1230,6 +1822,105 @@
           "type": "address",
           "indexed": false,
           "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "QuorumReached",
+      "inputs": [
+        {
+          "name": "target",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "caseId",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "reportCount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "QuorumReportAdded",
+      "inputs": [
+        {
+          "name": "target",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "reporter",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "currentReports",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "requiredQuorum",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ReputationUpdated",
+      "inputs": [
+        {
+          "name": "moderator",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "oldScore",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "newScore",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "successfulBans",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "unsuccessfulBans",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "netPnL",
+          "type": "int256",
+          "indexed": false,
+          "internalType": "int256"
         }
       ],
       "anonymous": false
@@ -1386,6 +2077,11 @@
     },
     {
       "type": "error",
+      "name": "AlreadyReportedTarget",
+      "inputs": []
+    },
+    {
+      "type": "error",
       "name": "AlreadyVoted",
       "inputs": []
     },
@@ -1478,7 +2174,22 @@
     },
     {
       "type": "error",
+      "name": "QuorumNotReached",
+      "inputs": []
+    },
+    {
+      "type": "error",
       "name": "ReentrancyGuardReentrantCall",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ReportCooldownActive",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ReputationTooLow",
       "inputs": []
     },
     {
@@ -1500,6 +2211,11 @@
     {
       "type": "error",
       "name": "TargetAlreadyHasActiveCase",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "TooManyEvidenceItems",
       "inputs": []
     },
     {

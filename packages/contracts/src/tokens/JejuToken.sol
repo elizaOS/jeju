@@ -20,11 +20,15 @@ contract JejuToken is ERC20, Ownable {
     bool public banEnforcementEnabled;
     bool public faucetEnabled;
     mapping(address => uint256) public lastFaucetClaim;
+    
+    /// @notice Addresses exempt from ban checks (e.g., ModerationMarketplace for appeals)
+    mapping(address => bool) public banExempt;
 
     event BanManagerUpdated(address indexed oldManager, address indexed newManager);
     event BanEnforcementToggled(bool enabled);
     event FaucetToggled(bool enabled);
     event FaucetClaimed(address indexed claimer, uint256 amount);
+    event BanExemptUpdated(address indexed account, bool exempt);
 
     error BannedUser(address user);
     error MaxSupplyExceeded();
@@ -54,9 +58,14 @@ contract JejuToken is ERC20, Ownable {
 
     function _update(address from, address to, uint256 value) internal virtual override {
         if (banEnforcementEnabled && address(banManager) != address(0)) {
-            if (from != address(0) && banManager.isAddressBanned(from)) {
+            // Allow banned users to transfer TO exempt addresses (e.g., ModerationMarketplace for staking)
+            bool toExempt = banExempt[to];
+            
+            // Check sender ban (skip for minting or if recipient is exempt)
+            if (from != address(0) && !toExempt && banManager.isAddressBanned(from)) {
                 revert BannedUser(from);
             }
+            // Check recipient ban (skip for burning)
             if (to != address(0) && banManager.isAddressBanned(to)) {
                 revert BannedUser(to);
             }
@@ -105,6 +114,14 @@ contract JejuToken is ERC20, Ownable {
         emit FaucetToggled(enabled);
     }
 
+    /// @notice Set ban exemption for an address (allows banned users to transfer TO this address)
+    /// @param account Address to set exemption for
+    /// @param exempt Whether the address is exempt
+    function setBanExempt(address account, bool exempt) external onlyOwner {
+        banExempt[account] = exempt;
+        emit BanExemptUpdated(account, exempt);
+    }
+
     function faucetCooldownRemaining(address account) external view returns (uint256) {
         uint256 nextClaim = lastFaucetClaim[account] + FAUCET_COOLDOWN;
         if (block.timestamp >= nextClaim) return 0;
@@ -112,6 +129,6 @@ contract JejuToken is ERC20, Ownable {
     }
 
     function version() external pure returns (string memory) {
-        return "1.0.0";
+        return "1.1.0";
     }
 }

@@ -1,14 +1,6 @@
-/**
- * x402 Payment Hook for Gateway
- * 
- * React hook for making x402 payments with wallet integration
- */
-
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount, useWalletClient, usePublicClient, useChainId } from 'wagmi';
 import { Address, Hex } from 'viem';
-
-// ============ Types ============
 
 interface PaymentState {
   status: 'idle' | 'signing' | 'approving' | 'settling' | 'success' | 'error';
@@ -33,8 +25,6 @@ interface UseX402Return {
   reset: () => void;
   isReady: boolean;
 }
-
-// ============ ABIs ============
 
 const X402_FACILITATOR_ABI = [
   {
@@ -111,8 +101,6 @@ const ERC20_ABI = [
   },
 ] as const;
 
-// ============ Constants ============
-
 const CHAIN_CONFIG: Record<number, { facilitator: Address; usdc: Address }> = {
   420691: {
     facilitator: (import.meta.env.VITE_X402_FACILITATOR_ADDRESS || '0x0000000000000000000000000000000000000000') as Address,
@@ -140,8 +128,6 @@ const PAYMENT_TYPES = {
     { name: 'timestamp', type: 'uint256' },
   ],
 } as const;
-
-// ============ Hook ============
 
 export function useX402(): UseX402Return {
   const { address, isConnected } = useAccount();
@@ -272,7 +258,7 @@ export function useX402(): UseX402Return {
         primaryType: 'Payment',
         message,
       });
-    } catch (e) {
+    } catch {
       setPaymentState({
         status: 'error',
         error: 'User rejected signature',
@@ -301,7 +287,7 @@ export function useX402(): UseX402Return {
           args: [facilitator.address, amount],
         });
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
-      } catch (e) {
+      } catch {
         setPaymentState({
           status: 'error',
           error: 'Approval failed',

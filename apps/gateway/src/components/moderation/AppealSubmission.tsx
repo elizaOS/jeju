@@ -1,8 +1,3 @@
-/**
- * Appeal Submission Component  
- * Appeal an unjust ban with new evidence
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -67,6 +62,7 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceHash, setEvidenceHash] = useState('');
   const [explanation, setExplanation] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useAccount(); // Track account for connection state
   const { upload: uploadToIPFS, uploading } = useIPFSUpload();
@@ -92,18 +88,19 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!evidenceHash) {
-      alert('Please upload evidence first');
+      setError('Please upload evidence first');
       return;
     }
 
     if (!explanation.trim()) {
-      alert('Please provide an explanation');
+      setError('Please provide an explanation');
       return;
     }
 
-      writeContract({
+    writeContract({
       address: MODERATION_CONTRACTS.RegistryGovernance as `0x${string}`,
       abi: GOVERNANCE_ABI,
       functionName: 'submitAppeal',
@@ -223,6 +220,12 @@ export default function AppealSubmission({ agentId: _agentId, proposalId, onSucc
           This bond will be refunded if your appeal is approved. If rejected, the bond is forfeited.
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Submit Button */}
       <button

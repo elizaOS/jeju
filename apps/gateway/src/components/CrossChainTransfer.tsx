@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { type Address } from 'viem';
 import TokenSelector from './TokenSelector';
@@ -7,7 +7,6 @@ import { useCrossChainSwap, useEILConfig } from '../hooks/useEIL';
 import { parseTokenAmount, formatUSD, calculateUSDValue } from '../lib/tokenUtils';
 import type { TokenOption } from './TokenSelector';
 
-// Supported destination chains
 const DESTINATION_CHAINS = [
   { id: 1, name: 'Ethereum', icon: '💎' },
   { id: 42161, name: 'Arbitrum', icon: '🟠' },
@@ -26,18 +25,16 @@ export default function CrossChainTransfer() {
   const [recipient, setRecipient] = useState('');
   const [destinationChainId, setDestinationChainId] = useState<number>(1);
   const [step, setStep] = useState<TransferStep>('input');
-  const estimatedTime = '~10 seconds';
-  const estimatedFee = '0.001';
 
   const { bridgeableTokens } = useProtocolTokens();
-  const tokens = bridgeableTokens.map(t => ({
+  const tokens = useMemo(() => bridgeableTokens.map(t => ({
     symbol: t.symbol,
     name: t.name,
     address: t.address,
     decimals: t.decimals,
     priceUSD: t.priceUSD,
     logoUrl: t.logoUrl,
-  }));
+  })), [bridgeableTokens]);
 
   const {
     executeCrossChainSwap,
@@ -186,29 +183,18 @@ export default function CrossChainTransfer() {
             </p>
           </div>
 
-          <div style={{ 
-            padding: '1rem', 
-            background: 'var(--surface-hover)', 
-            borderRadius: '12px', 
-            marginBottom: '1rem' 
-          }}>
+          <div style={{ padding: '1rem', background: 'var(--surface-hover)', borderRadius: '12px', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Estimated Time</span>
-              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--success)' }}>
-                {estimatedTime}
-              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--success)' }}>~10 seconds</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Network Fee</span>
-              <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>
-                ~{estimatedFee} ETH
-              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>~0.001 ETH</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Protocol</span>
-              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--info)' }}>
-                EIL (Trustless)
-              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--info)' }}>EIL (Trustless)</span>
             </div>
           </div>
 

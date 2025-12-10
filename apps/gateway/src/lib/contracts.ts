@@ -1,21 +1,5 @@
-/**
- * Gateway contract ABIs and addresses
- * 
- * Provides minimal ABI definitions needed for frontend interactions with:
- * - Token Registry
- * - Paymaster Factory
- * - Liquidity Vaults
- * - ERC20 tokens
- * 
- * @module gateway/lib/contracts
- */
-
 import { Address } from 'viem';
 
-/**
- * Token Registry contract ABI
- * Handles token registration and configuration
- */
 export const TOKEN_REGISTRY_ABI = [
   {
     type: 'function',
@@ -72,10 +56,6 @@ export const TOKEN_REGISTRY_ABI = [
   }
 ] as const;
 
-/**
- * Paymaster Factory contract ABI
- * Deploys and manages paymaster infrastructure
- */
 export const PAYMASTER_FACTORY_ABI = [
   {
     type: 'function',
@@ -122,10 +102,6 @@ export const PAYMASTER_FACTORY_ABI = [
   }
 ] as const;
 
-/**
- * Liquidity Vault contract ABI
- * Manages ETH and token liquidity for paymasters
- */
 export const LIQUIDITY_VAULT_ABI = [
   {
     type: 'function',
@@ -163,10 +139,6 @@ export const LIQUIDITY_VAULT_ABI = [
   }
 ] as const;
 
-/**
- * JEJU Token ABI (with ban enforcement check)
- * The native Jeju Network token
- */
 export const JEJU_TOKEN_ABI = [
   {
     type: 'function',
@@ -205,9 +177,6 @@ export const JEJU_TOKEN_ABI = [
   },
 ] as const;
 
-/**
- * Standard ERC20 token ABI
- */
 export const IERC20_ABI = [
   {
     type: 'function',
@@ -238,11 +207,6 @@ export const IERC20_ABI = [
   }
 ] as const;
 
-/**
- * Get deployed contract addresses from environment
- * 
- * @returns Contract addresses for core Jeju contracts
- */
 export const getContractAddresses = (): {
   tokenRegistry: Address;
   paymasterFactory: Address;

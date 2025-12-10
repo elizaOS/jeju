@@ -17,7 +17,9 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@jeju/shared": ["../../packages/shared/src/index.ts"],
+      "@jeju/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": ["src"],

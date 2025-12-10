@@ -1,8 +1,3 @@
-/**
- * Ban Voting Interface
- * Vote on ban proposals via Predimarket futarchy markets
- */
-
 'use client';
 
 import { useState } from 'react';

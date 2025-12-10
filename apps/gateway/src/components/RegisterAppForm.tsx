@@ -1,17 +1,14 @@
-/**
- * @fileoverview Form to register new app/agent in IdentityRegistry
- * @module gateway/components/RegisterAppForm
- */
-
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 import TokenSelector, { TokenOption } from './TokenSelector';
 import { useProtocolTokens } from '../hooks/useProtocolTokens';
 import { useRegistry, useRequiredStake } from '../hooks/useRegistry';
 import { formatTokenAmount } from '../lib/tokenUtils';
 
 const AVAILABLE_TAGS = [
+  { value: 'developer', label: 'Developer', icon: '👨‍💻' },
+  { value: 'agent', label: 'AI Agent', icon: '🤖' },
   { value: 'app', label: 'Application', icon: '📱' },
   { value: 'game', label: 'Game', icon: '🎮' },
   { value: 'marketplace', label: 'Marketplace', icon: '🏪' },
@@ -106,8 +103,23 @@ export default function RegisterAppForm() {
 
   return (
     <div>
+      {/* Info Banner */}
+      <div className="card" style={{ marginBottom: '1rem', background: 'var(--primary-soft)', border: '1px solid var(--primary)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+          <Info size={20} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <p style={{ fontWeight: 600, color: 'var(--primary)', marginBottom: '0.25rem' }}>
+              ERC-8004 Identity Registry
+            </p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              Register your identity to access the <strong>JEJU Faucet</strong>, participate in governance, and list your apps in the Bazaar. Your stake is refundable when you unregister.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="card">
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Register New App</h2>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Register Identity</h2>
 
         {error && (
           <div style={{
@@ -132,40 +144,47 @@ export default function RegisterAppForm() {
             border: '1px solid var(--success)',
             borderRadius: '8px',
             marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
           }}>
-            <CheckCircle size={20} style={{ color: 'var(--success)' }} />
-            <span style={{ color: 'var(--success)' }}>App registered successfully!</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <CheckCircle size={20} style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <span style={{ color: 'var(--success)', fontWeight: 600 }}>Registration successful!</span>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                  You can now claim from the JEJU Faucet and access all protocol features.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* App Name */}
+          {/* Name */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label className="input-label">
-              App Name <span style={{ color: 'var(--error)' }}>*</span>
+              Name <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="My Awesome App"
+              placeholder="My Agent / My App / My Name"
               className="input"
               required
             />
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              This can be your name, your agent's name, or your app name
+            </p>
           </div>
 
           {/* Description */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label className="input-label">Description</label>
+            <label className="input-label">Description <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>(optional)</span></label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of your app..."
+              placeholder="What you're building or working on..."
               className="input"
-              rows={3}
+              rows={2}
               style={{ resize: 'vertical' }}
             />
           </div>
@@ -187,32 +206,12 @@ export default function RegisterAppForm() {
             />
           </div>
 
-          {/* Tags */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label className="input-label">
-              Tags <span style={{ color: 'var(--error)' }}>*</span>
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-              Select one or more categories (up to 10)
-            </p>
+            <label className="input-label">Category <span style={{ color: 'var(--error)' }}>*</span></label>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>What best describes you? Select one or more.</p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {AVAILABLE_TAGS.map((tag) => (
-                <button
-                  key={tag.value}
-                  type="button"
-                  onClick={() => handleTagToggle(tag.value)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    border: selectedTags.includes(tag.value) ? '2px solid var(--accent-primary)' : '1px solid var(--border-strong)',
-                    background: selectedTags.includes(tag.value) ? 'var(--accent-primary)' : 'white',
-                    color: selectedTags.includes(tag.value) ? 'white' : 'var(--text-secondary)',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    transition: 'all 0.2s',
-                  }}
-                >
+                <button key={tag.value} type="button" onClick={() => handleTagToggle(tag.value)} className={`pill ${selectedTags.includes(tag.value) ? 'pill-active' : ''}`}>
                   {tag.icon} {tag.label}
                 </button>
               ))}
@@ -268,8 +267,11 @@ export default function RegisterAppForm() {
             disabled={isSubmitting || !name.trim() || selectedTags.length === 0 || !selectedToken}
             style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontWeight: 600 }}
           >
-            {isSubmitting ? 'Registering...' : 'Register App'}
+            {isSubmitting ? 'Registering...' : 'Register & Stake'}
           </button>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', textAlign: 'center' }}>
+            Your stake is fully refundable when you unregister
+          </p>
 
         </form>
       </div>

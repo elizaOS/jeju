@@ -129,7 +129,6 @@ class CompleteBootstrapper {
     result.contracts.usdc = await this.deployUSDC();
     result.contracts.elizaOS = await this.deployElizaOS();
     result.contracts.weth = '0x4200000000000000000000000000000000000006';
-    // JEJU token deployed after BanManager (needs ban enforcement)
     console.log('');
 
     // Step 2: Deploy support infrastructure
@@ -192,7 +191,7 @@ class CompleteBootstrapper {
     result.contracts.reputationLabelManager = moderation.reputationLabelManager;
     console.log('');
 
-    // Step 5.6.1: Deploy JEJU Token (with ban enforcement)
+    // Step 5.6.1: Deploy JEJU Token
     console.log('🏝️  STEP 5.6.1: Deploying JEJU Token');
     console.log('-'.repeat(70));
     result.contracts.jeju = await this.deployJejuToken(result.contracts.banManager);
@@ -507,7 +506,7 @@ class CompleteBootstrapper {
 
   private async deployJejuToken(banManager: string): Promise<string> {
     try {
-      // Deploy JEJU token with ban enforcement and faucet enabled
+      // Deploy JEJU token with faucet enabled
       const jeju = this.deployContractFromPackages(
         'src/tokens/JejuToken.sol:JejuToken',
         [this.deployerAddress, banManager, 'true'],
@@ -515,7 +514,6 @@ class CompleteBootstrapper {
       );
 
       console.log('     ✨ Faucet enabled (10,000 JEJU per claim)');
-      console.log('     ✨ Ban enforcement enabled (banned users cannot transfer)');
       
       return jeju;
     } catch (error) {
@@ -923,7 +921,7 @@ ${result.testWallets.map((w, i) => `TEST_ACCOUNT_${i + 1}_KEY="${w.privateKey}"`
     }
     console.log('');
     console.log('🎯 What Works Now:');
-    console.log('   ✅ JEJU token with ban enforcement');
+    console.log('   ✅ JEJU token');
     console.log('   ✅ x402 payments with USDC on Jeju');
     console.log('   ✅ Prepaid credit system (zero-latency!)');
     console.log('   ✅ Multi-token support (JEJU, USDC, elizaOS, ETH)');

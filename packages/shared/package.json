@@ -1,0 +1,21 @@
+{
+  "name": "@jeju/shared",
+  "version": "1.0.0",
+  "description": "Shared hooks, components, and APIs for Jeju apps",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./hooks/useBanStatus": "./src/hooks/useBanStatus.ts",
+    "./components/BanBanner": "./src/components/BanBanner.tsx",
+    "./api/moderation": "./src/api/moderation.ts"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

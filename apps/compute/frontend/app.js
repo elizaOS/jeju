@@ -145,57 +145,44 @@ async function loadProviders() {
     const data = await response.json();
     state.providers = data.providers || [];
 
+    // Fetch additional provider details (reputation, resources)
+    for (let i = 0; i < state.providers.length; i++) {
+      try {
+        const detailResponse = await fetch(`${CONFIG.gatewayUrl}/v1/providers/${state.providers[i].address}`);
+        if (detailResponse.ok) {
+          const detail = await detailResponse.json();
+          state.providers[i] = { ...state.providers[i], ...detail };
+        }
+      } catch {
+        // Continue with basic provider info
+      }
+    }
+
     // Update stats
     document.getElementById('stat-providers').textContent = state.providers.length;
     document.getElementById('stat-avg-price').textContent = calculateAvgPrice(state.providers);
     document.getElementById('stat-staked').textContent = calculateTotalStaked(state.providers);
-    document.getElementById('stat-gpu-hours').textContent = '12,450';
+    document.getElementById('stat-gpu-hours').textContent = '—'; // Real value from analytics
 
     renderProviders();
   } catch (error) {
     console.error('Load providers error:', error);
-    // Show mock data for demo
-    state.providers = generateMockProviders();
-    document.getElementById('stat-providers').textContent = state.providers.length;
-    document.getElementById('stat-avg-price').textContent = '0.05 ETH';
-    document.getElementById('stat-staked').textContent = '125 ETH';
-    document.getElementById('stat-gpu-hours').textContent = '12,450';
-    renderProviders();
+    // Show empty state instead of mock data
+    state.providers = [];
+    document.getElementById('stat-providers').textContent = '0';
+    document.getElementById('stat-avg-price').textContent = '—';
+    document.getElementById('stat-staked').textContent = '—';
+    document.getElementById('stat-gpu-hours').textContent = '—';
+    
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚠️</div>
+        <div class="empty-state-title">Unable to load providers</div>
+        <p>Gateway at ${CONFIG.gatewayUrl} is not responding. Check your connection.</p>
+        <button class="btn btn-primary" onclick="loadProviders()">Retry</button>
+      </div>
+    `;
   }
-}
-
-function generateMockProviders() {
-  const gpuTypes = ['NVIDIA_RTX_4090', 'NVIDIA_A100_40GB', 'NVIDIA_A100_80GB', 'NVIDIA_H100'];
-  const names = ['GPU Cloud Alpha', 'Neural Compute', 'AI Power Node', 'Deep Learn Cluster', 'ML Accelerator'];
-  
-  return Array.from({ length: 8 }, (_, i) => ({
-    address: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-    name: names[i % names.length] + ' ' + (i + 1),
-    endpoint: `https://node${i + 1}.compute.jeju.network`,
-    stake: (Math.random() * 50 + 10).toFixed(2),
-    agentId: i + 1,
-    active: true,
-    resources: {
-      cpuCores: 32 + i * 8,
-      memoryGb: 128 + i * 64,
-      gpuType: gpuTypes[i % gpuTypes.length],
-      gpuCount: 1 + (i % 4),
-      gpuMemoryGb: 24 + (i % 4) * 16,
-      teeSupported: i % 3 === 0,
-    },
-    pricing: {
-      pricePerHour: (0.02 + Math.random() * 0.08).toFixed(4),
-      minimumHours: 1,
-      maximumHours: 720,
-    },
-    available: i % 5 !== 0,
-    sshEnabled: true,
-    dockerEnabled: true,
-    reputation: {
-      avgRating: (3.5 + Math.random() * 1.5).toFixed(1),
-      ratingCount: Math.floor(Math.random() * 100) + 10,
-    },
-  }));
 }
 
 function renderProviders() {
@@ -301,37 +288,19 @@ async function loadUserRentals() {
     renderRentals();
   } catch (error) {
     console.error('Load rentals error:', error);
-    // Show mock data
-    state.rentals = generateMockRentals();
-    renderRentals();
+    // Show empty state instead of mock data
+    state.rentals = [];
+    const noRentals = document.getElementById('no-rentals');
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚠️</div>
+        <div class="empty-state-title">Unable to load rentals</div>
+        <p>Check gateway connection and try again.</p>
+        <button class="btn btn-primary" onclick="loadUserRentals()">Retry</button>
+      </div>
+    `;
+    if (noRentals) noRentals.style.display = 'none';
   }
-}
-
-function generateMockRentals() {
-  if (!state.connected) return [];
-  return [
-    {
-      rentalId: '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-      provider: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-      providerName: 'GPU Cloud Alpha 1',
-      status: 'ACTIVE',
-      startTime: Date.now() - 3600000,
-      endTime: Date.now() + 82800000,
-      totalCost: '0.48',
-      sshHost: 'node1.compute.jeju.network',
-      sshPort: 22,
-      containerImage: 'nvidia/cuda:12.0-base',
-    },
-    {
-      rentalId: '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-      provider: '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-      providerName: 'Neural Compute 2',
-      status: 'COMPLETED',
-      startTime: Date.now() - 172800000,
-      endTime: Date.now() - 86400000,
-      totalCost: '0.24',
-    },
-  ];
 }
 
 function renderRentals() {
@@ -496,15 +465,49 @@ async function createRental(e) {
     const dockerImage = document.getElementById('rental-docker-image').value;
     const startupScript = document.getElementById('rental-startup-script').value;
 
-    // Calculate cost
-    const pricePerHour = parseFloat(state.selectedProvider.pricing?.pricePerHour) || 0;
-    const totalCost = (pricePerHour * duration).toFixed(4);
+    // Get auth headers
+    const authHeaders = await generateAuthHeaders();
 
-    // In production, this would call the contract
-    showToast(`Creating rental for ${duration} hours at ${totalCost} ETH...`, 'success');
+    // Request transaction data from gateway
+    const response = await fetch(`${CONFIG.gatewayUrl}/v1/rentals`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify({
+        provider: state.selectedProvider.address,
+        duration,
+        sshPublicKey: sshKey,
+        containerImage: dockerImage,
+        startupScript,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to prepare rental');
+    }
+
+    const { transaction, estimatedCost } = await response.json();
     
-    // Simulate transaction
-    await new Promise(r => setTimeout(r, 2000));
+    showToast(`Creating rental (${(Number(estimatedCost) / 1e18).toFixed(6)} ETH)...`, 'success');
+
+    // Execute transaction via MetaMask
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: state.address,
+        to: transaction.to,
+        value: '0x' + BigInt(transaction.value).toString(16),
+        data: transaction.data,
+      }],
+    });
+
+    showToast('Transaction submitted: ' + txHash.slice(0, 10) + '...', 'success');
+
+    // Wait for confirmation
+    await waitForTransaction(txHash);
 
     closeRentalModal();
     await loadUserRentals();
@@ -520,16 +523,93 @@ async function createRental(e) {
   }
 }
 
+// Generate auth headers for gateway requests
+async function generateAuthHeaders() {
+  const nonce = crypto.randomUUID();
+  const timestamp = Date.now().toString();
+  const message = `${state.address}:${nonce}:${timestamp}`;
+  
+  const signature = await window.ethereum.request({
+    method: 'personal_sign',
+    params: [message, state.address],
+  });
+
+  return {
+    'x-jeju-address': state.address,
+    'x-jeju-nonce': nonce,
+    'x-jeju-timestamp': timestamp,
+    'x-jeju-signature': signature,
+  };
+}
+
+// Wait for transaction confirmation
+async function waitForTransaction(txHash) {
+  return new Promise((resolve, reject) => {
+    const checkReceipt = async () => {
+      const receipt = await window.ethereum.request({
+        method: 'eth_getTransactionReceipt',
+        params: [txHash],
+      });
+      
+      if (receipt) {
+        if (receipt.status === '0x1') {
+          resolve(receipt);
+        } else {
+          reject(new Error('Transaction failed'));
+        }
+      } else {
+        setTimeout(checkReceipt, 2000);
+      }
+    };
+    checkReceipt();
+  });
+}
+
 async function extendRental(rentalId) {
   if (!state.connected) return;
   
   const hours = prompt('Enter additional hours to extend:');
   if (!hours || isNaN(hours)) return;
 
-  showToast(`Extending rental by ${hours} hours...`, 'success');
-  await new Promise(r => setTimeout(r, 1500));
-  showToast('Rental extended successfully!', 'success');
-  await loadUserRentals();
+  try {
+    const authHeaders = await generateAuthHeaders();
+    
+    const response = await fetch(`${CONFIG.gatewayUrl}/v1/rentals/${rentalId}/extend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify({ additionalHours: parseInt(hours) }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to extend rental');
+    }
+
+    const { transaction, estimatedCost } = await response.json();
+    
+    showToast(`Extending rental (${(Number(estimatedCost) / 1e18).toFixed(6)} ETH)...`, 'success');
+
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: state.address,
+        to: transaction.to,
+        value: '0x' + BigInt(transaction.value).toString(16),
+        data: transaction.data,
+      }],
+    });
+
+    await waitForTransaction(txHash);
+    showToast('Rental extended successfully!', 'success');
+    await loadUserRentals();
+    
+  } catch (error) {
+    console.error('Extend rental error:', error);
+    showToast('Failed to extend rental: ' + error.message, 'error');
+  }
 }
 
 async function cancelRental(rentalId) {
@@ -537,10 +617,44 @@ async function cancelRental(rentalId) {
   
   if (!confirm('Are you sure you want to cancel this rental? You may receive a partial refund.')) return;
 
-  showToast('Cancelling rental...', 'success');
-  await new Promise(r => setTimeout(r, 1500));
-  showToast('Rental cancelled. Refund initiated.', 'success');
-  await loadUserRentals();
+  try {
+    const authHeaders = await generateAuthHeaders();
+    
+    const response = await fetch(`${CONFIG.gatewayUrl}/v1/rentals/${rentalId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to cancel rental');
+    }
+
+    const { transaction } = await response.json();
+    
+    showToast('Cancelling rental...', 'success');
+
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: state.address,
+        to: transaction.to,
+        value: '0x0',
+        data: transaction.data,
+      }],
+    });
+
+    await waitForTransaction(txHash);
+    showToast('Rental cancelled. Refund initiated.', 'success');
+    await loadUserRentals();
+    
+  } catch (error) {
+    console.error('Cancel rental error:', error);
+    showToast('Failed to cancel rental: ' + error.message, 'error');
+  }
 }
 
 async function submitRating() {
@@ -552,10 +666,37 @@ async function submitRating() {
 
   try {
     const review = document.getElementById('rating-review').value;
+    const authHeaders = await generateAuthHeaders();
+    
+    const response = await fetch(`${CONFIG.gatewayUrl}/v1/rentals/${state.selectedRentalId}/rate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify({ rating: state.selectedRating, review }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to submit rating');
+    }
+
+    const { transaction } = await response.json();
     
     showToast(`Submitting ${state.selectedRating}-star rating...`, 'success');
-    await new Promise(r => setTimeout(r, 1500));
-    
+
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: state.address,
+        to: transaction.to,
+        value: '0x0',
+        data: transaction.data,
+      }],
+    });
+
+    await waitForTransaction(txHash);
     closeRatingModal();
     showToast('Rating submitted successfully!', 'success');
 

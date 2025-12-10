@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VendorAppsConfig",
+  "description": "Configuration for optional vendor apps to clone",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "apps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "url", "path"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique identifier for the vendor app"
+          },
+          "url": {
+            "type": "string",
+            "description": "Git URL (SSH format for private repos)"
+          },
+          "path": {
+            "type": "string",
+            "description": "Local path relative to repo root (e.g., vendor/app-name)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description"
+          },
+          "private": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether this repo is private (will skip for users without access)"
+          },
+          "optional": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether the app is optional (failure to clone won't break install)"
+          },
+          "branch": {
+            "type": "string",
+            "default": "main",
+            "description": "Branch to checkout"
+          }
+        }
+      }
+    }
+  }
+}

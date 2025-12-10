@@ -1,8 +1,3 @@
-/**
- * Report Submission Form
- * Submit reports against bad actors with evidence upload
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -71,6 +66,7 @@ export default function ReportSubmissionForm({
 
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceHash, setEvidenceHash] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   const { upload: uploadToIPFS, uploading: uploadingEvidence } = useIPFSUpload();
   const { writeContract, data: hash, isPending } = useWriteContract();
@@ -87,14 +83,15 @@ export default function ReportSubmissionForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!formData.targetAgentId) {
-      alert('Target Agent ID is required');
+      setError('Target Agent ID is required');
       return;
     }
 
     if (!evidenceHash) {
-      alert('Please upload evidence first');
+      setError('Please upload evidence first');
       return;
     }
 
@@ -296,6 +293,12 @@ export default function ReportSubmissionForm({
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Submit */}
       <button

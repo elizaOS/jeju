@@ -1,7 +1,7 @@
 /**
  * Compute Node Server
  *
- * OpenAI-compatible inference server with on-chain settlement
+ * Standard inference server with on-chain settlement
  * Supports x402 payment protocol for micropayments
  */
 
@@ -19,7 +19,7 @@ import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import {
-  generateSimulatedAttestation,
+  generateAttestation,
   getAttestationHash,
 } from './attestation';
 import { detectHardware } from './hardware';
@@ -39,6 +39,14 @@ import {
   createPaymentRequirement as createX402Requirement,
   getX402Config,
 } from '../sdk/x402';
+import {
+  ContentModerator,
+  createContentModerator,
+  MemoryIncidentStorage,
+  SeverityEnum,
+  ContentCategoryEnum,
+  type ModerationIncident,
+} from '../sdk/content-moderation';
 
 // Credit Manager ABI for balance checking
 const CREDIT_MANAGER_ABI = [
@@ -78,6 +86,11 @@ export class ComputeNodeServer {
   private creditManager: Contract | null = null;
   private ledgerManager: Contract | null = null;
   private x402Enabled: boolean = false;
+  
+  // Content moderation
+  private moderator!: ContentModerator;
+  private moderationStorage!: MemoryIncidentStorage;
+  private moderationEnabled: boolean = false;
 
   constructor(config: ProviderConfig) {
     this.config = config;
@@ -91,6 +104,9 @@ export class ComputeNodeServer {
 
     // Initialize payment contracts if configured
     this.initializePaymentContracts();
+    
+    // Initialize content moderation
+    this.initializeModeration();
     
     this.setupRoutes();
   }
@@ -113,20 +129,52 @@ export class ComputeNodeServer {
       this.x402Enabled = process.env.X402_ENABLED === 'true';
     }
   }
+  
+  private initializeModeration(): void {
+    this.moderationStorage = new MemoryIncidentStorage();
+    this.moderationEnabled = process.env.MODERATION_ENABLED !== 'false'; // Enabled by default
+    
+    this.moderator = createContentModerator({
+      enableLocalFilter: true,
+      enableAIClassifier: !!process.env.AI_MODERATION_ENDPOINT,
+      aiClassifierEndpoint: process.env.AI_MODERATION_ENDPOINT,
+      aiClassifierModel: process.env.AI_MODERATION_MODEL || 'moderation',
+      recordIncidents: true,
+      minConfidenceToFlag: 70,
+      minConfidenceToBlock: 85,
+      onIncident: async (incident: ModerationIncident) => {
+        await this.moderationStorage.save(incident);
+        if (incident.highestSeverity >= SeverityEnum.HIGH) {
+          console.warn(`[Moderation] High severity incident: ${incident.id} from ${incident.userAddress}`);
+        }
+      },
+    });
+  }
 
   private setupRoutes(): void {
     // CORS
     this.app.use('/*', cors());
 
-    // Health check
-    this.app.get('/health', (c) => {
+    // Health check - includes TEE status prominently
+    this.app.get('/health', async (c) => {
       const metrics = this.getMetrics();
+      const hardware = await detectHardware();
+      
       return c.json({
         status: 'ok',
         provider: this.wallet.address,
         models: this.config.models.map((m) => m.name),
         warmth: metrics.warmth,
         uptime: metrics.uptime,
+        // Node classification
+        nodeType: hardware.nodeType,  // 'cpu' or 'gpu'
+        // TEE status - ALWAYS CHECK THIS
+        tee: {
+          status: hardware.teeInfo.status,
+          isReal: hardware.teeInfo.isReal,
+          provider: hardware.teeInfo.provider,
+          warning: hardware.teeInfo.warning,
+        },
       });
     });
     
@@ -148,20 +196,24 @@ export class ComputeNodeServer {
       });
     });
 
-    // Attestation
+    // Attestation - shows TEE status clearly
     this.app.get('/v1/attestation/report', async (c) => {
       const nonce = c.req.query('nonce') || crypto.randomUUID();
 
-      // Generate fresh attestation
-      this.attestation = await generateSimulatedAttestation(this.wallet, nonce);
+      // Generate attestation based on actual TEE environment
+      this.attestation = await generateAttestation(this.wallet, nonce);
 
       return c.json({
         ...this.attestation,
         attestation_hash: getAttestationHash(this.attestation),
+        // Highlight TEE status at top level for clarity
+        _tee_notice: this.attestation.teeIsReal 
+          ? `✅ Real TEE: ${this.attestation.teeStatus}`
+          : `⚠️ ${this.attestation.teeWarning}`,
       });
     });
 
-    // Chat completions with x402 payment support
+    // Chat completions with x402 payment support and content moderation
     this.app.post('/v1/chat/completions', async (c) => {
       // Verify auth headers (optional for local testing)
       const authValid = await this.verifyAuth(c);
@@ -180,8 +232,34 @@ export class ComputeNodeServer {
         );
       }
 
+      const userAddress = c.req.header('x-jeju-address') as `0x${string}` | undefined;
+      
+      // Content moderation check (if enabled)
+      if (this.moderationEnabled) {
+        const content = request.messages.map(m => m.content).join('\n');
+        const moderationResult = await this.moderator.moderate(content, {
+          userAddress: userAddress ?? '0x0000000000000000000000000000000000000000' as `0x${string}`,
+          providerAddress: this.wallet.address as `0x${string}`,
+          modelId: request.model,
+          requestType: 'inference',
+        });
+        
+        if (!moderationResult.allowed) {
+          const categories = moderationResult.flags.map(f => 
+            ContentModerator.getCategoryName(f.category)
+          ).join(', ');
+          
+          return c.json({
+            error: {
+              message: `Content blocked by moderation policy: ${categories}`,
+              code: 'content_policy_violation',
+              incidentId: moderationResult.incidentId,
+            }
+          }, 400);
+        }
+      }
+
       // x402 Payment check (if enabled)
-      const userAddress = c.req.header('x-jeju-address');
       if (this.x402Enabled && userAddress) {
         const estimatedCost = this.estimateInferenceCost(request);
         const paymentCheck = await this.checkPayment(c, userAddress, estimatedCost);
@@ -245,6 +323,50 @@ export class ComputeNodeServer {
     this.app.get('/v1/hardware', async (c) => {
       const hardware = await detectHardware();
       return c.json(hardware);
+    });
+    
+    // ========== Moderation Endpoints ==========
+    
+    // Get moderation incidents (admin)
+    this.app.get('/v1/moderation/incidents', async (c) => {
+      const limit = parseInt(c.req.query('limit') || '100', 10);
+      const reviewed = c.req.query('reviewed');
+      
+      if (reviewed === 'false') {
+        const incidents = await this.moderationStorage.getUnreviewed(limit);
+        return c.json({ incidents, count: incidents.length });
+      }
+      
+      // Get all incidents (limited functionality without full storage)
+      const incidents = await this.moderationStorage.getUnreviewed(limit);
+      return c.json({ incidents, count: incidents.length });
+    });
+    
+    // Get training data export
+    this.app.get('/v1/moderation/training', async (c) => {
+      const category = c.req.query('category');
+      const limit = parseInt(c.req.query('limit') || '1000', 10);
+      
+      const categoryValue = category ? parseInt(category, 10) as typeof ContentCategoryEnum[keyof typeof ContentCategoryEnum] : undefined;
+      const incidents = await this.moderationStorage.getForTraining(categoryValue, limit);
+      
+      const trainingData = incidents.map(i => ({
+        text: i.inputContent,
+        label: ContentModerator.getCategoryName(i.trainingLabel ?? i.flags[0]?.category ?? ContentCategoryEnum.SAFE),
+        confidence: i.flags[0]?.confidence ?? 0,
+        reviewed: i.reviewed,
+      }));
+      
+      return c.json({ data: trainingData, count: trainingData.length });
+    });
+    
+    // Moderation stats
+    this.app.get('/v1/moderation/stats', (c) => {
+      return c.json({
+        enabled: this.moderationEnabled,
+        aiClassifierEnabled: !!process.env.AI_MODERATION_ENDPOINT,
+        incidentCount: this.moderationStorage.size(),
+      });
     });
   }
 
@@ -506,11 +628,27 @@ export class ComputeNodeServer {
   /**
    * Start the server
    */
-  start(port: number): void {
+  async start(port: number): Promise<void> {
+    // Detect hardware to show TEE status
+    const hardware = await detectHardware();
+    const teeStatus = hardware.teeInfo.status;
+    const teeIsReal = hardware.teeInfo.isReal;
+
     console.log(`🚀 Compute Node starting...`);
     console.log(`   Provider: ${this.wallet.address}`);
     console.log(`   Port: ${port}`);
     console.log(`   Models: ${this.config.models.map((m) => m.name).join(', ')}`);
+    console.log(`   Node Type: ${hardware.nodeType.toUpperCase()}`);
+    
+    // Show TEE status prominently
+    if (teeIsReal) {
+      console.log(`   ✅ TEE: ${teeStatus} (REAL - production ready)`);
+    } else {
+      console.log(`   ⚠️  TEE: ${teeStatus} (SIMULATED - NOT for production)`);
+      if (hardware.teeInfo.warning) {
+        console.log(`   ⚠️  ${hardware.teeInfo.warning}`);
+      }
+    }
 
     this._server = Bun.serve({
       port,
@@ -518,7 +656,6 @@ export class ComputeNodeServer {
     });
 
     console.log(`✅ Compute Node running at http://localhost:${port}`);
-    console.log(`⚠️  Attestation: SIMULATED (wallet signatures only, no TEE)`);
   }
 
   /**
@@ -594,6 +731,6 @@ Generate a new wallet:
   };
 
   const server = new ComputeNodeServer(config);
-  server.start(port);
+  await server.start(port);
   return server;
 }

@@ -1,8 +1,3 @@
-/**
- * @fileoverview Governance hooks for futarchy system
- * @module gateway/hooks/useGovernance
- */
-
 import { useReadContract, useAccount } from 'wagmi';
 import { Address } from 'viem';
 
@@ -46,17 +41,10 @@ export function useVotingPower() {
     args: userAddress ? [userAddress, 0n] : undefined,
   });
   
-  return {
-    votingPower: votingPower as VotingPowerBreakdown | undefined
-  };
+  return { votingPower: votingPower as VotingPowerBreakdown | undefined };
 }
 
 export function useGovernance() {
   const { votingPower } = useVotingPower();
-  
-  return {
-    votingPower,
-    hasVotingPower: votingPower ? votingPower.total > 0n : false
-  };
+  return { votingPower, hasVotingPower: votingPower ? votingPower.total > 0n : false };
 }
-

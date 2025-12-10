@@ -1,8 +1,3 @@
-/**
- * @fileoverview SolversView - Display active solvers and leaderboard
- * Migrated from apps/intents/viewer
- */
-
 import { Star, Activity, Clock, TrendingUp, Shield } from 'lucide-react';
 import { useSolvers, useSolverLeaderboard } from '../../hooks/useIntentAPI';
 import type { Solver } from '@jejunetwork/types/oif';

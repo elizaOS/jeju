@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Sparkles, Plus, Grid3x3 } from 'lucide-react';
 import RegisteredAppsList from './RegisteredAppsList';
@@ -9,6 +9,13 @@ export default function RegistryTab() {
   const { isConnected } = useAccount();
   const [activeSection, setActiveSection] = useState<'list' | 'register'>('list');
   const [selectedAppId, setSelectedAppId] = useState<bigint | null>(null);
+
+  // Listen for navigation events from other components (e.g., FaucetTab)
+  useEffect(() => {
+    const handleNavigateToRegister = () => setActiveSection('register');
+    window.addEventListener('navigate-to-register', handleNavigateToRegister);
+    return () => window.removeEventListener('navigate-to-register', handleNavigateToRegister);
+  }, []);
 
   if (!isConnected) {
     return (

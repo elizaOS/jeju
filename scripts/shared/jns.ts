@@ -319,7 +319,6 @@ export const JEJU_APPS = {
   storage: 'storage.jeju',
   indexer: 'indexer.jeju',
   cloud: 'cloud.jeju',
-  intents: 'intents.jeju',
   docs: 'docs.jeju',
   monitoring: 'monitoring.jeju',
 } as const;

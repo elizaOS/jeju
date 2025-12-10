@@ -1,8 +1,3 @@
-/**
- * Reputation Viewer Component
- * Shows agent reputation, stake, labels, bans
- */
-
 'use client';
 
 import { useState, useEffect } from 'react';

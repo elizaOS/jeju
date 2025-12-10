@@ -499,6 +499,69 @@ contract ModerationMarketplaceTest is Test {
         assertTrue(reporterStakeAfter.amount < reporterInitialStake);
     }
 
+    // ============ Banned User Restriction Tests ============
+
+    function testBannedUserCannotVote() public {
+        // Setup case
+        _setupChallengedCase();
+        bytes32 caseId = marketplace.getAllCaseIds()[0];
+
+        // Setup voter1 with stake
+        vm.prank(voter1);
+        marketplace.stake{value: 1 ether}();
+        vm.warp(block.timestamp + STAKE_AGE + 1);
+        vm.roll(block.number + STAKE_BLOCKS + 1);
+
+        // Ban voter1 via BanManager (placeOnNotice then make permanent)
+        vm.prank(address(marketplace));
+        banManager.placeOnNotice(voter1, reporter, bytes32("testcase"), "Test ban");
+        vm.prank(address(marketplace));
+        banManager.updateBanStatus(voter1, BanManager.BanType.PERMANENT);
+
+        // Banned user should not be able to vote
+        vm.expectRevert(ModerationMarketplace.BannedUserCannotVote.selector);
+        vm.prank(voter1);
+        marketplace.vote(caseId, ModerationMarketplace.VotePosition.YES);
+    }
+
+    function testBannedUserCannotOpenCase() public {
+        // Setup reporter with stake and age
+        vm.prank(reporter);
+        marketplace.stake{value: 0.1 ether}();
+        vm.warp(block.timestamp + STAKE_AGE + 1);
+        vm.roll(block.number + STAKE_BLOCKS + 1);
+
+        // Ban reporter via BanManager (placeOnNotice then make permanent)
+        vm.prank(address(marketplace));
+        banManager.placeOnNotice(reporter, target, bytes32("testcase"), "Test ban");
+        vm.prank(address(marketplace));
+        banManager.updateBanStatus(reporter, BanManager.BanType.PERMANENT);
+
+        // Banned user should not be able to open a case
+        vm.expectRevert(ModerationMarketplace.BannedUserCannotReport.selector);
+        vm.prank(reporter);
+        marketplace.openCase(target, "Spam bot", bytes32(0));
+    }
+
+    function testBannedUserCanChallengeTheirOwnCase() public {
+        // Setup case against target
+        vm.prank(reporter);
+        marketplace.stake{value: 0.1 ether}();
+        vm.warp(block.timestamp + STAKE_AGE + 1);
+        vm.roll(block.number + STAKE_BLOCKS + 1);
+
+        vm.prank(reporter);
+        bytes32 caseId = marketplace.openCase(target, "Spam bot", bytes32(0));
+
+        // Target is now ON_NOTICE (effectively banned) - they should still be able to challenge
+        vm.prank(target);
+        marketplace.challengeCase{value: MIN_STAKE}(caseId);
+
+        // Verify challenge succeeded
+        ModerationMarketplace.BanCase memory banCase = marketplace.getCase(caseId);
+        assertEq(uint8(banCase.status), uint8(ModerationMarketplace.BanStatus.CHALLENGED));
+    }
+
     // ============ Helper Functions ============
 
     function _setupChallengedCase() internal returns (bytes32) {

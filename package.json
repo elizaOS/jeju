@@ -63,7 +63,11 @@
     "testnet:fund": "bun run scripts/fund-testnet-deployer.ts",
     "testnet:bridge": "bun run scripts/fund-testnet-deployer.ts --bridge",
     "testnet:accumulate": "bun run scripts/token-accumulator.ts",
-    "testnet:accumulate:watch": "bun run scripts/token-accumulator.ts --watch"
+    "testnet:accumulate:watch": "bun run scripts/token-accumulator.ts --watch",
+    "apps:list": "bun run scripts/list-apps.ts",
+    "vendor:list": "bun run scripts/list-apps.ts",
+    "vendor:sync": "bun run scripts/setup-apps.ts",
+    "vendor:update": "bun run scripts/vendor-update.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.911.0",

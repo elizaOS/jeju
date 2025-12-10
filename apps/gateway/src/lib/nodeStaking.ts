@@ -1,22 +1,12 @@
-/**
- * @fileoverview Node Staking contract ABIs and utilities
- * @module gateway/lib/nodeStaking
- */
-
 import { Address } from 'viem';
 
-// ============ Contract ABIs ============
-
 export const NODE_STAKING_MANAGER_ABI = [
-  // ============ Enums ============
   {
     type: 'function',
     name: 'Region',
     inputs: [],
     outputs: [{ type: 'uint8' }],
   },
-  
-  // ============ Core Functions ============
   {
     type: 'function',
     name: 'registerNode',
@@ -56,8 +46,6 @@ export const NODE_STAKING_MANAGER_ABI = [
     outputs: [],
     stateMutability: 'nonpayable'
   },
-  
-  // ============ View Functions ============
   {
     type: 'function',
     name: 'getNodeInfo',
@@ -163,8 +151,6 @@ export const NODE_STAKING_MANAGER_ABI = [
     outputs: [{ name: 'nodeIds', type: 'bytes32[]' }],
     stateMutability: 'view'
   },
-  
-  // ============ Events ============
   {
     type: 'event',
     name: 'NodeRegistered',
@@ -206,8 +192,6 @@ export const NODE_STAKING_MANAGER_ABI = [
     ]
   }
 ] as const;
-
-// ============ Types ============
 
 export interface NodeStake {
   nodeId: string;
@@ -262,8 +246,6 @@ export const REGION_NAMES = {
   [Region.Africa]: 'Africa',
   [Region.Oceania]: 'Oceania'
 };
-
-// ============ Utility Functions ============
 
 export function getNodeStakingAddress(): Address {
   return (import.meta.env.VITE_NODE_STAKING_MANAGER_ADDRESS || '0x0000000000000000000000000000000000000000') as Address;

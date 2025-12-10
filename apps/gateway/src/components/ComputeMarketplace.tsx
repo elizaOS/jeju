@@ -1,8 +1,3 @@
-/**
- * @fileoverview Compute Marketplace component for browsing and renting compute resources
- * @module gateway/components/ComputeMarketplace
- */
-
 import { useState } from 'react';
 import { formatEther } from 'viem';
 import { useAccount } from 'wagmi';
@@ -19,10 +14,6 @@ import {
   formatDuration,
   formatHourlyRate,
 } from '../hooks/useComputeRental';
-
-// ============================================================================
-// Mock Provider Data (replace with actual provider discovery)
-// ============================================================================
 
 const DEMO_PROVIDERS: Array<{
   address: `0x${string}`;
@@ -49,10 +40,6 @@ const DEMO_PROVIDERS: Array<{
     rating: 4.7,
   },
 ];
-
-// ============================================================================
-// Provider Card Component
-// ============================================================================
 
 interface ProviderCardProps {
   provider: (typeof DEMO_PROVIDERS)[0];
@@ -221,10 +208,6 @@ function ProviderCard({ provider, onRent }: ProviderCardProps) {
     </div>
   );
 }
-
-// ============================================================================
-// Rental Form Modal
-// ============================================================================
 
 interface RentalFormProps {
   provider: `0x${string}`;
@@ -436,12 +419,8 @@ function RentalForm({ provider, onClose }: RentalFormProps) {
   );
 }
 
-// ============================================================================
-// My Rentals Component
-// ============================================================================
-
 function MyRentals() {
-  const { rentalIds, refetchIds: _refetchIds } = useUserRentals();
+  const { rentalIds } = useUserRentals();
   const { cancelRental, isCancelling } = useCancelRental();
 
   if (rentalIds.length === 0) {
@@ -591,10 +570,6 @@ function RentalCard({ rentalId, onCancel, isCancelling }: RentalCardProps) {
     </div>
   );
 }
-
-// ============================================================================
-// Main Component
-// ============================================================================
 
 export default function ComputeMarketplace() {
   const { isConnected } = useAccount();

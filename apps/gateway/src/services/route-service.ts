@@ -1,8 +1,3 @@
-/**
- * @fileoverview Route Service - Manages cross-chain route discovery
- * Migrated from apps/intents/aggregator
- */
-
 import type { IntentRoute, SupportedChainId } from '@jejunetwork/types/oif';
 
 // Chain configurations
@@ -83,7 +78,7 @@ function getRoutes(): IntentRoute[] {
       totalIntents: 0,
       avgFeePercent: config.oracle === 'superchain' ? 30 : 50,
       avgFillTimeSeconds: config.oracle === 'superchain' ? 15 : 30,
-      successRate: 99,
+      successRate: 0,
       activeSolvers: 0,
       totalLiquidity: '0',
       lastUpdated: Date.now(),

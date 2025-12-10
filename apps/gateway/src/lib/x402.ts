@@ -1,8 +1,3 @@
-/**
- * x402 Payment Protocol for Gateway
- * Re-exports shared implementation with Gateway-specific payment tiers
- */
-
 import { parseEther } from 'viem';
 
 // Re-export all core x402 functionality from shared
@@ -31,8 +26,6 @@ export {
 import { createPaymentRequirement as sharedCreatePaymentRequirement } from '../../../../scripts/shared/x402';
 import type { Address } from 'viem';
 
-// ============ Gateway-Specific Payment Tiers ============
-
 export const PAYMENT_TIERS = {
   // Node Operations
   NODE_REGISTRATION: parseEther('0.05'),
@@ -49,11 +42,6 @@ export const PAYMENT_TIERS = {
   LIQUIDITY_REMOVE: parseEther('0.0005'),
 } as const;
 
-// ============ Gateway-Specific Wrapper ============
-
-/**
- * Create payment requirement with Gateway defaults
- */
 export function createPaymentRequirement(
   resource: string,
   amount: bigint,

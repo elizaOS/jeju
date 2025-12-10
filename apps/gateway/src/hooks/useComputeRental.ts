@@ -1,15 +1,6 @@
-/**
- * @fileoverview Hook for interacting with the Compute Rental marketplace
- * @module gateway/hooks/useComputeRental
- */
-
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { formatEther } from 'viem';
 import { useMemo } from 'react';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export enum GPUType {
   NONE = 0,
@@ -100,10 +91,6 @@ export interface Rental {
   sshHost: string;
   sshPort: number;
 }
-
-// ============================================================================
-// Contract Configuration
-// ============================================================================
 
 const COMPUTE_RENTAL_ADDRESS = (process.env.NEXT_PUBLIC_RENTAL_ADDRESS ||
   process.env.VITE_RENTAL_ADDRESS ||
@@ -236,17 +223,10 @@ const COMPUTE_RENTAL_ABI = [
   },
 ] as const;
 
-// ============================================================================
-// Hooks
-// ============================================================================
-
 export function getComputeRentalAddress(): `0x${string}` {
   return COMPUTE_RENTAL_ADDRESS;
 }
 
-/**
- * Hook for reading provider resources
- */
 export function useProviderResources(provider: `0x${string}` | undefined) {
   const { data, refetch, isLoading } = useReadContract({
     address: COMPUTE_RENTAL_ADDRESS,
@@ -287,9 +267,6 @@ export function useProviderResources(provider: `0x${string}` | undefined) {
   return { resources, refetch, isLoading };
 }
 
-/**
- * Hook for user's rentals
- */
 export function useUserRentals() {
   const { address } = useAccount();
 
@@ -306,9 +283,6 @@ export function useUserRentals() {
   };
 }
 
-/**
- * Hook for individual rental details
- */
 export function useRental(rentalId: `0x${string}` | undefined) {
   const { data, refetch, isLoading } = useReadContract({
     address: COMPUTE_RENTAL_ADDRESS,
@@ -324,9 +298,6 @@ export function useRental(rentalId: `0x${string}` | undefined) {
   };
 }
 
-/**
- * Hook for calculating rental cost
- */
 export function useRentalCost(provider: `0x${string}` | undefined, durationHours: number) {
   const { data, isLoading } = useReadContract({
     address: COMPUTE_RENTAL_ADDRESS,
@@ -342,9 +313,6 @@ export function useRentalCost(provider: `0x${string}` | undefined, durationHours
   };
 }
 
-/**
- * Hook for creating rentals
- */
 export function useCreateRental() {
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -374,9 +342,6 @@ export function useCreateRental() {
   };
 }
 
-/**
- * Hook for extending rentals
- */
 export function useExtendRental() {
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -398,9 +363,6 @@ export function useExtendRental() {
   };
 }
 
-/**
- * Hook for cancelling rentals
- */
 export function useCancelRental() {
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -421,9 +383,6 @@ export function useCancelRental() {
   };
 }
 
-/**
- * Format duration for display
- */
 export function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -437,9 +396,6 @@ export function formatDuration(seconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-/**
- * Format price per hour for display
- */
 export function formatHourlyRate(weiPerHour: bigint): string {
   const ethPerHour = Number(formatEther(weiPerHour));
   return `${ethPerHour.toFixed(4)} ETH/hr`;

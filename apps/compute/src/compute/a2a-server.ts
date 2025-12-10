@@ -314,7 +314,7 @@ export class ComputeA2AServer {
     if (!paymentHeader) {
       return { message: 'Payment required', data: {}, requiresPayment: { x402Version: 1, error: 'Payment required', accepts: [{ scheme: 'exact', network: 'jeju', maxAmountRequired: estimatedCost.toString(), asset: '0x0000000000000000000000000000000000000000', payTo: this.config.ledgerAddress, resource: '/a2a/inference', description: `AI inference on ${model}` }] } };
     }
-    return { message: 'Use OpenAI-compatible endpoint directly', data: { steps: ['1. Deposit to LedgerManager', '2. Acknowledge provider', '3. Call provider endpoint', '4. Provider settles via InferenceServing'] } };
+    return { message: 'Use inference endpoint directly', data: { steps: ['1. Deposit to LedgerManager', '2. Acknowledge provider', '3. Call provider endpoint', '4. Provider settles via InferenceServing'] } };
   }
 
   getRouter(): Hono { return this.app; }

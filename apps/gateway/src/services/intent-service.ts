@@ -1,8 +1,3 @@
-/**
- * @fileoverview Intent Service - Core business logic for intent management
- * Migrated from apps/intents/aggregator
- */
-
 import { keccak256, encodeAbiParameters, parseAbiParameters } from 'viem';
 import type { 
   Intent, 
@@ -293,11 +288,26 @@ export class IntentService {
       0n
     );
 
+    const filledIntents = chainIntents.filter(i => i.status === 'filled');
+    const failedIntents = chainIntents.filter(i => i.status === 'expired');
+    const totalCompleted = filledIntents.length + failedIntents.length;
+
+    const avgFillTime = filledIntents.length > 0
+      ? filledIntents.reduce((sum, i) => {
+          const fillTime = (i.filledAt || Date.now()) - (i.createdAt || Date.now());
+          return sum + fillTime / 1000;
+        }, 0) / filledIntents.length
+      : 0;
+
+    const successRate = totalCompleted > 0
+      ? (filledIntents.length / totalCompleted) * 100
+      : 0;
+
     return {
       totalIntents: chainIntents.length,
       totalVolume: totalVolume.toString(),
-      avgFillTime: 45,
-      successRate: 98.5,
+      avgFillTime: Math.round(avgFillTime),
+      successRate: Math.round(successRate * 10) / 10,
     };
   }
 

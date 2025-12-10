@@ -7,6 +7,7 @@
     "dev": "concurrently \"vite\" \"bun src/a2a-server.ts\"",
     "dev:ui": "vite",
     "dev:a2a": "bun src/a2a-server.ts",
+    "dev:solver": "bun src/solver/index.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -41,6 +42,7 @@
     "test:report": "playwright show-report"
   },
   "dependencies": {
+    "@jeju/shared": "workspace:*",
     "@jejunetwork/config": "workspace:*",
     "@jejunetwork/contracts": "workspace:*",
     "@jejunetwork/types": "workspace:*",
@@ -53,7 +55,8 @@
     "recharts": "^3.3.0",
     "lucide-react": "^0.546.0",
     "express": "^4.19.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@jejunetwork/tests": "workspace:*",
@@ -63,6 +66,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^24.8.1",
+    "@types/ws": "^8.18.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.0.0",

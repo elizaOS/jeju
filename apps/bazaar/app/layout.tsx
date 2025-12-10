@@ -3,6 +3,7 @@ import { Outfit, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { Header } from '@/components/Header'
+import { BanCheckWrapper } from '@/components/BanCheckWrapper'
 import { Toaster } from 'sonner'
 
 const outfit = Outfit({ 
@@ -70,7 +71,9 @@ export default function RootLayout({
           <div className="min-h-screen">
             <Header />
             <main className="container mx-auto px-4 pt-24 md:pt-28 pb-12">
-              {children}
+              <BanCheckWrapper>
+                {children}
+              </BanCheckWrapper>
             </main>
             <footer 
               className="border-t py-8 mt-16"

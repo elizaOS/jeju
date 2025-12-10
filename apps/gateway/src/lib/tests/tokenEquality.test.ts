@@ -1,10 +1,3 @@
-/**
- * Token Equality Tests
- * 
- * Ensures all protocol tokens (JEJU, elizaOS, CLANKER, VIRTUAL, CLANKERMON) are treated equally
- * and have complete configurations.
- */
-
 import { getProtocolTokens, getAllTokens, getTokenBySymbol, getTokenByAddress, getPreferredToken, getPaymasterTokens, hasBanEnforcement } from '../tokens';
 
 describe('Token Equality and Completeness', () => {

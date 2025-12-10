@@ -1,8 +1,3 @@
-/**
- * Gateway Storage Manager
- * Manage IPFS file storage, payments, and pinning
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -129,9 +124,6 @@ export default function StorageManagerPage() {
   );
 }
 
-/**
- * Upload Section
- */
 function UploadSection() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -266,9 +258,6 @@ function UploadSection() {
   );
 }
 
-/**
- * Files Section
- */
 function FilesSection({ fileCIDs }: { fileCIDs: readonly `0x${string}`[] }) {
   if (fileCIDs.length === 0) {
     return (
@@ -288,9 +277,6 @@ function FilesSection({ fileCIDs }: { fileCIDs: readonly `0x${string}`[] }) {
   );
 }
 
-/**
- * Individual File Card
- */
 function FileCard({ cidBytes }: { cidBytes: `0x${string}` }) {
   const { data: fileData } = useReadContract({
     address: FILE_STORAGE_MANAGER_ADDRESS,
@@ -339,9 +325,6 @@ function FileCard({ cidBytes }: { cidBytes: `0x${string}` }) {
   );
 }
 
-/**
- * Funding Section
- */
 function FundingSection() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">

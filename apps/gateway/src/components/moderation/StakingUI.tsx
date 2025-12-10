@@ -1,8 +1,3 @@
-/**
- * Staking UI Component
- * Upgrade reputation tier by staking ETH
- */
-
 'use client';
 
 import { useState, useEffect } from 'react';

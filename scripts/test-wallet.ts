@@ -54,13 +54,6 @@ const CORE_WALLET_APPS: WalletTestApp[] = [
     testDir: 'tests/e2e-synpress',
     type: 'app',
   },
-  {
-    name: 'Intents Viewer',
-    path: 'apps/intents/viewer',
-    configFile: 'playwright.config.ts',
-    testDir: 'tests',
-    type: 'app',
-  },
 ];
 
 // Discover vendor examples with synpress configs
