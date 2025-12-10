@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
+  repository: ghcr.io/ethereum-optimism/op-node
   pullPolicy: IfNotPresent
-  tag: "v1.16.3"
+  tag: "v1.10.0"
 
 nameOverride: ""
 fullnameOverride: ""
@@ -114,7 +114,7 @@ config:
     enabled: false
   snapshotLog: "/data/snapshot.log"
   conductor:
-    enabled: true
+    enabled: false
     rpc: "http://op-conductor:8547"
   flashblocks:
     enabled: true
