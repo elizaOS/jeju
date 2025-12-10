@@ -23,7 +23,7 @@ config:
   l1ChainId: 11155111
   l2ChainId: 420690
   l1:
-    rpcUrl: "https://rpc.sepolia.org"
+    rpcUrl: "https://1rpc.io/sepolia"
     rpcKind: "standard"
     beacon:
       url: "https://ethereum-sepolia-beacon-api.publicnode.com"
@@ -33,8 +33,9 @@ config:
   p2p:
     bootnodes: []
   # Genesis and contract configuration
-  genesisL1Hash: "0xcd6424c8d0a66660713c82b8df86b1ad6368856f9b8d6d0e6be6a40a61394166"
-  genesisL1Number: 9043968
+  # Use Sepolia genesis block (block 0) to avoid hash validation issues
+  genesisL1Hash: "0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9"
+  genesisL1Number: 0
   genesisL2Hash: "0xa9a264f374dd37a03827836390158f9ffd0ddec31bd46259f647c2ed5b9cc0ba"
   genesisL2Time: 1765340021
   batcherAddr: "0x169a20665f6A2175580d669869eFD6B20045F6aA"
