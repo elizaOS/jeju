@@ -5,14 +5,14 @@
  * the cloud platform with the decentralized compute marketplace.
  */
 
-import { describe, test, expect, beforeAll, mock, spyOn } from 'bun:test';
+import { describe, test, expect, beforeAll } from 'bun:test';
 import {
   CloudModelBroadcaster,
   CloudProviderBridge,
-  UnifiedModelDiscovery,
+  ModelDiscovery,
   createCloudBroadcaster,
   createCloudBridge,
-  createUnifiedDiscovery,
+  createModelDiscovery,
   type CloudModelInfo,
   type CloudA2ASkill,
   type CloudIntegrationConfig,
@@ -91,11 +91,10 @@ const TEST_CONFIG: CloudIntegrationConfig = {
 };
 
 // Mock fetch for all tests
-const originalFetch = global.fetch;
-let mockFetch: ReturnType<typeof mock>;
+let mockFetch: typeof fetch;
 
 beforeAll(() => {
-  mockFetch = mock((url: string, options?: RequestInit) => {
+  mockFetch = ((url: string) => {
     const urlStr = url.toString();
     
     if (urlStr.includes('/api/v1/models')) {
@@ -142,7 +141,7 @@ beforeAll(() => {
     }
     
     return Promise.resolve(new Response('Not found', { status: 404 }));
-  });
+  }) as typeof fetch;
   
   global.fetch = mockFetch;
 });
@@ -332,17 +331,17 @@ describe('CloudProviderBridge', () => {
 });
 
 // ============================================================================
-// UnifiedModelDiscovery Tests
+// ModelDiscovery Tests
 // ============================================================================
 
-describe('UnifiedModelDiscovery', () => {
-  test('creates unified discovery with cloud', () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
-    expect(discovery).toBeInstanceOf(UnifiedModelDiscovery);
+describe('ModelDiscovery', () => {
+  test('creates model discovery with cloud', () => {
+    const discovery = createModelDiscovery(TEST_CONFIG);
+    expect(discovery).toBeInstanceOf(ModelDiscovery);
   });
   
   test('initializes cloud bridge', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     const bridge = discovery.getCloudBridge();
@@ -350,7 +349,7 @@ describe('UnifiedModelDiscovery', () => {
   });
   
   test('discovers models from cloud', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     const { cloud, combined } = await discovery.discoverAll();
@@ -360,7 +359,7 @@ describe('UnifiedModelDiscovery', () => {
   });
   
   test('filters by model type', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     const { combined } = await discovery.discoverAll({ modelType: ModelTypeEnum.IMAGE_GEN });
@@ -370,7 +369,7 @@ describe('UnifiedModelDiscovery', () => {
   });
   
   test('selects best model preferring cloud', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     const result = await discovery.selectBestModel({
@@ -383,7 +382,7 @@ describe('UnifiedModelDiscovery', () => {
   });
   
   test('returns null when no models match', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     const result = await discovery.selectBestModel({
@@ -395,7 +394,7 @@ describe('UnifiedModelDiscovery', () => {
   });
   
   test('sorts by price when selecting best model', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     const result = await discovery.selectBestModel({
@@ -414,7 +413,7 @@ describe('UnifiedModelDiscovery', () => {
 
 describe('Cloud-Compute Integration', () => {
   test('full workflow: discover, select, and infer', async () => {
-    const discovery = createUnifiedDiscovery(TEST_CONFIG);
+    const discovery = createModelDiscovery(TEST_CONFIG);
     await discovery.initialize();
     
     // Discover models
@@ -513,8 +512,7 @@ describe('Cloud-Compute Integration', () => {
 
 describe('Error Handling', () => {
   test('handles fetch failure gracefully', async () => {
-    const failingFetch = mock(() => Promise.reject(new Error('Network error')));
-    global.fetch = failingFetch;
+    global.fetch = ((() => Promise.reject(new Error('Network error'))) as unknown) as typeof fetch;
     
     const broadcaster = createCloudBroadcaster(TEST_CONFIG);
     
@@ -525,13 +523,12 @@ describe('Error Handling', () => {
   });
   
   test('handles 404 for agent card', async () => {
-    const notFoundFetch = mock((url: string) => {
+    global.fetch = ((url: string) => {
       if (url.includes('agent-card.json')) {
         return Promise.resolve(new Response('Not found', { status: 404 }));
       }
       return Promise.resolve(new Response(JSON.stringify({ models: [] }), { status: 200 }));
-    });
-    global.fetch = notFoundFetch;
+    }) as typeof fetch;
     
     const broadcaster = createCloudBroadcaster(TEST_CONFIG);
     const skills = await broadcaster.fetchCloudSkills();
@@ -544,13 +541,12 @@ describe('Error Handling', () => {
   });
   
   test('handles cloud inference error', async () => {
-    const errorFetch = mock((url: string) => {
+    global.fetch = ((url: string) => {
       if (url.includes('/chat/completions')) {
         return Promise.resolve(new Response('Internal Server Error', { status: 500 }));
       }
       return mockFetch(url);
-    });
-    global.fetch = errorFetch;
+    }) as typeof fetch;
     
     const bridge = createCloudBridge(TEST_CONFIG);
     
@@ -562,15 +558,14 @@ describe('Error Handling', () => {
   });
   
   test('handles A2A error response', async () => {
-    const errorFetch = mock((url: string) => {
+    global.fetch = ((url: string) => {
       if (url.includes('/api/a2a')) {
         return Promise.resolve(new Response(JSON.stringify({
           error: { message: 'Skill not found' },
         }), { status: 200 }));
       }
       return mockFetch(url);
-    });
-    global.fetch = errorFetch;
+    }) as typeof fetch;
     
     const bridge = createCloudBridge(TEST_CONFIG);
     

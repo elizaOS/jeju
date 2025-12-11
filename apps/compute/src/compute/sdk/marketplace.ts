@@ -1,7 +1,7 @@
 /**
  * Compute Marketplace SDK
  *
- * Unified interface for the decentralized compute marketplace:
+ * Interface for the decentralized compute marketplace:
  * - Model discovery (LLM, image, video, audio)
  * - Phala TEE node provisioning
  * - X402 payment integration with JEJU token
