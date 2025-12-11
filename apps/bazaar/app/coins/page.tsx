@@ -65,9 +65,14 @@ export default function TokensPage() {
           </h1>
           <p style={{ color: 'var(--text-secondary)' }}>Browse and trade coins on Jeju and beyond</p>
         </div>
-        <Link href="/coins/create" className="btn-primary w-full md:w-auto text-center">
-          Create Coin
-        </Link>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Link href="/coins/launch" className="btn-primary flex-1 md:flex-none text-center">
+            Launch Token
+          </Link>
+          <Link href="/coins/create" className="btn-secondary flex-1 md:flex-none text-center">
+            Simple Create
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
