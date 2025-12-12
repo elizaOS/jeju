@@ -1,13 +1,3 @@
-/**
- * Trigger Integration Tests
- *
- * Tests the generalized trigger system including:
- * - Proof of trigger generation and verification
- * - HTTP and contract targets
- * - Subscription management
- * - Cron expression matching
- */
-
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
 import { Wallet, Interface } from 'ethers';
 import {
@@ -495,10 +485,6 @@ describe('Trigger Integration', () => {
   });
 });
 
-// ============================================================================
-// X402 Payment Parsing Tests
-// ============================================================================
-
 import { parseX402PaymentHeader } from '../sdk/x402';
 
 describe('X402 Payment Parsing', () => {
@@ -542,10 +528,6 @@ describe('X402 Payment Parsing', () => {
     expect(parsed!.asset).toBe('0x0000000000000000000000000000000000000000');
   });
 });
-
-// ============================================================================
-// Target Type Tests
-// ============================================================================
 
 describe('Target Type Configuration', () => {
   test('HTTP target has required fields', () => {
@@ -595,13 +577,9 @@ describe('Target Type Configuration', () => {
   });
 });
 
-// ============================================================================
-// ABI Compatibility Tests
-// ============================================================================
-
 describe('TriggerRegistry ABI Compatibility', () => {
   const TRIGGER_REGISTRY_ABI = [
-    'function getTrigger(bytes32 triggerId) view returns (address owner, uint8 triggerType, string name, string endpoint, bool active, uint256 executionCount, uint256 lastExecutedAt)',
+    'function getTrigger(bytes32 triggerId) view returns (address owner, uint8 triggerType, string name, string endpoint, bool active, uint256 executionCount, uint256 lastExecutedAt, uint256 agentId)',
     'function getCronTriggers() view returns (bytes32[] triggerIds, string[] cronExpressions, string[] endpoints)',
     'function recordExecution(bytes32 triggerId, bool success, bytes32 outputHash) returns (bytes32)',
     'function registerTrigger(string name, string description, uint8 triggerType, string cronExpression, string webhookPath, string[] eventTypes, string endpoint, string method, uint256 timeout, uint8 paymentMode, uint256 pricePerExecution) returns (bytes32)',
@@ -617,7 +595,7 @@ describe('TriggerRegistry ABI Compatibility', () => {
     const func = iface.getFunction('getTrigger');
     
     expect(func).not.toBeNull();
-    expect(func!.outputs?.length).toBe(7);
+    expect(func!.outputs?.length).toBe(8); // owner, type, name, endpoint, active, execCount, lastExec, agentId
   });
 
   test('getCronTriggers returns three arrays', () => {

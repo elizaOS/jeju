@@ -4,20 +4,19 @@
  * Tests for on-demand compute provisioning with cold start support.
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { Hono } from 'hono';
 import { serve } from 'bun';
-import type { Server } from 'bun';
 import {
   ComputeNodeManager,
   createComputeNodeManager,
   type ComputeNodeConfig,
-  type ComputeNode,
-  type ComputeNodeMetadata,
 } from '../sdk/cloud-integration';
 
+type BunServer = ReturnType<typeof serve>;
+
 // Mock provisioner server
-let provisionerServer: Server | null = null;
+let provisionerServer: BunServer | null = null;
 let provisionerPort = 9878;
 let provisionRequests: Array<{ action: string; params: Record<string, unknown> }> = [];
 let provisionDelay = 100; // ms to simulate provisioning

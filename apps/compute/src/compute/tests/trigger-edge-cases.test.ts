@@ -9,7 +9,6 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { Wallet } from 'ethers';
 import { Hono } from 'hono';
 import { serve } from 'bun';
-import type { Server } from 'bun';
 import {
   TriggerIntegration,
   generateProofMessage,
@@ -20,16 +19,16 @@ import {
   type TriggerProofMessage,
   type TriggerProof,
   type HttpTarget,
-  type ContractTarget,
 } from '../sdk/trigger-integration';
 import { parseX402PaymentHeader } from '../sdk/x402';
 import type { Address } from 'viem';
+
+type BunServer = ReturnType<typeof serve>;
 
 const executorWallet = Wallet.createRandom() as unknown as Wallet;
 const subscriberWallet = Wallet.createRandom() as unknown as Wallet;
 
 // ============================================================================
-// Cron Expression Edge Cases
 // ============================================================================
 
 describe('Cron Expression Edge Cases', () => {
@@ -149,7 +148,6 @@ describe('Cron Expression Edge Cases', () => {
 });
 
 // ============================================================================
-// Proof System Edge Cases
 // ============================================================================
 
 describe('Proof System Edge Cases', () => {
@@ -300,7 +298,6 @@ describe('Proof System Edge Cases', () => {
 });
 
 // ============================================================================
-// X402 Payment Header Edge Cases
 // ============================================================================
 
 describe('X402 Payment Header Edge Cases', () => {
@@ -360,13 +357,143 @@ describe('X402 Payment Header Edge Cases', () => {
   });
 });
 
+describe('X402 Payment Verification', () => {
+  const { verifyX402Payment, generateX402PaymentHeader, parseX402PaymentHeader: parseHeader } = require('../sdk/x402');
+  const testWallet = Wallet.createRandom() as unknown as Wallet;
+  const providerWallet = Wallet.createRandom() as unknown as Wallet;
+
+  test('verifies payment with correct payer address', async () => {
+    const providerAddress = providerWallet.address as Address;
+    const amount = '1000000';
+    const header = await generateX402PaymentHeader(testWallet, providerAddress, amount, 'jeju');
+    const payment = parseHeader(header);
+    
+    expect(payment).not.toBeNull();
+    const isValid = verifyX402Payment(payment, providerAddress, testWallet.address as Address);
+    expect(isValid).toBe(true);
+  });
+
+  test('rejects payment with wrong payer address', async () => {
+    const providerAddress = providerWallet.address as Address;
+    const amount = '1000000';
+    const header = await generateX402PaymentHeader(testWallet, providerAddress, amount, 'jeju');
+    const payment = parseHeader(header);
+    
+    const wrongPayer = Wallet.createRandom().address as Address;
+    const isValid = verifyX402Payment(payment, providerAddress, wrongPayer);
+    expect(isValid).toBe(false);
+  });
+
+  test('rejects payment with wrong provider address', async () => {
+    const providerAddress = providerWallet.address as Address;
+    const amount = '1000000';
+    const header = await generateX402PaymentHeader(testWallet, providerAddress, amount, 'jeju');
+    const payment = parseHeader(header);
+    
+    const wrongProvider = Wallet.createRandom().address as Address;
+    const isValid = verifyX402Payment(payment, wrongProvider, testWallet.address as Address);
+    expect(isValid).toBe(false);
+  });
+});
+
+describe('Webhook x402 Payment Flow', () => {
+  let integration: TriggerIntegration;
+  let server: BunServer;
+  const port = 9878;
+  const testWallet = Wallet.createRandom() as unknown as Wallet;
+  const providerWallet = Wallet.createRandom() as unknown as Wallet;
+
+  beforeAll(async () => {
+    const app = new Hono();
+    app.post('/webhook-target', (c) => c.json({ received: true }));
+    server = serve({ fetch: app.fetch, port });
+
+    integration = new TriggerIntegration({
+      rpcUrl: 'http://localhost:9545',
+      enableOnChainRegistration: false,
+      chainId: 9545,
+    });
+    await integration.initialize();
+  });
+
+  afterAll(async () => {
+    await integration.shutdown();
+    server.stop();
+  });
+
+  test('handleWebhook requires payer address for x402 triggers', async () => {
+    await integration.registerTrigger({
+      source: 'local',
+      type: 'webhook',
+      name: 'x402-webhook',
+      webhookPath: '/test-x402',
+      target: { type: 'http', endpoint: `http://localhost:${port}/webhook-target`, method: 'POST', timeout: 30 },
+      payment: { mode: 'x402', pricePerExecution: 1000n },
+      ownerAddress: providerWallet.address as Address,
+      active: true,
+    });
+
+    const { generateX402PaymentHeader } = await import('../sdk/x402');
+    const paymentHeader = await generateX402PaymentHeader(testWallet, providerWallet.address as Address, '1000', 'jeju');
+
+    // Without x-jeju-address header - should fail
+    await expect(integration.handleWebhook('/test-x402', { data: 'test' }, {
+      'x-payment': paymentHeader,
+    })).rejects.toThrow('x-jeju-address header required');
+  });
+
+  test('handleWebhook accepts valid x402 payment with correct payer', async () => {
+    await integration.registerTrigger({
+      source: 'local',
+      type: 'webhook',
+      name: 'x402-webhook-valid',
+      webhookPath: '/test-x402-valid',
+      target: { type: 'http', endpoint: `http://localhost:${port}/webhook-target`, method: 'POST', timeout: 30 },
+      payment: { mode: 'x402', pricePerExecution: 1000n },
+      ownerAddress: providerWallet.address as Address,
+      active: true,
+    });
+
+    const { generateX402PaymentHeader } = await import('../sdk/x402');
+    const paymentHeader = await generateX402PaymentHeader(testWallet, providerWallet.address as Address, '1000', 'jeju');
+
+    const result = await integration.handleWebhook('/test-x402-valid', { data: 'test' }, {
+      'x-payment': paymentHeader,
+      'x-jeju-address': testWallet.address,
+    });
+    expect(result).not.toBeNull();
+    expect(result!.status).toBe('success');
+  });
+
+  test('handleWebhook rejects invalid x402 signature', async () => {
+    await integration.registerTrigger({
+      source: 'local',
+      type: 'webhook',
+      name: 'x402-webhook-invalid',
+      webhookPath: '/test-x402-invalid',
+      target: { type: 'http', endpoint: `http://localhost:${port}/webhook-target`, method: 'POST', timeout: 30 },
+      payment: { mode: 'x402', pricePerExecution: 1000n },
+      ownerAddress: providerWallet.address as Address,
+      active: true,
+    });
+
+    const { generateX402PaymentHeader } = await import('../sdk/x402');
+    const paymentHeader = await generateX402PaymentHeader(testWallet, providerWallet.address as Address, '1000', 'jeju');
+    const wrongPayer = Wallet.createRandom().address;
+
+    await expect(integration.handleWebhook('/test-x402-invalid', { data: 'test' }, {
+      'x-payment': paymentHeader,
+      'x-jeju-address': wrongPayer,
+    })).rejects.toThrow('x402 verification failed');
+  });
+});
+
 // ============================================================================
-// Concurrent Trigger Execution
 // ============================================================================
 
 describe('Concurrent Trigger Execution', () => {
   let integration: TriggerIntegration;
-  let server: Server;
+  let server: BunServer;
   let port = 9879;
   let requestCount = 0;
   let concurrentMax = 0;
@@ -443,13 +570,12 @@ describe('Concurrent Trigger Execution', () => {
 });
 
 // ============================================================================
-// Subscription Edge Cases
 // ============================================================================
 
 describe('Subscription Edge Cases', () => {
   let integration: TriggerIntegration;
-  let targetServer: Server;
-  let callbackServer: Server;
+  let targetServer: BunServer;
+  let callbackServer: BunServer;
   let targetPort = 9880;
   let callbackPort = 9881;
   let callbacks: Array<{ time: number; body: Record<string, unknown> }> = [];
@@ -570,7 +696,6 @@ describe('Subscription Edge Cases', () => {
 });
 
 // ============================================================================
-// Error Handling Edge Cases
 // ============================================================================
 
 describe('Error Handling Edge Cases', () => {
@@ -633,12 +758,11 @@ describe('Error Handling Edge Cases', () => {
 });
 
 // ============================================================================
-// Data Integrity Verification
 // ============================================================================
 
 describe('Data Integrity Verification', () => {
   let integration: TriggerIntegration;
-  let server: Server;
+  let server: BunServer;
   let port = 9882;
   let receivedData: Array<{ headers: Record<string, string>; body: Record<string, unknown> }> = [];
 
@@ -727,8 +851,8 @@ describe('Data Integrity Verification', () => {
     expect(result.proof!.nonce).toBeTruthy();
     expect(result.proof!.inputHash).toMatch(/^0x[a-f0-9]{64}$/);
     expect(result.proof!.outputHash).toMatch(/^0x[a-f0-9]{64}$/);
-    expect(result.proof!.executorAddress).toBe(executorWallet.address);
-    expect(result.proof!.subscriberAddress).toBe(subscriberWallet.address);
+    expect(result.proof!.executorAddress).toBe(executorWallet.address as Address);
+    expect(result.proof!.subscriberAddress).toBe(subscriberWallet.address as Address);
     expect(result.proof!.executorSignature).toMatch(/^0x[a-f0-9]+$/);
     expect(result.proof!.chainId).toBe(1);
     

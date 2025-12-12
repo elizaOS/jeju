@@ -11,7 +11,6 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { Wallet } from 'ethers';
 import { Hono } from 'hono';
 import { serve } from 'bun';
-import type { Server } from 'bun';
 import {
   TriggerIntegration,
   createTriggerIntegration,
@@ -20,6 +19,8 @@ import {
   type HttpTarget,
 } from '../sdk/trigger-integration';
 import type { Address } from 'viem';
+
+type BunServer = ReturnType<typeof serve>;
 
 // Test wallets
 const executorWallet = Wallet.createRandom() as unknown as Wallet;
@@ -37,10 +38,10 @@ interface CallbackRecord {
 }
 
 let callbackRecords: CallbackRecord[] = [];
-let callbackServer: Server | null = null;
+let callbackServer: BunServer | null = null;
 let callbackPort = 9876;
 
-let targetServer: Server | null = null;
+let targetServer: BunServer | null = null;
 let targetPort = 9877;
 let targetInvocations: Array<{ timestamp: number; body: unknown }> = [];
 
@@ -293,7 +294,7 @@ describe('Trigger E2E Tests', () => {
       await integration.executeTrigger({ triggerId });
       await integration.executeTrigger({ triggerId });
 
-      const beforeCount = callbackRecords.length;
+      // Third execution should be ignored (max 2)
       await integration.executeTrigger({ triggerId });
       await new Promise((r) => setTimeout(r, 50));
 

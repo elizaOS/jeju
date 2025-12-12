@@ -8,20 +8,19 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { Hono } from 'hono';
 import { serve } from 'bun';
-import type { Server } from 'bun';
 import {
   ComputeNodeManager,
   createComputeNodeManager,
-  type ComputeNodeConfig,
 } from '../sdk/cloud-integration';
 
+type BunServer = ReturnType<typeof serve>;
+
 // ============================================================================
-// Provisioner Failure Scenarios
 // ============================================================================
 
 describe('Provisioner Failure Scenarios', () => {
   let manager: ComputeNodeManager;
-  let server: Server;
+  let server: BunServer;
   let port = 9890;
   let shouldFail = false;
   let failureMessage = 'Provisioning failed';
@@ -115,12 +114,11 @@ describe('Provisioner Failure Scenarios', () => {
 });
 
 // ============================================================================
-// Concurrent Provisioning
 // ============================================================================
 
 describe('Concurrent Provisioning', () => {
   let manager: ComputeNodeManager;
-  let server: Server;
+  let server: BunServer;
   let port = 9891;
   let provisionCount = 0;
   let currentlyProvisioning = 0;
@@ -223,12 +221,11 @@ describe('Concurrent Provisioning', () => {
 });
 
 // ============================================================================
-// Request Queue Behavior
 // ============================================================================
 
 describe('Request Queue Behavior', () => {
   let manager: ComputeNodeManager;
-  let server: Server;
+  let server: BunServer;
   let port = 9892;
   let provisionDelay = 500;
 
@@ -291,12 +288,11 @@ describe('Request Queue Behavior', () => {
 });
 
 // ============================================================================
-// State Transitions
 // ============================================================================
 
 describe('State Transitions', () => {
   let manager: ComputeNodeManager;
-  let server: Server;
+  let server: BunServer;
   let port = 9893;
   let provisionDelay = 100;
 
@@ -400,12 +396,11 @@ describe('State Transitions', () => {
 });
 
 // ============================================================================
-// Metadata Accuracy
 // ============================================================================
 
 describe('Metadata Accuracy', () => {
   let manager: ComputeNodeManager;
-  let server: Server;
+  let server: BunServer;
   let port = 9894;
 
   beforeEach(async () => {
@@ -521,12 +516,11 @@ describe('Metadata Accuracy', () => {
 });
 
 // ============================================================================
-// Edge Cases for Node Configuration
 // ============================================================================
 
 describe('Node Configuration Edge Cases', () => {
   let manager: ComputeNodeManager;
-  let server: Server;
+  let server: BunServer;
   let port = 9895;
 
   beforeEach(async () => {

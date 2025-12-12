@@ -19,7 +19,6 @@ import {
 } from './payment';
 import {
   createX402PaymentRequirement,
-  X402_NETWORK_CONFIGS,
   type X402Network,
 } from './x402';
 import type {

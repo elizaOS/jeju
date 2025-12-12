@@ -1,18 +1,11 @@
 /**
- * Cloud-Compute Integration
- *
- * On-demand compute provisioning with cold start support.
- * Provisions TEE nodes only when needed to minimize costs.
+ * Cloud-Compute Integration - on-demand TEE provisioning with cold start
  */
 
 import type { Address } from 'viem';
 import type { RegisteredModel, ModelPricing, ModelEndpoint, ModelType, ModelDiscoveryResult, ModelDiscoveryFilter, ExtendedSDKConfig } from './types';
 import { ModelTypeEnum, ModelSourceTypeEnum, ModelHostingTypeEnum, ModelCapabilityEnum, TEETypeEnum, GPUTypeEnum } from './types';
 import { createInferenceRegistry, type InferenceRegistrySDK } from './inference-registry';
-
-// ============================================================================
-// Compute Node Types
-// ============================================================================
 
 export type ComputeNodeStatus = 'cold' | 'provisioning' | 'ready' | 'active' | 'idle' | 'draining' | 'terminated' | 'error';
 export type ComputeHardwareType = 'cpu' | 'gpu';
@@ -89,17 +82,12 @@ export interface ComputeManagerConfig {
   statusPollIntervalMs: number;
 }
 
-// ============================================================================
-// Compute Node Manager
-// ============================================================================
-
 export class ComputeNodeManager {
-  private config: ComputeManagerConfig;
   private nodes = new Map<string, ComputeNode>();
   private queues = new Map<string, QueuedRequest[]>();
   private pollers = new Map<string, NodeJS.Timer>();
 
-  constructor(config: ComputeManagerConfig) { this.config = config; }
+  constructor(private config: ComputeManagerConfig) {}
 
   registerNode(cfg: ComputeNodeConfig): ComputeNode {
     const node: ComputeNode = { config: cfg, status: 'cold', activeRequests: 0, totalRequests: 0 };
@@ -309,10 +297,6 @@ export class ComputeNodeManager {
   }
 }
 
-// ============================================================================
-// Cloud Model Types
-// ============================================================================
-
 export interface CloudModelInfo {
   id: string;
   name: string;
@@ -336,19 +320,13 @@ export interface CloudIntegrationConfig {
   enableBroadcasting?: boolean;
 }
 
-// ============================================================================
-// Cloud Model Broadcaster
-// ============================================================================
-
 export class CloudModelBroadcaster {
-  private config: CloudIntegrationConfig;
   private registry: InferenceRegistrySDK | null = null;
   private models = new Map<string, CloudModelInfo>();
   private lastSync = 0;
   private syncInterval: number;
 
-  constructor(config: CloudIntegrationConfig) {
-    this.config = config;
+  constructor(private config: CloudIntegrationConfig) {
     this.syncInterval = config.syncIntervalMs ?? 60000;
     if (config.modelRegistryAddress && config.enableBroadcasting) {
       this.registry = createInferenceRegistry({
@@ -433,16 +411,10 @@ export class CloudModelBroadcaster {
   isSynced(): boolean { return this.lastSync > 0; }
 }
 
-// ============================================================================
-// Cloud Provider Bridge
-// ============================================================================
-
 export class CloudProviderBridge {
-  private config: CloudIntegrationConfig;
   private broadcaster: CloudModelBroadcaster;
 
-  constructor(config: CloudIntegrationConfig) {
-    this.config = config;
+  constructor(private config: CloudIntegrationConfig) {
     this.broadcaster = new CloudModelBroadcaster(config);
   }
 
@@ -479,11 +451,20 @@ export class CloudProviderBridge {
     const data = await res.json() as { id: string; model: string; choices: Array<{ message: { content: string } }>; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } };
     return { id: data.id, model: data.model, content: data.choices[0]?.message.content ?? '', usage: { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens, totalTokens: data.usage.total_tokens } };
   }
-}
 
-// ============================================================================
-// Model Discovery
-// ============================================================================
+  async getStatus(): Promise<{ endpoint: string; modelCount: number; skillCount: number }> {
+    await this.broadcaster.sync();
+    return { endpoint: this.config.cloudEndpoint, modelCount: this.broadcaster.getModels().length, skillCount: 0 };
+  }
+
+  getAvailableSkills(): Array<{ id: string; name: string; description: string }> {
+    return [];
+  }
+
+  async executeSkill(_skillId: string, _input: string | Record<string, unknown>): Promise<unknown> {
+    throw new Error('A2A skills not implemented in cloud bridge');
+  }
+}
 
 export class ModelDiscovery {
   private cloudBridge: CloudProviderBridge | null = null;
@@ -515,10 +496,7 @@ export class ModelDiscovery {
   getComputeManager(): ComputeNodeManager | null { return this.computeManager; }
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
+// Factory functions
 export function createComputeNodeManager(config: ComputeManagerConfig): ComputeNodeManager { return new ComputeNodeManager(config); }
 export function createCloudBroadcaster(config: CloudIntegrationConfig): CloudModelBroadcaster { return new CloudModelBroadcaster(config); }
 export function createCloudBridge(config: CloudIntegrationConfig): CloudProviderBridge { return new CloudProviderBridge(config); }

@@ -16,7 +16,6 @@ const MOCK_CLOUD_MODELS: CloudModelInfo[] = [
     id: 'gpt-4o',
     name: 'GPT-4o',
     provider: 'OpenAI',
-    providerId: 'openai',
     modelType: 'llm',
     multiModal: true,
     contextWindow: 128000,
@@ -27,7 +26,6 @@ const MOCK_CLOUD_MODELS: CloudModelInfo[] = [
     id: 'claude-sonnet-4',
     name: 'Claude Sonnet 4',
     provider: 'Anthropic',
-    providerId: 'anthropic',
     modelType: 'llm',
     multiModal: true,
     contextWindow: 200000,
@@ -38,9 +36,7 @@ const MOCK_CLOUD_MODELS: CloudModelInfo[] = [
     id: 'flux-pro',
     name: 'FLUX Pro',
     provider: 'Black Forest Labs',
-    providerId: 'flux',
     modelType: 'image',
-    maxResolution: '1024x1024',
     pricePerImage: 0.05,
   },
 ];
@@ -293,13 +289,12 @@ describe('Error Handling', () => {
   });
 
   test('handles sync failure', async () => {
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = (() =>
-      Promise.resolve(new Response('Error', { status: 500 }))
-    ) as typeof fetch;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response('Error', { status: 500 }))) as unknown as typeof fetch;
 
     const broadcaster = createCloudBroadcaster(TEST_CONFIG);
     await expect(broadcaster.sync()).rejects.toThrow();
 
-    (globalThis as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
+    globalThis.fetch = originalFetch;
   });
 });
