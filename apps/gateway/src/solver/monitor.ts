@@ -18,80 +18,72 @@ export interface IntentEvent {
   transactionHash: string;
 }
 
-interface MonitorConfig {
-  chains: Array<{ chainId: number; name: string; rpcUrl: string }>;
-  intentCheckIntervalMs: number;
-}
-
 const OPEN_EVENT = parseAbiItem(
   'event Open(bytes32 indexed orderId, (address user, uint256 originChainId, uint32 openDeadline, uint32 fillDeadline, bytes32 orderId, (bytes32 token, uint256 amount, bytes32 recipient, uint256 chainId)[] maxSpent, (bytes32 token, uint256 amount, bytes32 recipient, uint256 chainId)[] minReceived, (uint64 destinationChainId, bytes32 destinationSettler, bytes originData)[] fillInstructions) order)'
 );
 
-function loadSettlerAddresses(): Record<number, `0x${string}`> {
-  const configPath = resolve(process.cwd(), '../../packages/config/contracts.json');
-  if (!existsSync(configPath)) return {};
+function loadSettlers(): Record<number, `0x${string}`> {
+  const path = resolve(process.cwd(), '../../packages/config/contracts.json');
+  if (!existsSync(path)) {
+    console.warn('⚠️ contracts.json not found');
+    return {};
+  }
   
-  const contracts = JSON.parse(readFileSync(configPath, 'utf-8'));
-  const addresses: Record<number, `0x${string}`> = {};
+  const contracts = JSON.parse(readFileSync(path, 'utf-8'));
+  const out: Record<number, `0x${string}`> = {};
 
-  // External chains
   for (const chain of Object.values(contracts.external || {})) {
     const c = chain as { chainId?: number; oif?: { inputSettler?: string } };
-    if (c.chainId && c.oif?.inputSettler) {
-      addresses[c.chainId] = c.oif.inputSettler as `0x${string}`;
-    }
+    if (c.chainId && c.oif?.inputSettler) out[c.chainId] = c.oif.inputSettler as `0x${string}`;
   }
-
-  // Jeju chains
   for (const net of ['testnet', 'mainnet'] as const) {
     const cfg = contracts[net];
-    if (cfg?.chainId && cfg?.oif?.inputSettler) {
-      addresses[cfg.chainId] = cfg.oif.inputSettler as `0x${string}`;
-    }
+    if (cfg?.chainId && cfg?.oif?.inputSettler) out[cfg.chainId] = cfg.oif.inputSettler as `0x${string}`;
   }
-
-  return addresses;
+  return out;
 }
 
-const SETTLER_ADDRESSES = loadSettlerAddresses();
+const SETTLERS = loadSettlers();
 
 export class EventMonitor extends EventEmitter {
-  private config: MonitorConfig;
-  private clients: Map<number, { public: PublicClient }> = new Map();
-  private running = false;
+  private chains: Array<{ chainId: number; name: string }>;
   private unwatchers: Array<() => void> = [];
+  private running = false;
 
-  constructor(config: MonitorConfig) {
+  constructor(config: { chains: Array<{ chainId: number; name: string }> }) {
     super();
-    this.config = config;
+    this.chains = config.chains;
   }
 
   async start(clients: Map<number, { public: PublicClient }>): Promise<void> {
-    this.clients = clients;
     this.running = true;
     console.log('👁️ Starting event monitor...');
 
-    for (const chain of this.config.chains) {
+    for (const chain of this.chains) {
       const client = clients.get(chain.chainId);
-      const settlerAddress = SETTLER_ADDRESSES[chain.chainId];
-      if (!client || !settlerAddress) continue;
+      const settler = SETTLERS[chain.chainId];
+      if (!client) continue;
+      if (!settler) {
+        console.warn(`   ⚠️ No settler for ${chain.name}, skipping`);
+        continue;
+      }
 
       const unwatch = client.public.watchContractEvent({
-        address: settlerAddress,
+        address: settler,
         abi: [OPEN_EVENT],
         eventName: 'Open',
-        onLogs: (logs) => logs.forEach(log => this.processOpenEvent(chain.chainId, log)),
-        onError: (error) => console.error(`Event watch error on ${chain.name}:`, error.message),
+        onLogs: (logs) => logs.forEach(log => this.processEvent(chain.chainId, log)),
+        onError: (err) => console.error(`Event error on ${chain.name}:`, err.message),
       });
 
       this.unwatchers.push(unwatch);
-      console.log(`   ✓ Watching ${chain.name} InputSettler`);
+      console.log(`   ✓ Watching ${chain.name}`);
     }
   }
 
   async stop(): Promise<void> {
     this.running = false;
-    this.unwatchers.forEach(unwatch => unwatch());
+    this.unwatchers.forEach(fn => fn());
     this.unwatchers = [];
   }
 
@@ -99,32 +91,31 @@ export class EventMonitor extends EventEmitter {
     return this.running;
   }
 
-  private processOpenEvent(chainId: number, log: { args: Record<string, unknown>; blockNumber: bigint; transactionHash: `0x${string}` }): void {
+  private processEvent(chainId: number, log: { args: Record<string, unknown>; blockNumber: bigint; transactionHash: `0x${string}` }): void {
     const args = log.args as {
       orderId: `0x${string}`;
       order: {
         user: `0x${string}`;
-        maxSpent: Array<{ token: `0x${string}`; amount: bigint; recipient: `0x${string}`; chainId: bigint }>;
+        maxSpent: Array<{ token: `0x${string}`; amount: bigint; chainId: bigint }>;
         minReceived: Array<{ token: `0x${string}`; amount: bigint; recipient: `0x${string}`; chainId: bigint }>;
         fillDeadline: number;
       };
     };
 
-    const order = args.order;
-    const maxSpent = order.maxSpent[0];
-    const minReceived = order.minReceived[0];
+    const spent = args.order.maxSpent[0];
+    const received = args.order.minReceived[0];
 
     this.emit('intent', {
       orderId: args.orderId,
-      user: order.user,
+      user: args.order.user,
       sourceChain: chainId,
-      destinationChain: Number(minReceived?.chainId || 0),
-      inputToken: maxSpent?.token.slice(0, 42) || '0x',
-      inputAmount: maxSpent?.amount.toString() || '0',
-      outputToken: minReceived?.token.slice(0, 42) || '0x',
-      outputAmount: minReceived?.amount.toString() || '0',
-      recipient: minReceived?.recipient.slice(0, 42) || '0x',
-      deadline: order.fillDeadline,
+      destinationChain: Number(received?.chainId || 0),
+      inputToken: spent?.token.slice(0, 42) || '0x',
+      inputAmount: spent?.amount.toString() || '0',
+      outputToken: received?.token.slice(0, 42) || '0x',
+      outputAmount: received?.amount.toString() || '0',
+      recipient: received?.recipient.slice(0, 42) || '0x',
+      deadline: args.order.fillDeadline,
       blockNumber: log.blockNumber,
       transactionHash: log.transactionHash,
     } as IntentEvent);
