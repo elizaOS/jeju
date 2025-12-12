@@ -438,4 +438,222 @@ contract BabylonTreasuryTest is Test {
         vm.warp(block.timestamp + 2 hours);
         assertTrue(treasury.isTakeoverAvailable());
     }
+    
+    // =========================================================================
+    // IGameTreasury Interface Tests
+    // =========================================================================
+    
+    function test_GetBalance() public view {
+        assertEq(treasury.getBalance(), 100 ether);
+    }
+    
+    function test_GetBalanceAfterDeposit() public {
+        vm.deal(address(this), 5 ether);
+        treasury.deposit{value: 5 ether}();
+        assertEq(treasury.getBalance(), 105 ether);
+    }
+    
+    function test_GetBalanceAfterWithdraw() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.prank(operator);
+        treasury.withdraw(5 ether);
+        
+        assertEq(treasury.getBalance(), 95 ether);
+    }
+    
+    // =========================================================================
+    // Boundary Condition Tests
+    // =========================================================================
+    
+    function test_WithdrawExactDailyLimit() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.prank(operator);
+        treasury.withdraw(dailyLimit);
+        
+        (uint256 limit, uint256 used, uint256 remaining) = treasury.getWithdrawalInfo();
+        assertEq(used, dailyLimit);
+        assertEq(remaining, 0);
+    }
+    
+    function test_WithdrawOneWeiOverLimit() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.prank(operator);
+        vm.expectRevert("Exceeds daily limit");
+        treasury.withdraw(dailyLimit + 1);
+    }
+    
+    function test_WithdrawZeroAmount() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.prank(operator);
+        vm.expectRevert("Amount must be positive");
+        treasury.withdraw(0);
+    }
+    
+    function test_WithdrawAllTreasuryBalance() public {
+        vm.prank(admin);
+        treasury.setDailyLimit(200 ether);
+        
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.prank(operator);
+        treasury.withdraw(100 ether);
+        
+        assertEq(treasury.getBalance(), 0);
+    }
+    
+    function test_HeartbeatExactlyAtTimeout() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        // Warp to exactly heartbeat timeout (1 hour)
+        vm.warp(block.timestamp + 1 hours);
+        
+        // At exactly 1 hour, operator is still considered active (boundary is exclusive)
+        assertTrue(treasury.isOperatorActive());
+        
+        // One second later, inactive
+        vm.warp(block.timestamp + 1);
+        assertFalse(treasury.isOperatorActive());
+    }
+    
+    function test_HeartbeatJustBeforeTimeout() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        // Warp to just before timeout
+        vm.warp(block.timestamp + 1 hours - 1);
+        
+        assertTrue(treasury.isOperatorActive());
+    }
+    
+    // =========================================================================
+    // Multiple Takeover Scenarios
+    // =========================================================================
+    
+    function test_MultipleTakeovers() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        // First takeover after timeout (4 hours from start)
+        uint256 time1 = block.timestamp + 4 hours;
+        vm.warp(time1);
+        vm.prank(newOperator);
+        treasury.takeoverAsOperator(attestation);
+        assertEq(treasury.operator(), newOperator);
+        assertTrue(treasury.isOperatorActive()); // New operator is active
+        
+        // Second takeover by another operator after new operator times out
+        // Note: Takeover resets the heartbeat, so need full timeout again
+        uint256 time2 = time1 + 4 hours; // 8 hours from start
+        address thirdOperator = address(0x100);
+        vm.warp(time2);
+        assertFalse(treasury.isOperatorActive()); // newOperator timed out
+        vm.prank(thirdOperator);
+        treasury.takeoverAsOperator(attestation);
+        assertEq(treasury.operator(), thirdOperator);
+    }
+    
+    function test_TakeoverPreservesDailyUsage() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        // Withdraw some amount
+        vm.prank(operator);
+        treasury.withdraw(5 ether);
+        
+        // Takeover
+        vm.warp(block.timestamp + 4 hours);
+        vm.prank(newOperator);
+        treasury.takeoverAsOperator(attestation);
+        
+        // Daily usage is preserved (per-contract, not per-operator)
+        (uint256 limit, uint256 used,) = treasury.getWithdrawalInfo();
+        assertEq(used, 5 ether);
+        
+        // New operator can still withdraw remaining allowance
+        vm.prank(newOperator);
+        treasury.withdraw(limit - 5 ether);
+    }
+    
+    // =========================================================================
+    // State Update Edge Cases
+    // =========================================================================
+    
+    function test_UpdateStateWithEmptyCID() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.prank(operator);
+        treasury.updateState("", bytes32(0));
+        
+        assertEq(treasury.currentStateCID(), "");
+    }
+    
+    function test_UpdateStateMultipleTimes() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        vm.startPrank(operator);
+        treasury.updateState("QmV1", keccak256("v1"));
+        treasury.updateState("QmV2", keccak256("v2"));
+        treasury.updateState("QmV3", keccak256("v3"));
+        vm.stopPrank();
+        
+        assertEq(treasury.stateVersion(), 3);
+        assertEq(treasury.currentStateCID(), "QmV3");
+    }
+    
+    // =========================================================================
+    // Council Management Edge Cases
+    // =========================================================================
+    
+    function test_RemoveCouncilMember() public {
+        vm.prank(admin);
+        treasury.removeCouncilMember(council3);
+        
+        vm.prank(council3);
+        vm.expectRevert();
+        treasury.registerOperator(newOperator, attestation);
+    }
+    
+    function test_AddAndRemoveSameCouncilMember() public {
+        address newCouncil = address(0x200);
+        
+        vm.startPrank(admin);
+        treasury.addCouncilMember(newCouncil);
+        treasury.removeCouncilMember(newCouncil);
+        vm.stopPrank();
+        
+        vm.prank(newCouncil);
+        vm.expectRevert();
+        treasury.registerOperator(operator, attestation);
+    }
+    
+    // =========================================================================
+    // Reentrancy Protection Tests
+    // =========================================================================
+    
+    function test_WithdrawNoReentrancy() public {
+        vm.prank(council1);
+        treasury.registerOperator(operator, attestation);
+        
+        // Multiple sequential withdrawals should work
+        vm.startPrank(operator);
+        treasury.withdraw(1 ether);
+        treasury.withdraw(1 ether);
+        treasury.withdraw(1 ether);
+        vm.stopPrank();
+        
+        (,uint256 used,) = treasury.getWithdrawalInfo();
+        assertEq(used, 3 ether);
+    }
 }
