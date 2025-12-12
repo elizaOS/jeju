@@ -235,16 +235,11 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
 
     // ============ XLP Registration ============
 
-    /**
-     * @notice Register as an XLP with initial stake
-     * @param chains Array of chain IDs to support
-     */
     function register(uint256[] calldata chains) external payable nonReentrant whenNotPaused {
         if (msg.value < MIN_STAKE) revert InsufficientStake();
         if (stakes[msg.sender].isActive) revert AlreadyRegistered();
         if (chains.length > MAX_CHAINS) revert TooManyChains();
 
-        // Verify all chains have registered paymasters
         for (uint256 i = 0; i < chains.length; i++) {
             if (l2Paymasters[chains[i]] == address(0)) revert ChainNotSupported();
         }
@@ -265,9 +260,6 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
         emit XLPRegistered(msg.sender, msg.value, chains);
     }
 
-    /**
-     * @notice Add more stake
-     */
     function addStake() external payable nonReentrant whenNotPaused {
         if (!stakes[msg.sender].isActive) revert NotRegistered();
         if (msg.value == 0) revert InvalidAmount();
@@ -278,10 +270,6 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
         emit StakeDeposited(msg.sender, msg.value, stakes[msg.sender].stakedAmount);
     }
 
-    /**
-     * @notice Start unbonding stake
-     * @param amount Amount to unbond
-     */
     function startUnbonding(uint256 amount) external nonReentrant whenNotPaused {
         XLPStake storage stake = stakes[msg.sender];
 
@@ -289,7 +277,6 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
         if (stake.unbondingAmount > 0) revert UnbondingInProgress();
         if (amount > stake.stakedAmount) revert InsufficientStake();
 
-        // Must keep minimum stake if staying active
         uint256 remainingStake = stake.stakedAmount - amount;
         if (remainingStake > 0 && remainingStake < MIN_STAKE) {
             revert InsufficientStake();
@@ -299,27 +286,19 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
         stake.unbondingAmount = amount;
         stake.unbondingStartTime = block.timestamp;
 
-        // If fully unbonding, deactivate XLP
         if (stake.stakedAmount == 0) {
             stake.isActive = false;
             activeXLPCount--;
         }
 
-        // Use XLP-specific unbonding period (max of all supported chains)
-        uint256 unbondingPeriod = getXLPUnbondingPeriod(msg.sender);
-        emit UnbondingStarted(msg.sender, amount, block.timestamp + unbondingPeriod);
+        emit UnbondingStarted(msg.sender, amount, block.timestamp + getXLPUnbondingPeriod(msg.sender));
     }
 
-    /**
-     * @notice Complete unbonding and withdraw stake
-     * @dev Uses the XLP's effective unbonding period based on their supported chains
-     */
     function completeUnbonding() external nonReentrant {
         XLPStake storage stake = stakes[msg.sender];
 
         if (stake.unbondingAmount == 0) revert NoUnbondingStake();
 
-        // Use XLP-specific unbonding period
         uint256 unbondingPeriod = getXLPUnbondingPeriod(msg.sender);
         if (block.timestamp < stake.unbondingStartTime + unbondingPeriod) {
             revert UnbondingNotComplete();
@@ -336,9 +315,6 @@ contract L1StakeManager is Ownable, ReentrancyGuard, Pausable {
         emit StakeWithdrawn(msg.sender, amount);
     }
 
-    /**
-     * @notice Cancel unbonding and restake
-     */
     function cancelUnbonding() external nonReentrant whenNotPaused {
         XLPStake storage stake = stakes[msg.sender];
 
