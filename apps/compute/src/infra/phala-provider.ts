@@ -272,7 +272,7 @@ export class PhalaProvider implements TEEProvider {
    * Provision a lightweight CVM for backend serving (no GPU)
    * Ideal for game servers, APIs, static sites
    */
-  async provisionBackend(options: {
+  async provisionBackend(config: {
     dockerImage: string;
     memoryGb?: number;
     cpuCores?: number;
@@ -280,23 +280,21 @@ export class PhalaProvider implements TEEProvider {
     healthCheck?: { path: string; interval: number; timeout: number };
   }): Promise<TEENode> {
     return this.provision({
-      dockerImage: options.dockerImage,
-      memoryGb: options.memoryGb ?? 2,
-      cpuCores: options.cpuCores ?? 1,
-      env: options.env,
-      healthCheck: options.healthCheck ?? {
-        path: '/health',
-        interval: 30,
-        timeout: 10,
-      },
+      dockerImage: config.dockerImage,
+      memoryGb: config.memoryGb ?? 2,
+      cpuCores: config.cpuCores ?? 1,
+      env: config.env,
+      healthCheck: config.healthCheck ?? PhalaProvider.DEFAULT_HEALTH_CHECK,
     });
   }
 
+  /** Default health check configuration */
+  private static readonly DEFAULT_HEALTH_CHECK = { path: '/health', interval: 30, timeout: 10 };
+
   /**
    * Provision a game server with configurable image
-   * @param gameConfig Game-specific configuration
    */
-  async provisionGameServer(gameConfig: {
+  async provisionGameServer(config: {
     dockerImage: string;
     memoryGb?: number;
     cpuCores?: number;
@@ -304,37 +302,27 @@ export class PhalaProvider implements TEEProvider {
     healthCheck?: { path: string; interval: number; timeout: number };
   }): Promise<TEENode> {
     return this.provisionBackend({
-      dockerImage: gameConfig.dockerImage,
-      memoryGb: gameConfig.memoryGb ?? 4,
-      cpuCores: gameConfig.cpuCores ?? 2,
-      env: {
-        NODE_ENV: 'production',
-        ...gameConfig.env,
-      },
-      healthCheck: gameConfig.healthCheck ?? {
-        path: '/health',
-        interval: 30,
-        timeout: 10,
-      },
+      dockerImage: config.dockerImage,
+      memoryGb: config.memoryGb ?? 4,
+      cpuCores: config.cpuCores ?? 2,
+      env: { NODE_ENV: 'production', ...config.env },
+      healthCheck: config.healthCheck ?? PhalaProvider.DEFAULT_HEALTH_CHECK,
     });
   }
 
   /**
    * Provision for static frontend serving
    */
-  async provisionStaticServer(options: {
+  async provisionStaticServer(config: {
     ipfsCid: string;
     dockerImage?: string;
     env?: Record<string, string>;
   }): Promise<TEENode> {
     return this.provisionBackend({
-      dockerImage: options.dockerImage ?? 'ghcr.io/jeju-ai/static-server:latest',
+      dockerImage: config.dockerImage ?? 'ghcr.io/jeju-ai/static-server:latest',
       memoryGb: 1,
       cpuCores: 1,
-      env: {
-        IPFS_CID: options.ipfsCid,
-        ...options?.env,
-      },
+      env: { IPFS_CID: config.ipfsCid, ...config.env },
     });
   }
 
