@@ -3,7 +3,10 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { LiquidityManager } from './liquidity';
 import { StrategyEngine } from './strategy';
 import { EventMonitor, type IntentEvent } from './monitor';
-import { OUTPUT_SETTLERS, OUTPUT_SETTLER_ABI, ERC20_APPROVE_ABI, isNativeToken } from './contracts';
+import {
+  OUTPUT_SETTLERS, OUTPUT_SETTLER_ABI, ERC20_APPROVE_ABI, isNativeToken,
+  INPUT_SETTLERS, INPUT_SETTLER_ABI,
+} from './contracts';
 import { getChain } from '../lib/chains.js';
 
 interface SolverConfig {
@@ -11,6 +14,18 @@ interface SolverConfig {
   minProfitBps: number;
   maxGasPrice: bigint;
   maxIntentSize: string;
+  settlementCheckIntervalMs?: number;
+  maxSettlementRetries?: number;
+}
+
+interface PendingSettlement {
+  orderId: string;
+  sourceChain: number;
+  destinationChain: number;
+  inputToken: string;
+  inputAmount: string;
+  filledAt: number;
+  retries: number;
 }
 
 export class SolverAgent {
@@ -20,6 +35,8 @@ export class SolverAgent {
   private monitor: EventMonitor;
   private clients = new Map<number, { public: PublicClient; wallet?: WalletClient }>();
   private pending = new Map<string, Promise<void>>();
+  private pendingSettlements = new Map<string, PendingSettlement>();
+  private settlementTimer: ReturnType<typeof setInterval> | null = null;
   private running = false;
 
   constructor(config: SolverConfig, liquidity: LiquidityManager, strategy: StrategyEngine, monitor: EventMonitor) {
@@ -46,13 +63,111 @@ export class SolverAgent {
     await this.liquidity.initialize(this.clients);
     this.monitor.on('intent', (e: IntentEvent) => this.handleIntent(e));
     await this.monitor.start(this.clients);
+    this.startSettlementWatcher();
     this.running = true;
   }
 
   async stop(): Promise<void> {
     this.running = false;
+    if (this.settlementTimer) {
+      clearInterval(this.settlementTimer);
+      this.settlementTimer = null;
+    }
     await this.monitor.stop();
     await Promise.all(this.pending.values());
+  }
+
+  private startSettlementWatcher(): void {
+    const intervalMs = this.config.settlementCheckIntervalMs || 30_000;
+    console.log(`⏰ Settlement watcher started (${intervalMs / 1000}s interval)`);
+
+    this.settlementTimer = setInterval(() => {
+      this.checkPendingSettlements().catch(err => {
+        console.error('Settlement check error:', err);
+      });
+    }, intervalMs);
+  }
+
+  private async checkPendingSettlements(): Promise<void> {
+    if (this.pendingSettlements.size === 0) return;
+
+    console.log(`\n🔍 Checking ${this.pendingSettlements.size} pending settlements...`);
+    const maxRetries = this.config.maxSettlementRetries || 48; // ~24 hours at 30min intervals
+
+    for (const [orderId, settlement] of this.pendingSettlements) {
+      const result = await this.trySettle(settlement);
+
+      if (result.settled) {
+        console.log(`   💰 Settled ${orderId.slice(0, 10)}... tx: ${result.txHash}`);
+        this.pendingSettlements.delete(orderId);
+      } else if (result.reason === 'not_ready') {
+        // Still waiting for attestation or claim delay
+      } else if (result.reason === 'already_settled') {
+        console.log(`   ✓ ${orderId.slice(0, 10)}... already settled`);
+        this.pendingSettlements.delete(orderId);
+      } else {
+        settlement.retries++;
+        if (settlement.retries >= maxRetries) {
+          console.log(`   ⚠️ ${orderId.slice(0, 10)}... max retries reached, abandoning`);
+          this.pendingSettlements.delete(orderId);
+        }
+      }
+    }
+  }
+
+  private async trySettle(settlement: PendingSettlement): Promise<{
+    settled: boolean;
+    txHash?: string;
+    reason?: 'not_ready' | 'already_settled' | 'error' | 'no_settler' | 'no_wallet';
+  }> {
+    const client = this.clients.get(settlement.sourceChain);
+    if (!client?.wallet) return { settled: false, reason: 'no_wallet' };
+
+    const settler = INPUT_SETTLERS[settlement.sourceChain] ||
+      process.env[`OIF_INPUT_SETTLER_${settlement.sourceChain}`] as `0x${string}`;
+    if (!settler) return { settled: false, reason: 'no_settler' };
+
+    // Check if already settled
+    const order = await client.public.readContract({
+      address: settler,
+      abi: INPUT_SETTLER_ABI,
+      functionName: 'getOrder',
+      args: [settlement.orderId as `0x${string}`],
+    });
+
+    if (order.filled) {
+      return { settled: false, reason: 'already_settled' };
+    }
+
+    // Check if can settle (oracle attested + claim delay passed)
+    const canSettle = await client.public.readContract({
+      address: settler,
+      abi: INPUT_SETTLER_ABI,
+      functionName: 'canSettle',
+      args: [settlement.orderId as `0x${string}`],
+    });
+
+    if (!canSettle) {
+      return { settled: false, reason: 'not_ready' };
+    }
+
+    // Execute settlement
+    const chain = getChain(settlement.sourceChain);
+    const tx = await client.wallet.writeContract({
+      chain,
+      account: client.wallet.account!,
+      address: settler,
+      abi: INPUT_SETTLER_ABI,
+      functionName: 'settle',
+      args: [settlement.orderId as `0x${string}`],
+    });
+
+    const receipt = await client.public.waitForTransactionReceipt({ hash: tx });
+    if (receipt.status === 'reverted') {
+      return { settled: false, reason: 'error' };
+    }
+
+    return { settled: true, txHash: tx };
   }
 
   isRunning(): boolean {
@@ -154,6 +269,23 @@ export class SolverAgent {
     if (receipt.status === 'reverted') return { success: false, error: 'Reverted' };
 
     await this.liquidity.recordFill(e.destinationChain, e.outputToken, e.outputAmount);
+
+    // Track for settlement claiming
+    this.pendingSettlements.set(e.orderId, {
+      orderId: e.orderId,
+      sourceChain: e.sourceChain,
+      destinationChain: e.destinationChain,
+      inputToken: e.inputToken,
+      inputAmount: e.inputAmount,
+      filledAt: Date.now(),
+      retries: 0,
+    });
+
     return { success: true, txHash: fillTx };
+  }
+
+  /** Get pending settlements for monitoring */
+  getPendingSettlements(): PendingSettlement[] {
+    return Array.from(this.pendingSettlements.values());
   }
 }

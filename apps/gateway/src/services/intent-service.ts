@@ -6,6 +6,7 @@ import type {
   SupportedChainId
 } from '@jejunetwork/types/oif';
 import * as chainService from './chain-service';
+import { quoteService } from './quote-service.js';
 import { ZERO_ADDRESS } from '../lib/contracts.js';
 
 // In-memory cache for intents
@@ -157,39 +158,7 @@ export class IntentService {
   }
 
   async getQuotes(params: QuoteParams): Promise<IntentQuote[]> {
-    const quotes: IntentQuote[] = [];
-    
-    const quoteId = keccak256(
-      encodeAbiParameters(
-        parseAbiParameters('uint256, uint256, uint256'),
-        [BigInt(params.sourceChain), BigInt(params.destinationChain), BigInt(Date.now())]
-      )
-    );
-
-    const inputAmount = BigInt(params.amount);
-    const isL2ToL2 = params.sourceChain > 1 && params.destinationChain > 1;
-    const feePercent = isL2ToL2 ? 30 : 50;
-    const fee = (inputAmount * BigInt(feePercent)) / 10000n;
-    const outputAmount = inputAmount - fee;
-
-    quotes.push({
-      quoteId,
-      sourceChainId: params.sourceChain as SupportedChainId,
-      destinationChainId: params.destinationChain as SupportedChainId,
-      sourceToken: params.sourceToken as `0x${string}`,
-      destinationToken: params.destinationToken as `0x${string}`,
-      inputAmount: params.amount,
-      outputAmount: outputAmount.toString(),
-      fee: fee.toString(),
-      feePercent,
-      priceImpact: 10,
-      estimatedFillTimeSeconds: isL2ToL2 ? 15 : 30,
-      validUntil: Math.floor(Date.now() / 1000) + 300,
-      solver: ZERO_ADDRESS,
-      solverReputation: 0,
-    });
-
-    return quotes;
+    return quoteService.getQuotes(params);
   }
 
   async getIntent(intentId: string): Promise<Intent | undefined> {

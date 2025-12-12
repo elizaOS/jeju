@@ -26,6 +26,68 @@ export const OUTPUT_SETTLER_ABI = [
   },
 ] as const;
 
+export const INPUT_SETTLER_ABI = [
+  {
+    type: 'function',
+    name: 'settle',
+    inputs: [{ name: 'orderId', type: 'bytes32' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'canSettle',
+    inputs: [{ name: 'orderId', type: 'bytes32' }],
+    outputs: [{ type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'getOrder',
+    inputs: [{ name: 'orderId', type: 'bytes32' }],
+    outputs: [{
+      type: 'tuple',
+      components: [
+        { name: 'user', type: 'address' },
+        { name: 'inputToken', type: 'address' },
+        { name: 'inputAmount', type: 'uint256' },
+        { name: 'outputToken', type: 'address' },
+        { name: 'outputAmount', type: 'uint256' },
+        { name: 'destinationChainId', type: 'uint256' },
+        { name: 'recipient', type: 'address' },
+        { name: 'maxFee', type: 'uint256' },
+        { name: 'openDeadline', type: 'uint32' },
+        { name: 'fillDeadline', type: 'uint32' },
+        { name: 'solver', type: 'address' },
+        { name: 'filled', type: 'bool' },
+        { name: 'refunded', type: 'bool' },
+        { name: 'createdBlock', type: 'uint256' },
+      ],
+    }],
+    stateMutability: 'view',
+  },
+] as const;
+
+export const ORACLE_ABI = [
+  {
+    type: 'function',
+    name: 'hasAttested',
+    inputs: [{ name: 'orderId', type: 'bytes32' }],
+    outputs: [{ type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'submitAttestation',
+    inputs: [
+      { name: 'orderId', type: 'bytes32' },
+      { name: 'proof', type: 'bytes' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const;
+
 export const ERC20_APPROVE_ABI = [{
   type: 'function',
   name: 'approve',
@@ -36,7 +98,7 @@ export const ERC20_APPROVE_ABI = [{
 
 interface ContractConfig {
   chainId?: number;
-  oif?: { inputSettler?: string; outputSettler?: string };
+  oif?: { inputSettler?: string; outputSettler?: string; oracle?: string };
 }
 
 function loadContractsJson(): Record<string, ContractConfig> {
@@ -45,7 +107,9 @@ function loadContractsJson(): Record<string, ContractConfig> {
   return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
-function loadSettlers(key: 'inputSettler' | 'outputSettler'): Record<number, `0x${string}`> {
+type OifContractKey = 'inputSettler' | 'outputSettler' | 'oracle';
+
+function loadOifContracts(key: OifContractKey): Record<number, `0x${string}`> {
   const contracts = loadContractsJson();
   const out: Record<number, `0x${string}`> = {};
 
@@ -60,8 +124,9 @@ function loadSettlers(key: 'inputSettler' | 'outputSettler'): Record<number, `0x
   return out;
 }
 
-export const INPUT_SETTLERS = loadSettlers('inputSettler');
-export const OUTPUT_SETTLERS = loadSettlers('outputSettler');
+export const INPUT_SETTLERS = loadOifContracts('inputSettler');
+export const OUTPUT_SETTLERS = loadOifContracts('outputSettler');
+export const ORACLES = loadOifContracts('oracle');
 
 /** Convert bytes32 address to 0x address format */
 export function bytes32ToAddress(b32: `0x${string}`): `0x${string}` {
@@ -73,3 +138,4 @@ export function isNativeToken(addr: string): boolean {
   return addr === '0x0000000000000000000000000000000000000000' ||
          addr === '0x' || !addr;
 }
+
