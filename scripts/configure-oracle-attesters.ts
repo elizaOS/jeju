@@ -85,7 +85,7 @@ function getDeployedChains(): ChainDeployment[] {
     .map(([id, d]) => ({ ...d, chainId: parseInt(id) }));
 }
 
-function isTestnet(chainId: number): boolean {
+function _isTestnet(chainId: number): boolean {
   return TESTNET_CHAIN_IDS.includes(chainId);
 }
 

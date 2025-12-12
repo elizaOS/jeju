@@ -1,4 +1,4 @@
-import { type PublicClient, parseAbiItem } from 'viem';
+import { type PublicClient } from 'viem';
 import { EventEmitter } from 'events';
 import { INPUT_SETTLERS, bytes32ToAddress } from './contracts';
 
@@ -17,9 +17,53 @@ export interface IntentEvent {
   transactionHash: string;
 }
 
-const OPEN_EVENT = parseAbiItem(
-  'event Open(bytes32 indexed orderId, (address user, uint256 originChainId, uint32 openDeadline, uint32 fillDeadline, bytes32 orderId, (bytes32 token, uint256 amount, bytes32 recipient, uint256 chainId)[] maxSpent, (bytes32 token, uint256 amount, bytes32 recipient, uint256 chainId)[] minReceived, (uint64 destinationChainId, bytes32 destinationSettler, bytes originData)[] fillInstructions) order)'
-);
+const OPEN_EVENT = {
+  type: 'event',
+  name: 'Open',
+  inputs: [
+    { name: 'orderId', type: 'bytes32', indexed: true },
+    {
+      name: 'order',
+      type: 'tuple',
+      components: [
+        { name: 'user', type: 'address' },
+        { name: 'originChainId', type: 'uint256' },
+        { name: 'openDeadline', type: 'uint32' },
+        { name: 'fillDeadline', type: 'uint32' },
+        { name: 'orderId', type: 'bytes32' },
+        {
+          name: 'maxSpent',
+          type: 'tuple[]',
+          components: [
+            { name: 'token', type: 'bytes32' },
+            { name: 'amount', type: 'uint256' },
+            { name: 'recipient', type: 'bytes32' },
+            { name: 'chainId', type: 'uint256' },
+          ],
+        },
+        {
+          name: 'minReceived',
+          type: 'tuple[]',
+          components: [
+            { name: 'token', type: 'bytes32' },
+            { name: 'amount', type: 'uint256' },
+            { name: 'recipient', type: 'bytes32' },
+            { name: 'chainId', type: 'uint256' },
+          ],
+        },
+        {
+          name: 'fillInstructions',
+          type: 'tuple[]',
+          components: [
+            { name: 'destinationChainId', type: 'uint64' },
+            { name: 'destinationSettler', type: 'bytes32' },
+            { name: 'originData', type: 'bytes' },
+          ],
+        },
+      ],
+    },
+  ],
+} as const;
 
 interface EventArgs {
   orderId?: `0x${string}`;

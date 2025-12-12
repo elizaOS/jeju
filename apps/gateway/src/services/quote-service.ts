@@ -14,7 +14,7 @@ import { getRpcUrl, IS_TESTNET } from '../config/networks.js';
 import { SOLVER_REGISTRY_ADDRESS } from '../config/contracts.js';
 import { ZERO_ADDRESS } from '../lib/contracts.js';
 import type { IntentQuote, SupportedChainId } from '@jejunetwork/types/oif';
-import { keccak256, encodeAbiParameters, parseAbiParameters } from 'viem';
+import { keccak256, encodePacked } from 'viem';
 
 const SOLVER_REGISTRY_ABI = [
   {
@@ -241,8 +241,8 @@ export async function getQuotes(params: QuoteParams): Promise<IntentQuote[]> {
     }
 
     const quoteId = keccak256(
-      encodeAbiParameters(
-        parseAbiParameters('address, uint256, uint256, uint256'),
+      encodePacked(
+        ['address', 'uint256', 'uint256', 'uint256'],
         [solver.address, BigInt(sourceChain), BigInt(destinationChain), BigInt(Date.now())]
       )
     );
@@ -273,8 +273,8 @@ export async function getQuotes(params: QuoteParams): Promise<IntentQuote[]> {
     const outputAmount = inputAmount - fee;
 
     const quoteId = keccak256(
-      encodeAbiParameters(
-        parseAbiParameters('uint256, uint256, uint256'),
+      encodePacked(
+        ['uint256', 'uint256', 'uint256'],
         [BigInt(sourceChain), BigInt(destinationChain), BigInt(Date.now())]
       )
     );

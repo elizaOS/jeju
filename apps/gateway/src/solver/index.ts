@@ -37,3 +37,5 @@ async function main() {
 main().catch(console.error);
 
 export { SolverAgent, LiquidityManager, EventMonitor, StrategyEngine };
+export * from './metrics';
+export * from './contracts';
