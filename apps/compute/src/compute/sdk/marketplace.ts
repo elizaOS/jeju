@@ -155,61 +155,18 @@ export class ComputeMarketplace {
     });
   }
 
-  async getLLMs(): Promise<RegisteredModel[]> {
-    return this.registry.getLLMs();
-  }
+  async getLLMs(): Promise<RegisteredModel[]> { return this.registry.getLLMs(); }
+  async getImageGenerators(): Promise<RegisteredModel[]> { return this.registry.getImageGenerators(); }
+  async getVideoGenerators(): Promise<RegisteredModel[]> { return this.registry.getVideoGenerators(); }
+  async getAudioGenerators(): Promise<RegisteredModel[]> { return this.registry.getAudioGenerators(); }
+  async getSpeechToTextModels(): Promise<RegisteredModel[]> { return this.registry.getSpeechToTextModels(); }
+  async getTextToSpeechModels(): Promise<RegisteredModel[]> { return this.registry.getTextToSpeechModels(); }
+  async getEmbeddingModels(): Promise<RegisteredModel[]> { return this.registry.getEmbeddingModels(); }
+  async getMultimodalModels(): Promise<RegisteredModel[]> { return this.registry.getMultimodalModels(); }
+  async discoverModels(filter: ModelDiscoveryFilter): Promise<ModelDiscoveryResult[]> { return this.registry.discoverModels(filter); }
+  async getModel(modelId: string): Promise<RegisteredModel> { return this.registry.getModel(modelId); }
+  async getEndpoints(modelId: string): Promise<ModelEndpoint[]> { return this.registry.getEndpoints(modelId); }
 
-  /** Get all image generation models */
-  async getImageGenerators(): Promise<RegisteredModel[]> {
-    return this.registry.getImageGenerators();
-  }
-
-  /** Get all video generation models */
-  async getVideoGenerators(): Promise<RegisteredModel[]> {
-    return this.registry.getVideoGenerators();
-  }
-
-  /** Get all audio generation models */
-  async getAudioGenerators(): Promise<RegisteredModel[]> {
-    return this.registry.getAudioGenerators();
-  }
-
-  /** Get all speech-to-text models */
-  async getSpeechToTextModels(): Promise<RegisteredModel[]> {
-    return this.registry.getSpeechToTextModels();
-  }
-
-  /** Get all text-to-speech models */
-  async getTextToSpeechModels(): Promise<RegisteredModel[]> {
-    return this.registry.getTextToSpeechModels();
-  }
-
-  /** Get all embedding models */
-  async getEmbeddingModels(): Promise<RegisteredModel[]> {
-    return this.registry.getEmbeddingModels();
-  }
-
-  /** Get all multimodal models */
-  async getMultimodalModels(): Promise<RegisteredModel[]> {
-    return this.registry.getMultimodalModels();
-  }
-
-  /** Discover models with custom filters */
-  async discoverModels(filter: ModelDiscoveryFilter): Promise<ModelDiscoveryResult[]> {
-    return this.registry.discoverModels(filter);
-  }
-
-  /** Get model by ID */
-  async getModel(modelId: string): Promise<RegisteredModel> {
-    return this.registry.getModel(modelId);
-  }
-
-  /** Get available endpoints for a model */
-  async getEndpoints(modelId: string): Promise<ModelEndpoint[]> {
-    return this.registry.getEndpoints(modelId);
-  }
-
-  /** Get the best endpoint for a model (considers load, TEE, latency) */
   async getBestEndpoint(modelId: string, options?: InferenceOptions): Promise<ModelEndpoint | null> {
     const endpoints = await this.registry.getEndpoints(modelId);
     if (endpoints.length === 0) return null;
@@ -684,13 +641,11 @@ export class ComputeMarketplace {
     description?: string
   ): ReturnType<typeof createX402PaymentRequirement> {
     const network = this.config.network ?? 'jeju-testnet';
-    const networkConfig = X402_NETWORK_CONFIGS[network];
 
     return createX402PaymentRequirement({
       network,
       recipient: this.config.paymentConfig?.ledgerManagerAddress ?? '0x0' as Address,
       amount: estimatedCost,
-      asset: networkConfig.usdc,
       resource: `/v1/inference/${modelId}`,
       description: description ?? `Inference request for ${modelId}`,
     });
@@ -758,17 +713,6 @@ export class ComputeMarketplace {
     return names;
   }
 
-  // ============================================================================
-  // Trigger Integration
-  // ============================================================================
-
-  /**
-   * Create a cron trigger for scheduled compute jobs
-   * @param name - Trigger name
-   * @param cronExpression - Cron expression (e.g., '* * * * *' for every minute)
-   * @param endpoint - Endpoint to call on trigger
-   * @param options - Additional options
-   */
   async createCronTrigger(
     name: string,
     cronExpression: string,
@@ -806,12 +750,6 @@ export class ComputeMarketplace {
     });
   }
 
-  /**
-   * Create a webhook trigger
-   * @param name - Trigger name
-   * @param webhookPath - Path for webhook (e.g., '/webhooks/my-trigger')
-   * @param endpoint - Endpoint to call on trigger
-   */
   async createWebhookTrigger(
     name: string,
     webhookPath: string,
@@ -847,12 +785,6 @@ export class ComputeMarketplace {
     });
   }
 
-  /**
-   * Create an event trigger
-   * @param name - Trigger name
-   * @param eventTypes - Event types to listen for
-   * @param endpoint - Endpoint to call on trigger
-   */
   async createEventTrigger(
     name: string,
     eventTypes: string[],
@@ -882,12 +814,6 @@ export class ComputeMarketplace {
     });
   }
 
-  /**
-   * Subscribe to a trigger with callback endpoint
-   * @param triggerId - ID of the trigger to subscribe to
-   * @param callbackEndpoint - Your endpoint to receive trigger callbacks
-   * @param options - Subscription options
-   */
   async subscribeTrigger(
     triggerId: string,
     callbackEndpoint: string,
@@ -923,9 +849,6 @@ export class ComputeMarketplace {
     return { subscriptionId: subscription.id };
   }
 
-  /**
-   * Get all registered triggers
-   */
   async getTriggers(filter?: {
     type?: 'cron' | 'webhook' | 'event';
     active?: boolean;
@@ -957,9 +880,6 @@ export class ComputeMarketplace {
     }));
   }
 
-  /**
-   * Execute a trigger manually
-   */
   async executeTrigger(
     triggerId: string,
     input?: Record<string, unknown>
