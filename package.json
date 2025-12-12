@@ -6,6 +6,9 @@
   "workspaces": [
     "packages/*",
     "apps/*",
+    "apps/*/app",
+    "apps/storage/da-server",
+    "apps/storage/pinning-api",
     "vendor/*",
     "vendor/*/packages/*"
   ],
@@ -46,6 +49,10 @@
     "test:wallet": "bun run scripts/test-all.ts --wallet --phase=wallet",
     "test:all": "bun run scripts/test-all.ts --wallet",
     "test:help": "bun run scripts/test-all.ts --help",
+    "test:load": "cd apps/gateway && bun test tests/load/pool-api-load.test.ts",
+    "verify:monitoring": "bun run scripts/verify-monitoring.ts",
+    "verify:rollback": "bun run scripts/test-rollback.ts",
+    "verify:security": "bun run scripts/check-vendor-security.ts",
     "synpress:cache": "cd packages/tests && bun run synpress:cache",
     "synpress:cache:clear": "rm -rf .synpress-cache",
     "clean": "bun run scripts/clean.ts",
