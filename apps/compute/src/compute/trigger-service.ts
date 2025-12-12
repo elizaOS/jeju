@@ -9,19 +9,15 @@ import type { Address } from 'viem';
 import { createX402Middleware, type X402Config } from './sdk/x402';
 
 const TRIGGER_REGISTRY_ABI = [
-  // Registration
   'function registerTrigger(string name, string description, uint8 triggerType, string cronExpression, string webhookPath, string[] eventTypes, string endpoint, string method, uint256 timeout, uint8 paymentMode, uint256 pricePerExecution) returns (bytes32)',
   'function registerTriggerWithAgent(string name, string description, uint8 triggerType, string cronExpression, string endpoint, uint256 timeout, uint8 paymentMode, uint256 pricePerExecution, uint256 agentId) returns (bytes32)',
   'function setTriggerActive(bytes32 triggerId, bool active)',
   'function updateTriggerEndpoint(bytes32 triggerId, string endpoint)',
   'function updateTriggerPricing(bytes32 triggerId, uint8 paymentMode, uint256 pricePerExecution)',
-  // Execution
   'function recordExecution(bytes32 triggerId, bool success, bytes32 outputHash) returns (bytes32)',
-  // Prepaid
   'function depositPrepaid() payable',
   'function withdrawPrepaid(uint256 amount)',
   'function prepaidBalances(address) view returns (uint256)',
-  // Views
   'function getTrigger(bytes32 triggerId) view returns (address owner, uint8 triggerType, string name, string endpoint, bool active, uint256 executionCount, uint256 lastExecutedAt, uint256 agentId)',
   'function getCronTriggers() view returns (bytes32[] triggerIds, string[] cronExpressions, string[] endpoints)',
   'function getActiveTriggers(uint8 triggerType) view returns (bytes32[])',
@@ -167,8 +163,6 @@ export class TriggerService {
   private activeExecutions = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private running = false;
-
-  // Stats
   private stats = {
     totalExecutions: 0,
     successfulExecutions: 0,
@@ -202,12 +196,7 @@ export class TriggerService {
     if (this.running) return;
     this.running = true;
 
-    console.log('[TriggerService] Starting...');
-
-    // Initial poll
     await this.poll();
-
-    // Start polling
     this.pollTimer = setInterval(() => this.poll(), this.config.pollIntervalMs);
     console.log('[TriggerService] Started');
   }
@@ -259,11 +248,7 @@ export class TriggerService {
 
     this.triggers.set(id, trigger);
 
-    if (trigger.webhookPath) {
-      this.webhookPaths.set(trigger.webhookPath, id);
-    }
-
-    console.log('[TriggerService] Created trigger:', id);
+    if (trigger.webhookPath) this.webhookPaths.set(trigger.webhookPath, id);
     return trigger;
   }
 
@@ -416,10 +401,8 @@ export class TriggerService {
     const now = new Date();
     const currentMinute = now.getHours() * 60 + now.getMinutes();
 
-    // Sync from chain
     await this.syncFromChain();
 
-    // Check cron triggers
     for (const trigger of this.triggers.values()) {
       if (trigger.type !== 'cron' || !trigger.cronExpression || !trigger.active) continue;
 
@@ -432,9 +415,7 @@ export class TriggerService {
           this.lastRunMinute.set(trigger.id, currentMinute);
           this.executionQueue.push(trigger);
         }
-      } catch {
-        // Invalid cron expression
-      }
+      } catch { /* invalid cron */ }
     }
 
     this.processQueue();
@@ -484,16 +465,13 @@ export class TriggerService {
 
     const duration = Date.now() - startTime;
 
-    // Update stats
     this.stats.totalExecutions++;
     if (success) this.stats.successfulExecutions++;
     else this.stats.failedExecutions++;
 
-    // Update trigger
     trigger.lastExecutedAt = Date.now();
     trigger.executionCount++;
 
-    // Record on-chain
     let txHash: string | undefined;
     if (trigger.onChainId && this.registry && this.signer) {
       try {
@@ -501,12 +479,9 @@ export class TriggerService {
         const tx = await this.registry.recordExecution(trigger.onChainId, success, outputHash);
         await tx.wait();
         txHash = tx.hash as string;
-      } catch {
-        // Non-fatal
-      }
+      } catch { /* non-fatal */ }
     }
 
-    // Generate proof
     const proof = await this.generateProof(trigger.id, executionId, output);
 
     console.log('[TriggerService] Execution complete:', {
@@ -586,12 +561,10 @@ export function createTriggerApi(service: TriggerService, x402Config?: X402Confi
   const app = new Hono();
   app.use('*', cors());
 
-  // Optional x402 middleware for paid endpoints
   if (x402Config?.enabled) {
     app.use('/triggers/*', createX402Middleware(x402Config));
   }
 
-  // List triggers
   app.get('/triggers', async (c) => {
     const type = c.req.query('type');
     const active = c.req.query('active');
@@ -604,34 +577,29 @@ export function createTriggerApi(service: TriggerService, x402Config?: X402Confi
     return c.json({ triggers });
   });
 
-  // Get trigger
   app.get('/triggers/:id', async (c) => {
     const trigger = service.getTrigger(c.req.param('id'));
     if (!trigger) return c.json({ error: 'Trigger not found' }, 404);
     return c.json({ trigger });
   });
 
-  // Create trigger
   app.post('/triggers', async (c) => {
     const body = await c.req.json<CreateTriggerRequest>();
     const trigger = await service.createTrigger(body);
     return c.json({ trigger }, 201);
   });
 
-  // Update trigger status
   app.patch('/triggers/:id/active', async (c) => {
     const { active } = await c.req.json<{ active: boolean }>();
     await service.setTriggerActive(c.req.param('id'), active);
     return c.json({ success: true });
   });
 
-  // Delete trigger
   app.delete('/triggers/:id', async (c) => {
     await service.deleteTrigger(c.req.param('id'));
     return c.json({ success: true });
   });
 
-  // Webhook endpoint
   app.post('/webhook/*', async (c) => {
     const path = c.req.path.replace('/webhook', '');
     const body = await c.req.json();
@@ -640,7 +608,6 @@ export function createTriggerApi(service: TriggerService, x402Config?: X402Confi
     return c.json({ success: true, proof });
   });
 
-  // Prepaid balance
   app.get('/prepaid/:address', async (c) => {
     const balance = await service.getPrepaidBalance(c.req.param('address') as Address);
     return c.json({ balance: balance.toString() });
@@ -658,7 +625,6 @@ export function createTriggerApi(service: TriggerService, x402Config?: X402Confi
     return c.json({ txHash });
   });
 
-  // Stats
   app.get('/stats', async (c) => c.json(service.getStats()));
 
   return app;

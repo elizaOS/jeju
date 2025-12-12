@@ -43,6 +43,7 @@ export interface Trigger {
   active: boolean;
   createdAt: Date;
   ownerAddress?: Address;
+  agentId?: bigint;
 }
 
 export interface TriggerProof {
@@ -113,7 +114,7 @@ const TRIGGER_REGISTRY_ABI = [
   'function depositPrepaid() payable',
   'function withdrawPrepaid(uint256)',
   'function prepaidBalances(address) view returns (uint256)',
-  'function getTrigger(bytes32) view returns (address,uint8,string,string,bool,uint256,uint256)',
+  'function getTrigger(bytes32) view returns (address,uint8,string,string,bool,uint256,uint256,uint256)',
   'function getCronTriggers() view returns (bytes32[],string[],string[])',
   'function getActiveTriggers(uint8) view returns (bytes32[])',
   'function getOwnerTriggers(address) view returns (bytes32[])',
@@ -167,7 +168,7 @@ export class TriggerIntegration {
 
     const [ids, crons, endpoints] = await registry.getCronTriggers();
     for (let i = 0; i < ids.length; i++) {
-      const [owner, , name, endpoint, active] = await registry.getTrigger(ids[i]);
+      const [owner, , name, endpoint, active, , , agentId] = await registry.getTrigger(ids[i]);
       if (!active) continue;
 
       this.triggers.set(`onchain-${ids[i]}`, {
@@ -180,6 +181,7 @@ export class TriggerIntegration {
         active: true,
         createdAt: new Date(),
         ownerAddress: owner as Address,
+        agentId: agentId ? BigInt(agentId) : undefined,
       });
     }
   }
@@ -247,7 +249,7 @@ export class TriggerIntegration {
     return [...this.subscriptions.values()].filter(s => s.triggerId === triggerId && s.active);
   }
 
-  async executeTrigger(req: { triggerId: string; input?: Record<string, unknown>; executorAddress?: Address; paymentProof?: string }): Promise<TriggerExecutionResult> {
+  async executeTrigger(req: { triggerId: string; input?: Record<string, unknown>; executorAddress?: Address; paymentProof?: string; payerAddress?: Address }): Promise<TriggerExecutionResult> {
     const trigger = this.triggers.get(req.triggerId);
     if (!trigger) throw new Error(`Trigger ${req.triggerId} not found`);
     if (!trigger.active) throw new Error(`Trigger ${req.triggerId} is not active`);
@@ -260,7 +262,7 @@ export class TriggerIntegration {
     };
     this.history.push(result);
 
-    if (trigger.payment?.mode === 'x402') await this.verifyPayment(trigger, req.paymentProof);
+    if (trigger.payment?.mode === 'x402') await this.verifyPayment(trigger, req.paymentProof, req.payerAddress);
     if (trigger.payment?.mode === 'prepaid' && req.executorAddress) {
       const balance = await this.getPrepaidBalance(req.executorAddress);
       if (balance < (trigger.payment.pricePerExecution ?? 0n)) throw new Error('Insufficient prepaid balance');
@@ -321,13 +323,14 @@ export class TriggerIntegration {
     return { txHash: receipt.hash, blockNumber: receipt.blockNumber, gasUsed: receipt.gasUsed.toString() };
   }
 
-  private async verifyPayment(trigger: Trigger, proof?: string): Promise<void> {
+  private async verifyPayment(trigger: Trigger, proof?: string, payerAddress?: Address): Promise<void> {
     if (!proof) throw new Error('x402 payment proof required');
+    if (!payerAddress) throw new Error('Payer address required for x402 verification');
     const { parseX402PaymentHeader, verifyX402Payment } = await import('./x402');
     const payment = parseX402PaymentHeader(proof);
     if (!payment) throw new Error('Invalid x402 payment proof');
     if (BigInt(payment.amount) < (trigger.payment?.pricePerExecution ?? 0n)) throw new Error('Payment too low');
-    if (trigger.ownerAddress && !verifyX402Payment(payment, trigger.ownerAddress, payment.payload as Address)) {
+    if (trigger.ownerAddress && !verifyX402Payment(payment, trigger.ownerAddress, payerAddress)) {
       throw new Error('x402 verification failed');
     }
   }
@@ -395,12 +398,14 @@ export class TriggerIntegration {
   async handleWebhook(path: string, payload: Record<string, unknown>, headers?: Record<string, string>): Promise<TriggerExecutionResult | null> {
     for (const trigger of this.triggers.values()) {
       if (trigger.type === 'webhook' && trigger.webhookPath === path && trigger.active) {
+        const payerAddress = (headers?.['x-jeju-address'] || headers?.['X-Jeju-Address']) as Address | undefined;
+        const paymentProof = headers?.['x-402-payment'] || headers?.['X-402-Payment'] || headers?.['x-payment'] || headers?.['X-Payment'];
         if (trigger.payment?.mode === 'x402') {
-          const header = headers?.['x-402-payment'] || headers?.['X-402-Payment'];
-          if (!header) throw new Error('x402 payment required');
-          await this.verifyPayment(trigger, header);
+          if (!paymentProof) throw new Error('x402 payment required');
+          if (!payerAddress) throw new Error('x-jeju-address header required for x402 payment');
+          await this.verifyPayment(trigger, paymentProof, payerAddress);
         }
-        return this.executeTrigger({ triggerId: trigger.id, input: payload });
+        return this.executeTrigger({ triggerId: trigger.id, input: payload, payerAddress, paymentProof });
       }
     }
     return null;
