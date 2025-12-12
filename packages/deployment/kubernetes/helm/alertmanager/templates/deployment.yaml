@@ -54,7 +54,7 @@ spec:
         - name: secrets
           secret:
             secretName: {{ include "alertmanager.fullname" . }}-credentials
-        {{- end }}
+          {{- end }}
 
 
 

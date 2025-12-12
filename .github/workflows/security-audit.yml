@@ -67,3 +67,4 @@ jobs:
             exit 1
           fi
           echo "✅ No hardcoded secrets detected"
+

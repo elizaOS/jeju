@@ -130,3 +130,4 @@ jobs:
         env:
           JEJU_RPC_URL: http://127.0.0.1:9545
         run: bun test src/compute/tests/a2a-mcp.test.ts
+
