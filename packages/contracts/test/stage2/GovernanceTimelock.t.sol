@@ -299,7 +299,7 @@ contract GovernanceTimelockTest is Test {
 
     // ============ Emergency Bugfix Tests ============
 
-    function testEmergencyBugfixShorterDelay() public {
+    function testEmergencyBugfixDelay() public {
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
         bytes32 bugProof = keccak256("proof");
 
@@ -309,7 +309,8 @@ contract GovernanceTimelockTest is Test {
         GovernanceTimelock.Proposal memory proposal = timelock.getProposal(proposalId);
         uint256 emergencyDelay = timelock.EMERGENCY_MIN_DELAY();
         assertEq(proposal.executeAfter, block.timestamp + emergencyDelay);
-        assertLt(emergencyDelay, timelock.timelockDelay());
+        // Stage 2: Emergency delay is 7 days, not shorter than standard (both can be same or emergency can be less)
+        assertEq(emergencyDelay, 7 days);
     }
 
     function testEmergencyBugfixExecution() public {
@@ -370,7 +371,8 @@ contract GovernanceTimelockTest is Test {
     // ============ Admin Functions ============
 
     function testSetTimelockDelay() public {
-        uint256 newDelay = 3 hours;
+        // Stage 2: Minimum delay is 7 days
+        uint256 newDelay = 14 days;
         vm.prank(owner);
         timelock.setTimelockDelay(newDelay);
 
@@ -380,7 +382,7 @@ contract GovernanceTimelockTest is Test {
     function testSetTimelockDelayBelowMinimum() public {
         vm.prank(owner);
         vm.expectRevert(GovernanceTimelock.InvalidDelay.selector);
-        timelock.setTimelockDelay(30 minutes); // Below EMERGENCY_MIN_DELAY (1 hour)
+        timelock.setTimelockDelay(3 days); // Below EMERGENCY_MIN_DELAY (7 days for Stage 2)
     }
 
     function testSetGovernance() public {

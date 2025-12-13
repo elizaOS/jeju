@@ -464,23 +464,21 @@ contract ProverTest is Test {
 
     // ============ Gas Measurement Tests ============
 
+    uint256 private _gasUsed;
+
     function testVerifyFraudProofGas() public {
         bytes memory proof = _generateFraudProof(STATE_ROOT, CLAIM_ROOT, ACTUAL_POST_STATE);
         uint256 gasBefore = gasleft();
         prover.verifyProof(STATE_ROOT, CLAIM_ROOT, proof);
-        uint256 gasUsed = gasBefore - gasleft();
-        
-        // Gas should be reasonable (under 100k for 1 signature verification)
-        assertLt(gasUsed, 100_000);
+        _gasUsed = gasBefore - gasleft();
+        assertLt(_gasUsed, 100_000);
     }
 
     function testVerifyDefenseProofGas() public {
         bytes memory proof = _generateDefenseProof(STATE_ROOT, CLAIM_ROOT);
         uint256 gasBefore = gasleft();
         prover.verifyDefenseProof(STATE_ROOT, CLAIM_ROOT, proof);
-        uint256 gasUsed = gasBefore - gasleft();
-        
-        // Gas should be reasonable (under 150k for 2 signature verifications)
-        assertLt(gasUsed, 150_000);
+        _gasUsed = gasBefore - gasleft();
+        assertLt(_gasUsed, 150_000);
     }
 }

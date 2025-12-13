@@ -1039,7 +1039,7 @@ contract GovernanceTimelockEdgeCasesTest is Test {
 
     // ============ Emergency vs Normal Timing ============
 
-    function testEmergencyExecutesFasterThanNormal() public {
+    function testEmergencyDelaysAreEnforced() public {
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
         bytes32 bugProof = keccak256("proof");
         
@@ -1054,7 +1054,11 @@ contract GovernanceTimelockEdgeCasesTest is Test {
         GovernanceTimelock.Proposal memory normalProposal = timelock.getProposal(normalId);
         GovernanceTimelock.Proposal memory emergencyProposal = timelock.getProposal(emergencyId);
         
-        assertLt(emergencyProposal.executeAfter, normalProposal.executeAfter);
+        // Stage 2: Emergency delay is always at least EMERGENCY_MIN_DELAY (7 days)
+        // Normal uses configured timelockDelay (2 hours in this test)
+        // Emergency will always use EMERGENCY_MIN_DELAY which is now 7 days
+        assertEq(emergencyProposal.executeAfter, block.timestamp + timelock.EMERGENCY_MIN_DELAY());
+        assertEq(normalProposal.executeAfter, block.timestamp + DELAY);
     }
 
     // ============ Batch Proposals ============
