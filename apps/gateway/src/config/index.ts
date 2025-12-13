@@ -1,13 +1,3 @@
-/**
- * Gateway App Configuration
- * 
- * Config-first architecture:
- * - Defaults come from @jejunetwork/config
- * - VITE_* env vars override at build time
- * 
- * Note: This file exists to centralize env var access and provide
- * type-safe defaults. Import from here instead of using import.meta.env directly.
- */
 import type { Address } from 'viem';
 import { ZERO_ADDRESS } from '../lib/contracts';
 
@@ -21,6 +11,9 @@ export const WS_URL = import.meta.env.VITE_WS_URL || getDefaultWsUrl();
 
 // External services
 export const INDEXER_URL = import.meta.env.VITE_INDEXER_URL || getDefaultIndexerUrl();
+export const INDEXER_REST_URL = import.meta.env.VITE_INDEXER_REST_URL || getDefaultIndexerRestUrl();
+export const INDEXER_A2A_URL = import.meta.env.VITE_INDEXER_A2A_URL || getDefaultIndexerA2AUrl();
+export const INDEXER_MCP_URL = import.meta.env.VITE_INDEXER_MCP_URL || getDefaultIndexerMCPUrl();
 export const RPC_GATEWAY_URL = import.meta.env.VITE_RPC_GATEWAY_URL || getDefaultRpcGatewayUrl();
 export const IPFS_API_URL = import.meta.env.VITE_JEJU_IPFS_API || getDefaultIpfsApiUrl();
 export const IPFS_GATEWAY_URL = import.meta.env.VITE_JEJU_IPFS_GATEWAY || getDefaultIpfsGatewayUrl();
@@ -109,10 +102,6 @@ export const CONTRACTS = {
 // API keys (only ones that are actually public/client-safe)
 export const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID';
 
-// ============================================================================
-// Default value getters (based on network)
-// ============================================================================
-
 function getDefaultChainId(): string {
   switch (NETWORK) {
     case 'mainnet': return '420691';
@@ -142,6 +131,30 @@ function getDefaultIndexerUrl(): string {
     case 'mainnet': return 'https://indexer.jeju.network/graphql';
     case 'testnet': return 'https://testnet-indexer.jeju.network/graphql';
     default: return 'http://127.0.0.1:4350/graphql';
+  }
+}
+
+function getDefaultIndexerRestUrl(): string {
+  switch (NETWORK) {
+    case 'mainnet': return 'https://indexer.jeju.network/api';
+    case 'testnet': return 'https://testnet-indexer.jeju.network/api';
+    default: return 'http://127.0.0.1:4352/api';
+  }
+}
+
+function getDefaultIndexerA2AUrl(): string {
+  switch (NETWORK) {
+    case 'mainnet': return 'https://indexer.jeju.network/a2a';
+    case 'testnet': return 'https://testnet-indexer.jeju.network/a2a';
+    default: return 'http://127.0.0.1:4351/api/a2a';
+  }
+}
+
+function getDefaultIndexerMCPUrl(): string {
+  switch (NETWORK) {
+    case 'mainnet': return 'https://indexer.jeju.network/mcp';
+    case 'testnet': return 'https://testnet-indexer.jeju.network/mcp';
+    default: return 'http://127.0.0.1:4353';
   }
 }
 

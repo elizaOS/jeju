@@ -12,11 +12,11 @@ import {
   StorageDeal, 
   StorageLedgerBalance,
   StorageMarketStats,
-  Account,
   StorageProviderType,
   StorageTier,
   StorageDealStatus,
 } from './model';
+import { createAccountFactory } from './lib/entities';
 import { ProcessorContext } from './processor';
 
 // Event signatures for storage contracts
@@ -46,6 +46,16 @@ const EVENT_SIGNATURES = {
 };
 
 const STORAGE_TOPIC_SET = new Set(Object.values(EVENT_SIGNATURES));
+
+// ABI interfaces - created once at module level
+const ABI = {
+  providerRegistered: new ethers.Interface([
+    'event ProviderRegistered(address indexed provider, string name, string endpoint, uint8 providerType, uint256 agentId)'
+  ]),
+  dealCreated: new ethers.Interface([
+    'event DealCreated(bytes32 indexed dealId, address indexed user, address indexed provider, string cid, uint256 cost)'
+  ]),
+};
 
 const PROVIDER_TYPES_MAP: StorageProviderType[] = [
   StorageProviderType.IPFS_NODE,
@@ -79,34 +89,12 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
   const providers = new Map<string, StorageProvider>();
   const deals = new Map<string, StorageDeal>();
   const balances = new Map<string, StorageLedgerBalance>();
-  const accounts = new Map<string, Account>();
+  const accountFactory = createAccountFactory();
   
   // Load existing providers
   const existingProviders = await ctx.store.find(StorageProvider);
   for (const p of existingProviders) {
     providers.set(p.id, p);
-  }
-  
-  function getOrCreateAccount(address: string, blockNumber: number, timestamp: Date): Account {
-    const id = address.toLowerCase();
-    let account = accounts.get(id);
-    if (!account) {
-      account = new Account({
-        id,
-        address: id,
-        isContract: false,
-        firstSeenBlock: blockNumber,
-        lastSeenBlock: blockNumber,
-        transactionCount: 0,
-        totalValueSent: 0n,
-        totalValueReceived: 0n,
-        labels: [],
-        firstSeenAt: timestamp,
-        lastSeenAt: timestamp,
-      });
-      accounts.set(id, account);
-    }
-    return account;
   }
   
   async function getOrCreateProvider(address: string, timestamp: Date): Promise<StorageProvider> {
@@ -169,25 +157,18 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
       
       if (topic0 === EVENT_SIGNATURES.ProviderRegistered) {
         const providerAddr = '0x' + topics[1].slice(26);
+        const decoded = ABI.providerRegistered.parseLog({ topics, data: log.data });
+        if (!decoded) continue;
+        
         const provider = await getOrCreateProvider(providerAddr, timestamp);
-        
-        // Decode data: (string name, string endpoint, uint8 providerType, uint256 agentId)
-        const iface = new ethers.Interface([
-          'event ProviderRegistered(address indexed provider, string name, string endpoint, uint8 providerType, uint256 agentId)'
-        ]);
-        const decoded = iface.parseLog({ topics: topics, data: log.data });
-        
-        if (decoded) {
-          provider.name = decoded.args.name;
-          provider.endpoint = decoded.args.endpoint;
-          provider.providerType = PROVIDER_TYPES_MAP[Number(decoded.args.providerType)] ?? StorageProviderType.IPFS_NODE;
-          provider.agentId = Number(decoded.args.agentId) || undefined;
-          provider.isActive = true;
-          provider.registeredAt = timestamp;
-          provider.lastUpdated = timestamp;
-        }
-        
-        ctx.log.info(`Storage provider registered: ${providerAddr}`);
+        provider.name = decoded.args.name;
+        provider.endpoint = decoded.args.endpoint;
+        provider.providerType = PROVIDER_TYPES_MAP[Number(decoded.args.providerType)] ?? StorageProviderType.IPFS_NODE;
+        provider.agentId = Number(decoded.args.agentId) || undefined;
+        provider.isActive = true;
+        provider.registeredAt = timestamp;
+        provider.lastUpdated = timestamp;
+        ctx.log.info(`Storage provider: ${providerAddr.slice(0, 10)}...`);
       }
       
       if (topic0 === EVENT_SIGNATURES.ProviderDeactivated) {
@@ -208,7 +189,7 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
         const providerAddr = '0x' + topics[1].slice(26);
         const provider = await getOrCreateProvider(providerAddr, timestamp);
         const amount = BigInt('0x' + log.data.slice(2, 66));
-        provider.stakeAmount = (provider.stakeAmount || 0n) + amount;
+        provider.stakeAmount += amount;
         provider.lastUpdated = timestamp;
       }
       
@@ -216,7 +197,7 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
         const providerAddr = '0x' + topics[1].slice(26);
         const provider = await getOrCreateProvider(providerAddr, timestamp);
         const amount = BigInt('0x' + log.data.slice(2, 66));
-        provider.stakeAmount = (provider.stakeAmount || 0n) - amount;
+        provider.stakeAmount -= amount;
         provider.lastUpdated = timestamp;
       }
       
@@ -237,40 +218,36 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
         const dealId = topics[1];
         const userAddr = '0x' + topics[2].slice(26);
         const providerAddr = '0x' + topics[3].slice(26);
+        const decoded = ABI.dealCreated.parseLog({ topics, data: log.data });
+        if (!decoded) continue;
         
-        const iface = new ethers.Interface([
-          'event DealCreated(bytes32 indexed dealId, address indexed user, address indexed provider, string cid, uint256 cost)'
-        ]);
-        const decoded = iface.parseLog({ topics: topics, data: log.data });
-        
-        const user = getOrCreateAccount(userAddr, header.height, timestamp);
+        const user = accountFactory.getOrCreate(userAddr, header.height, timestamp);
         const provider = await getOrCreateProvider(providerAddr, timestamp);
+        const cost = BigInt(decoded.args.cost);
         
-        const deal = new StorageDeal({
+        deals.set(dealId, new StorageDeal({
           id: dealId,
           dealId: dealId,
           user,
           provider,
           status: StorageDealStatus.PENDING,
-          cid: decoded?.args.cid || '',
+          cid: decoded.args.cid,
           sizeBytes: 0n,
           tier: StorageTier.WARM,
-          totalCost: decoded?.args.cost ? BigInt(decoded.args.cost) : 0n,
-          paidAmount: decoded?.args.cost ? BigInt(decoded.args.cost) : 0n,
+          totalCost: cost,
+          paidAmount: cost,
           refundedAmount: 0n,
           replicationFactor: 1,
           retrievalCount: 0,
           createdAt: timestamp,
-          txHash: log.transaction?.hash ?? '',
+          txHash: log.transaction?.hash ?? dealId,
           blockNumber: header.height,
-        });
+        }));
         
-        deals.set(dealId, deal);
-        provider.totalDeals = (provider.totalDeals || 0) + 1;
-        provider.activeDeals = (provider.activeDeals || 0) + 1;
+        provider.totalDeals++;
+        provider.activeDeals++;
         provider.lastUpdated = timestamp;
-        
-        ctx.log.info(`Storage deal created: ${dealId}`);
+        ctx.log.info(`Storage deal: ${dealId.slice(0, 10)}...`);
       }
       
       if (topic0 === EVENT_SIGNATURES.DealConfirmed) {
@@ -288,20 +265,16 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
       
       if (topic0 === EVENT_SIGNATURES.DealCompleted) {
         const dealId = topics[1];
-        let deal = deals.get(dealId);
-        if (!deal) {
-          deal = await ctx.store.get(StorageDeal, dealId);
-        }
+        const deal = deals.get(dealId) || await ctx.store.get(StorageDeal, dealId);
         if (deal) {
           deal.status = StorageDealStatus.EXPIRED;
           deal.endTime = timestamp;
           deals.set(dealId, deal);
-          
           if (deal.provider) {
             const provider = await getOrCreateProvider(deal.provider.id, timestamp);
-            provider.activeDeals = Math.max(0, (provider.activeDeals || 0) - 1);
-            provider.completedDeals = (provider.completedDeals || 0) + 1;
-            provider.totalEarnings = (provider.totalEarnings || 0n) + (deal.totalCost || 0n);
+            provider.activeDeals = Math.max(0, provider.activeDeals - 1);
+            provider.completedDeals++;
+            provider.totalEarnings += deal.totalCost;
             provider.lastUpdated = timestamp;
           }
         }
@@ -309,20 +282,15 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
       
       if (topic0 === EVENT_SIGNATURES.DealTerminated) {
         const dealId = topics[1];
-        let deal = deals.get(dealId);
-        if (!deal) {
-          deal = await ctx.store.get(StorageDeal, dealId);
-        }
+        const deal = deals.get(dealId) || await ctx.store.get(StorageDeal, dealId);
         if (deal) {
           deal.status = StorageDealStatus.TERMINATED;
           deal.endTime = timestamp;
-          const refundAmount = BigInt('0x' + log.data.slice(2, 66));
-          deal.refundedAmount = refundAmount;
+          deal.refundedAmount = BigInt('0x' + log.data.slice(2, 66));
           deals.set(dealId, deal);
-          
           if (deal.provider) {
             const provider = await getOrCreateProvider(deal.provider.id, timestamp);
-            provider.activeDeals = Math.max(0, (provider.activeDeals || 0) - 1);
+            provider.activeDeals = Math.max(0, provider.activeDeals - 1);
             provider.lastUpdated = timestamp;
           }
         }
@@ -330,19 +298,15 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
       
       if (topic0 === EVENT_SIGNATURES.DealFailed) {
         const dealId = topics[1];
-        let deal = deals.get(dealId);
-        if (!deal) {
-          deal = await ctx.store.get(StorageDeal, dealId);
-        }
+        const deal = deals.get(dealId) || await ctx.store.get(StorageDeal, dealId);
         if (deal) {
           deal.status = StorageDealStatus.FAILED;
           deal.endTime = timestamp;
           deals.set(dealId, deal);
-          
           if (deal.provider) {
             const provider = await getOrCreateProvider(deal.provider.id, timestamp);
-            provider.activeDeals = Math.max(0, (provider.activeDeals || 0) - 1);
-            provider.failedDeals = (provider.failedDeals || 0) + 1;
+            provider.activeDeals = Math.max(0, provider.activeDeals - 1);
+            provider.failedDeals++;
             provider.lastUpdated = timestamp;
           }
         }
@@ -351,20 +315,14 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
       if (topic0 === EVENT_SIGNATURES.DealRated) {
         const dealId = topics[1];
         const score = Number(BigInt('0x' + log.data.slice(2, 66)));
-        
-        let deal = deals.get(dealId);
-        if (!deal) {
-          deal = await ctx.store.get(StorageDeal, dealId);
-        }
+        const deal = deals.get(dealId) || await ctx.store.get(StorageDeal, dealId);
         if (deal) {
           deal.rating = score;
           deals.set(dealId, deal);
-          
           if (deal.provider) {
             const provider = await getOrCreateProvider(deal.provider.id, timestamp);
-            // Update running average
-            const oldTotal = (provider.avgRating || 0) * (provider.ratingCount || 0);
-            provider.ratingCount = (provider.ratingCount || 0) + 1;
+            const oldTotal = provider.avgRating * provider.ratingCount;
+            provider.ratingCount++;
             provider.avgRating = Math.round((oldTotal + score) / provider.ratingCount);
             provider.lastUpdated = timestamp;
           }
@@ -379,7 +337,7 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
         
         const balance = new StorageLedgerBalance({
           id: balanceId,
-          user: getOrCreateAccount(userAddr, header.height, timestamp),
+          user: accountFactory.getOrCreate(userAddr, header.height, timestamp),
           totalBalance: 0n,
           availableBalance: 0n,
           lockedBalance: 0n,
@@ -394,14 +352,10 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
         const userAddr = '0x' + topics[1].slice(26);
         const amount = BigInt('0x' + log.data.slice(2, 66));
         const balanceId = userAddr.toLowerCase();
-        
-        let balance = balances.get(balanceId);
-        if (!balance) {
-          balance = await ctx.store.get(StorageLedgerBalance, balanceId);
-        }
+        const balance = balances.get(balanceId) || await ctx.store.get(StorageLedgerBalance, balanceId);
         if (balance) {
-          balance.totalBalance = (balance.totalBalance || 0n) + amount;
-          balance.availableBalance = (balance.availableBalance || 0n) + amount;
+          balance.totalBalance += amount;
+          balance.availableBalance += amount;
           balance.lastUpdated = timestamp;
           balances.set(balanceId, balance);
         }
@@ -413,7 +367,7 @@ export async function processStorageEvents(ctx: ProcessorContext<Store>): Promis
   const stats = await updateStorageStats(ctx, providers, deals);
   
   // Save all entities
-  await ctx.store.upsert(Array.from(accounts.values()));
+  await ctx.store.upsert(accountFactory.getAll());
   await ctx.store.upsert(Array.from(providers.values()));
   await ctx.store.upsert(Array.from(deals.values()));
   await ctx.store.upsert(Array.from(balances.values()));
@@ -474,9 +428,9 @@ async function updateStorageStats(
     totalProviders++;
     if (p.isActive) activeProviders++;
     if (p.isVerified || p.agentId) verifiedProviders++;
-    totalStaked += p.stakeAmount || 0n;
-    totalCapacity += p.totalCapacityGB || 0n;
-    usedCapacity += p.usedCapacityGB || 0n;
+    totalStaked += p.stakeAmount;
+    totalCapacity += p.totalCapacityGB;
+    usedCapacity += p.usedCapacityGB;
   }
   
   stats.totalProviders = Math.max(stats.totalProviders, totalProviders);
@@ -496,7 +450,7 @@ async function updateStorageStats(
     totalDeals++;
     if (d.status === 'ACTIVE') activeDeals++;
     if (d.status === 'EXPIRED') completedDeals++;
-    totalEarnings += d.totalCost || 0n;
+    totalEarnings += d.totalCost;
   }
   
   stats.totalDeals = Math.max(stats.totalDeals, totalDeals);

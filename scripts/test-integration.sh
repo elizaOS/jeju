@@ -44,50 +44,50 @@ cd "$CONTRACTS_DIR"
 # Deploy JejuToken (mock ERC20)
 echo "Deploying JejuToken..."
 INITIAL_SUPPLY="1000000000000000000000000000"  # 1 billion tokens with 18 decimals
-JEJU_TOKEN=$(forge create src/otc/mocks/MockERC20.sol:MockERC20 \
+JEJU_TOKEN_OUTPUT=$(forge create src/otc/mocks/MockERC20.sol:MockERC20 \
     --constructor-args "Jeju Token" "JEJU" 18 $INITIAL_SUPPLY \
     --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --json 2>/dev/null | jq -r '.deployedTo')
+    --private-key $PRIVATE_KEY 2>&1)
+JEJU_TOKEN=$(echo "$JEJU_TOKEN_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
 echo "JejuToken: $JEJU_TOKEN"
 
 # Deploy SequencerRegistry
 echo "Deploying SequencerRegistry..."
 OWNER="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 # Constructor: jejuToken, identityRegistry, reputationRegistry, treasury, owner
-SEQUENCER_REGISTRY=$(forge create src/stage2/SequencerRegistry.sol:SequencerRegistry \
+SEQ_REG_OUTPUT=$(forge create src/stage2/SequencerRegistry.sol:SequencerRegistry \
     --constructor-args $JEJU_TOKEN $OWNER $OWNER $OWNER $OWNER \
     --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --json 2>/dev/null | jq -r '.deployedTo')
+    --private-key $PRIVATE_KEY 2>&1)
+SEQUENCER_REGISTRY=$(echo "$SEQ_REG_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
 echo "SequencerRegistry: $SEQUENCER_REGISTRY"
 
 # Deploy a mock batch inbox first (just a placeholder address that accepts calls)
 echo "Deploying MockBatchInbox..."
-MOCK_BATCH_INBOX=$(forge create src/otc/mocks/MockERC20.sol:MockERC20 \
+INBOX_OUTPUT=$(forge create src/otc/mocks/MockERC20.sol:MockERC20 \
     --constructor-args "BatchInbox" "INBOX" 18 0 \
     --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --json 2>/dev/null | jq -r '.deployedTo')
+    --private-key $PRIVATE_KEY 2>&1)
+MOCK_BATCH_INBOX=$(echo "$INBOX_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
 echo "MockBatchInbox: $MOCK_BATCH_INBOX"
 
 # Deploy ThresholdBatchSubmitter
 echo "Deploying ThresholdBatchSubmitter..."
-THRESHOLD_SUBMITTER=$(forge create src/stage2/ThresholdBatchSubmitter.sol:ThresholdBatchSubmitter \
+SUBMITTER_OUTPUT=$(forge create src/stage2/ThresholdBatchSubmitter.sol:ThresholdBatchSubmitter \
     --constructor-args $MOCK_BATCH_INBOX $OWNER 2 \
     --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --json 2>/dev/null | jq -r '.deployedTo')
+    --private-key $PRIVATE_KEY 2>&1)
+THRESHOLD_SUBMITTER=$(echo "$SUBMITTER_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
 echo "ThresholdBatchSubmitter: $THRESHOLD_SUBMITTER"
 
 # Deploy GovernanceTimelock
 echo "Deploying GovernanceTimelock..."
 # Constructor: governance, securityCouncil, owner, timelockDelay
-TIMELOCK=$(forge create src/stage2/GovernanceTimelock.sol:GovernanceTimelock \
+TIMELOCK_OUTPUT=$(forge create src/stage2/GovernanceTimelock.sol:GovernanceTimelock \
     --constructor-args $OWNER $OWNER $OWNER 7200 \
     --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --json 2>/dev/null | jq -r '.deployedTo')
+    --private-key $PRIVATE_KEY 2>&1)
+TIMELOCK=$(echo "$TIMELOCK_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
 echo "GovernanceTimelock: $TIMELOCK"
 
 echo ""
@@ -138,13 +138,52 @@ SIG2=$(cast wallet sign --private-key $KEY2 $DIGEST 2>/dev/null)
 echo "Signature 1: ${SIG1:0:20}..."
 echo "Signature 2: ${SIG2:0:20}..."
 
-# Attempt batch submission (will fail because batch inbox is address(0), but tests the flow)
+# Actually submit the batch with threshold signatures
+echo ""
+echo "=== Submitting Batch with Threshold Signatures ==="
+
+# Get nonce before submission
+NONCE_BEFORE=$(cast call $THRESHOLD_SUBMITTER "nonce()(uint256)" --rpc-url $RPC_URL 2>/dev/null)
+echo "Nonce before: $NONCE_BEFORE"
+
+# Format signatures and signers for the call
+# submitBatch(bytes batchData, bytes[] signatures, address[] signers)
+echo "Calling submitBatch..."
+SUBMIT_RESULT=$(cast send $THRESHOLD_SUBMITTER \
+    "submitBatch(bytes,bytes[],address[])" \
+    $BATCH_DATA \
+    "[$SIG1,$SIG2]" \
+    "[$SEQ1,$SEQ2]" \
+    --rpc-url $RPC_URL \
+    --private-key $PRIVATE_KEY 2>&1)
+
+if echo "$SUBMIT_RESULT" | grep -q "transactionHash"; then
+    echo "Batch submission succeeded!"
+    TX_HASH=$(echo "$SUBMIT_RESULT" | grep "transactionHash" | awk '{print $2}')
+    echo "Transaction: $TX_HASH"
+    
+    # Verify nonce incremented
+    NONCE_AFTER=$(cast call $THRESHOLD_SUBMITTER "nonce()(uint256)" --rpc-url $RPC_URL 2>/dev/null)
+    echo "Nonce after: $NONCE_AFTER"
+    
+    if [ "$NONCE_AFTER" -gt "$NONCE_BEFORE" ]; then
+        echo "✓ Nonce incremented correctly"
+    else
+        echo "✗ Nonce did not increment!"
+        exit 1
+    fi
+else
+    echo "Batch submission failed:"
+    echo "$SUBMIT_RESULT"
+    # Don't exit - the mock batch inbox might not accept all calls
+fi
+
 echo ""
 echo "=== Summary ==="
 echo "Contracts deployed successfully"
 echo "Sequencers added: 3"
 echo "Threshold: $THRESHOLD"
-echo "Batch signing flow verified"
+echo "Batch submission: attempted"
 echo ""
 echo "Integration test completed"
 

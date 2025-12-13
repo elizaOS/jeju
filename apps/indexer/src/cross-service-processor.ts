@@ -17,25 +17,26 @@ import { ethers } from 'ethers';
 import { Store } from '@subsquid/typeorm-store';
 import { ProcessorContext } from './processor';
 import {
-  Account,
   ComputeProvider,
   StorageProvider,
   IPFSFile,
   FileCategory,
   RegisteredAgent,
+  ContainerImage,
+  CrossServiceRequest,
+  CrossServiceRequestType,
+  CrossServiceRequestStatus,
+  ContainerArchitecture,
+  StorageTier,
+  ComputeRental,
 } from './model';
+import { createAccountFactory, BlockHeader, LogData } from './lib/entities';
 
-// Helper to convert hex string to Uint8Array
-function hexToBytes(hex: string): Uint8Array {
-  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(cleanHex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
-
-const ZERO_BYTES = hexToBytes('0x0000000000000000000000000000000000000000');
+const hexToBytes = (hex: string): Uint8Array => {
+  const h = hex.startsWith('0x') ? hex.slice(2) : hex;
+  return Uint8Array.from({ length: h.length / 2 }, (_, i) => parseInt(h.slice(i * 2, i * 2 + 2), 16));
+};
+const ZERO_BYTES = new Uint8Array(20);
 
 // Event signatures for cross-service operations
 const EVENT_SIGNATURES = {
@@ -57,21 +58,6 @@ const EVENT_SIGNATURES = {
 
 const CROSS_SERVICE_TOPIC_SET = new Set(Object.values(EVENT_SIGNATURES));
 
-interface BlockHeader {
-  hash: string;
-  height: number;
-  timestamp: number;
-}
-
-interface LogData {
-  address: string;
-  topics: string[];
-  data: string;
-  logIndex: number;
-  transactionIndex: number;
-  transaction?: { hash: string };
-}
-
 export function isCrossServiceProcessorEvent(topic0: string): boolean {
   return CROSS_SERVICE_TOPIC_SET.has(topic0);
 }
@@ -81,32 +67,12 @@ export function isCrossServiceProcessorEvent(topic0: string): boolean {
  */
 export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): Promise<void> {
   const containerFiles = new Map<string, IPFSFile>();
+  const containerImages = new Map<string, ContainerImage>();
+  const crossServiceRequests = new Map<string, CrossServiceRequest>();
   const updatedComputeProviders = new Map<string, ComputeProvider>();
   const updatedStorageProviders = new Map<string, StorageProvider>();
   const updatedAgents = new Map<string, RegisteredAgent>();
-  const accounts = new Map<string, Account>();
-
-  function getOrCreateAccount(address: string, blockNumber: number, timestamp: Date): Account {
-    const id = address.toLowerCase();
-    let account = accounts.get(id);
-    if (!account) {
-      account = new Account({
-        id,
-        address: id,
-        isContract: false,
-        firstSeenBlock: blockNumber,
-        lastSeenBlock: blockNumber,
-        transactionCount: 0,
-        totalValueSent: 0n,
-        totalValueReceived: 0n,
-        labels: [],
-        firstSeenAt: timestamp,
-        lastSeenAt: timestamp,
-      });
-      accounts.set(id, account);
-    }
-    return account;
-  }
+  const accountFactory = createAccountFactory();
 
   for (const block of ctx.blocks) {
     const header = block.header as unknown as BlockHeader;
@@ -128,10 +94,12 @@ export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): P
           log.data
         );
 
-        const cid = decoded[0];
-        const uploader = decoded[1];
-        const storageProviderAddr = decoded[2];
+        const cid = decoded[0] as string;
+        const uploader = decoded[1] as string;
+        const storageProviderAddr = decoded[2] as string;
         const sizeBytes = BigInt(decoded[3].toString());
+
+        const uploaderAccount = accountFactory.getOrCreate(uploader, header.height, blockTimestamp);
 
         // Create IPFS file entry for container
         const fileId = cid;
@@ -151,14 +119,14 @@ export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): P
             createdAt: blockTimestamp,
             expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year
             isPinned: true,
-            category: FileCategory.GAME_ASSET, // Container images
+            category: FileCategory.CONTAINER_IMAGE,
             relatedContract: hexToBytes(storageProviderAddr),
           });
         }
 
         containerFiles.set(fileId, file);
 
-        // Update storage provider stats
+        // Get or create storage provider reference
         let storageProvider = updatedStorageProviders.get(storageProviderAddr.toLowerCase());
         if (!storageProvider) {
           storageProvider = await ctx.store.get(StorageProvider, storageProviderAddr.toLowerCase());
@@ -167,6 +135,34 @@ export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): P
           storageProvider.lastUpdated = blockTimestamp;
           updatedStorageProviders.set(storageProviderAddr.toLowerCase(), storageProvider);
         }
+
+        // Create ContainerImage entity
+        let containerImage = containerImages.get(cid);
+        if (!containerImage) {
+          containerImage = await ctx.store.get(ContainerImage, cid);
+        }
+
+        if (!containerImage) {
+          containerImage = new ContainerImage({
+            id: cid,
+            cid,
+            name: `container-${cid.slice(0, 8)}`,
+            tag: 'latest',
+            sizeBytes,
+            uploadedAt: blockTimestamp,
+            uploadedBy: uploaderAccount,
+            storageProvider: storageProvider || undefined,
+            tier: StorageTier.HOT,
+            architecture: ContainerArchitecture.AMD64,
+            gpuRequired: false,
+            teeRequired: false,
+            contentHash: cid,
+            verified: false,
+            pullCount: 0,
+          });
+        }
+
+        containerImages.set(cid, containerImage);
 
         ctx.log.info(`Container stored: ${cid.slice(0, 16)}... on ${storageProviderAddr.slice(0, 10)}...`);
       }
@@ -180,11 +176,11 @@ export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): P
           log.data
         );
 
-        const cid = decoded[0];
-        const computeProviderAddr = decoded[1];
-        const storageProviderAddr = decoded[2];
+        const cid = decoded[0] as string;
+        const computeProviderAddr = decoded[1] as string;
+        const storageProviderAddr = decoded[2] as string;
 
-        // Update compute provider
+        // Get compute provider
         let computeProvider = updatedComputeProviders.get(computeProviderAddr.toLowerCase());
         if (!computeProvider) {
           computeProvider = await ctx.store.get(ComputeProvider, computeProviderAddr.toLowerCase());
@@ -194,17 +190,57 @@ export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): P
           updatedComputeProviders.set(computeProviderAddr.toLowerCase(), computeProvider);
         }
 
-        // Update file retrieval count
-        let file = containerFiles.get(cid);
-        if (!file) {
-          file = await ctx.store.get(IPFSFile, cid);
-        }
-        if (file) {
-          // Track retrieval (would need to add retrievalCount field)
-          containerFiles.set(cid, file);
+        // Get storage provider
+        let storageProvider = updatedStorageProviders.get(storageProviderAddr.toLowerCase());
+        if (!storageProvider) {
+          storageProvider = await ctx.store.get(StorageProvider, storageProviderAddr.toLowerCase());
         }
 
-        ctx.log.debug(`Container pulled: ${cid.slice(0, 16)}... for rental ${rentalId.slice(0, 10)}...`);
+        // Update container image pull count
+        let containerImage = containerImages.get(cid);
+        if (!containerImage) {
+          containerImage = await ctx.store.get(ContainerImage, cid);
+        }
+        if (containerImage) {
+          containerImage.pullCount += 1;
+          containerImage.lastPulledAt = blockTimestamp;
+          containerImages.set(cid, containerImage);
+        }
+
+        // Get rental if exists
+        let rental: ComputeRental | null = null;
+        if (rentalId) {
+          rental = await ctx.store.get(ComputeRental, rentalId);
+        }
+
+        // Create requester account (use compute provider address as requester)
+        const requesterAccount = accountFactory.getOrCreate(computeProviderAddr, header.height, blockTimestamp);
+
+        // Create CrossServiceRequest entity
+        const requestId = `${txHash}-${log.logIndex}`;
+        const crossServiceRequest = new CrossServiceRequest({
+          id: requestId,
+          requestId,
+          requester: requesterAccount,
+          requestType: CrossServiceRequestType.CONTAINER_PULL,
+          containerImage: containerImage || undefined,
+          sourceCid: cid,
+          sourceProvider: storageProvider || undefined,
+          destinationProvider: computeProvider || undefined,
+          destinationRental: rental || undefined,
+          status: CrossServiceRequestStatus.COMPLETED,
+          createdAt: blockTimestamp,
+          completedAt: blockTimestamp,
+          storageCost: 0n,
+          bandwidthCost: 0n,
+          totalCost: 0n,
+          txHash,
+          blockNumber: header.height,
+        });
+
+        crossServiceRequests.set(requestId, crossServiceRequest);
+
+        ctx.log.debug(`Container pulled: ${cid.slice(0, 16)}... for rental ${rentalId?.slice(0, 10) || 'N/A'}...`);
       }
 
       // ============ Rental With Container Event ============
@@ -321,30 +357,36 @@ export async function processCrossServiceEvents(ctx: ProcessorContext<Store>): P
     }
   }
 
-  // Persist entities
-  if (accounts.size > 0) {
-    await ctx.store.upsert(Array.from(accounts.values()));
+  // Persist entities - order matters for foreign key dependencies
+  if (accountFactory.hasAccounts()) {
+    await ctx.store.upsert(accountFactory.getAll());
   }
-  if (containerFiles.size > 0) {
-    await ctx.store.upsert(Array.from(containerFiles.values()));
+  if (updatedStorageProviders.size > 0) {
+    await ctx.store.upsert(Array.from(updatedStorageProviders.values()));
   }
   if (updatedComputeProviders.size > 0) {
     await ctx.store.upsert(Array.from(updatedComputeProviders.values()));
   }
-  if (updatedStorageProviders.size > 0) {
-    await ctx.store.upsert(Array.from(updatedStorageProviders.values()));
+  if (containerFiles.size > 0) {
+    await ctx.store.upsert(Array.from(containerFiles.values()));
+  }
+  if (containerImages.size > 0) {
+    await ctx.store.upsert(Array.from(containerImages.values()));
+  }
+  if (crossServiceRequests.size > 0) {
+    await ctx.store.upsert(Array.from(crossServiceRequests.values()));
   }
   if (updatedAgents.size > 0) {
     await ctx.store.upsert(Array.from(updatedAgents.values()));
   }
 
   // Log summary
-  const total = containerFiles.size + updatedComputeProviders.size + updatedStorageProviders.size + updatedAgents.size;
+  const total = containerFiles.size + containerImages.size + crossServiceRequests.size + 
+                updatedComputeProviders.size + updatedStorageProviders.size + updatedAgents.size;
   if (total > 0) {
     ctx.log.info(
-      `Cross-service: ${containerFiles.size} containers, ` +
-      `${updatedComputeProviders.size} compute, ` +
-      `${updatedStorageProviders.size} storage, ` +
+      `Cross-service: ${containerImages.size} containers, ${crossServiceRequests.size} requests, ` +
+      `${updatedComputeProviders.size} compute, ${updatedStorageProviders.size} storage, ` +
       `${updatedAgents.size} agents`
     );
   }
@@ -376,13 +418,13 @@ export async function getMarketplaceStats(ctx: ProcessorContext<Store>): Promise
   const computeProviders = await ctx.store.find(ComputeProvider);
   const activeComputeProviders = computeProviders.filter(p => p.isActive);
   const agentLinkedCompute = computeProviders.filter(p => p.agentId && p.agentId > 0);
-  const totalComputeStake = computeProviders.reduce((sum, p) => sum + (p.stakeAmount || 0n), 0n);
+  const totalComputeStake = computeProviders.reduce((sum, p) => sum + p.stakeAmount, 0n);
 
   // Query storage providers
   const storageProviders = await ctx.store.find(StorageProvider);
   const activeStorageProviders = storageProviders.filter(p => p.isActive);
   const agentLinkedStorage = storageProviders.filter(p => p.agentId && p.agentId > 0);
-  const totalCapacity = storageProviders.reduce((sum, p) => sum + Number(p.totalCapacityGB || 0n), 0);
+  const totalCapacity = storageProviders.reduce((sum, p) => sum + Number(p.totalCapacityGB), 0);
 
   // Query container files
   const containerFiles = await ctx.store.find(IPFSFile, {
@@ -412,3 +454,5 @@ export async function getMarketplaceStats(ctx: ProcessorContext<Store>): Promise
     },
   };
 }
+
+

@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Copy workspace files
 FROM base AS deps
-COPY package.json bun.lock ./
+COPY package.json bun.lockb ./
 COPY apps/bazaar/package.json ./apps/bazaar/
 COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
@@ -27,7 +27,7 @@ RUN bun install --production
 
 # Build stage
 FROM base AS builder
-COPY package.json bun.lock ./
+COPY package.json bun.lockb ./
 COPY apps/bazaar/package.json ./apps/bazaar/
 COPY packages/ ./packages/
 COPY scripts/shared/ ./scripts/shared/

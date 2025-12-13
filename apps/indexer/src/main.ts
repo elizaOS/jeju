@@ -22,6 +22,7 @@ import {processComputeEvents} from './compute-processor'
 import {processOIFEvents} from './oif-processor'
 import {processStorageEvents} from './storage-processor'
 import {processCrossServiceEvents} from './cross-service-processor'
+import {processOracleEvents} from './oracle-processor'
 import {
     getEventCategory, getEventName,
     ERC20_TRANSFER, ERC1155_TRANSFER_SINGLE, ERC1155_TRANSFER_BATCH
@@ -518,4 +519,5 @@ processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx: Process
     await processStorageEvents(ctx)
     await processOIFEvents(ctx)
     await processCrossServiceEvents(ctx)
+    await processOracleEvents(ctx)
 })
