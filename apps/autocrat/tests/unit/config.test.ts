@@ -489,3 +489,4 @@ describe('Contract Address Validation', () => {
     expect(addr1.toLowerCase()).toBe(addr2.toLowerCase());
   });
 });
+

@@ -87,8 +87,9 @@ Smart contract risks mitigated by audits.
     expect(data.isError).toBe(false);
     
     const result = JSON.parse(data.content[0].text);
-    // In local mode, uses local inference
-    expect(result.model).toBe('local-inference');
-    expect(result.mode).toBe('local');
+    // Returns research service info with Ollama requirement
+    expect(result.proposalId).toBeDefined();
+    expect(result.service).toBe('deep-research');
+    expect(result.model).toBe('ollama');
   });
 });

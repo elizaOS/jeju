@@ -297,3 +297,4 @@ describe('Architecture Compliance', () => {
     expect(types).not.toContain('r2');
   });
 });
+

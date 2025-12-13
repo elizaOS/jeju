@@ -102,6 +102,129 @@ const GPU_TYPES = [
 ];
 
 // ============================================================================
+// Indexer Client - Query indexer REST API for provider discovery
+// ============================================================================
+
+export interface IndexerConfig {
+  indexerUrl: string;
+  timeout?: number;
+}
+
+export class IndexerClient {
+  private baseUrl: string;
+  private timeout: number;
+
+  constructor(config: IndexerConfig) {
+    this.baseUrl = config.indexerUrl.replace(/\/$/, '');
+    this.timeout = config.timeout || 5000;
+  }
+
+  private async fetch<T>(path: string): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Indexer request failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  async getComputeProviders(limit?: number): Promise<Array<{
+    type: 'compute';
+    address: string;
+    name: string;
+    endpoint: string;
+    agentId: number | null;
+    isActive: boolean;
+  }>> {
+    const params = new URLSearchParams({ type: 'compute' });
+    if (limit) params.set('limit', limit.toString());
+
+    const result = await this.fetch<{ providers: Array<{
+      type: 'compute';
+      address: string;
+      name: string;
+      endpoint: string;
+      agentId: number | null;
+      isActive: boolean;
+    }> }>(`/api/providers?${params.toString()}`);
+    return result.providers;
+  }
+
+  async getFullStackProviders(limit?: number): Promise<Array<{
+    agentId: number;
+    compute: Array<{ address: string; name: string; endpoint: string }>;
+    storage: Array<{ address: string; name: string; endpoint: string; providerType: string }>;
+  }>> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+
+    const result = await this.fetch<{
+      fullStackProviders: Array<{
+        agentId: number;
+        compute: Array<{ address: string; name: string; endpoint: string }>;
+        storage: Array<{ address: string; name: string; endpoint: string; providerType: string }>;
+      }>;
+    }>(`/api/full-stack?${params.toString()}`);
+    return result.fullStackProviders;
+  }
+
+  async getContainerWithProviders(cid: string): Promise<{
+    container: {
+      cid: string;
+      name: string;
+      sizeBytes: string;
+      storageProvider: string | null;
+      tier: string;
+      architecture: string;
+      gpuRequired: boolean;
+      teeRequired: boolean;
+      verified: boolean;
+    } | null;
+    compatibleProviders: Array<{
+      address: string;
+      name: string;
+      endpoint: string;
+      agentId: number | null;
+    }>;
+  }> {
+    return this.fetch(`/api/containers/${cid}`);
+  }
+
+  async getMarketplaceStats(): Promise<{
+    compute: {
+      totalProviders: number;
+      activeProviders: number;
+      agentLinkedProviders: number;
+      totalRentals: number;
+      activeRentals: number;
+    };
+    storage: {
+      totalProviders: number;
+      activeProviders: number;
+      agentLinkedProviders: number;
+      totalDeals: number;
+      activeDeals: number;
+    };
+    crossService: {
+      totalContainerImages: number;
+      fullStackAgents: number;
+    };
+    lastUpdated: string;
+  }> {
+    return this.fetch('/api/marketplace/stats');
+  }
+}
+
+// ============================================================================
 // Compute Integration Client
 // ============================================================================
 
@@ -109,6 +232,7 @@ export interface ComputeIntegrationConfig {
   rpcUrl: string;
   computeRegistryAddress?: string;
   computeRentalAddress?: string;
+  indexerUrl?: string;
 }
 
 export class StorageComputeIntegration {
@@ -118,6 +242,7 @@ export class StorageComputeIntegration {
   private providerCache: Map<string, ComputeProviderInfo> = new Map();
   private lastCacheUpdate = 0;
   private readonly CACHE_TTL = 60000;
+  private indexerClient?: IndexerClient;
 
   constructor(config: ComputeIntegrationConfig) {
     this.provider = new JsonRpcProvider(config.rpcUrl);
@@ -137,30 +262,82 @@ export class StorageComputeIntegration {
         this.provider
       );
     }
+
+    // Initialize indexer client for fast lookups
+    if (config.indexerUrl) {
+      this.indexerClient = new IndexerClient({ indexerUrl: config.indexerUrl });
+    }
   }
 
   /**
    * Check if compute integration is available
    */
   isAvailable(): boolean {
-    return !!(this.computeRegistry && this.computeRental);
+    return !!(this.computeRegistry && this.computeRental) || !!this.indexerClient;
+  }
+
+  /**
+   * Get indexer client for direct queries
+   */
+  getIndexerClient(): IndexerClient | undefined {
+    return this.indexerClient;
   }
 
   /**
    * Get all active compute providers
+   * Tries indexer first for fast lookups, falls back to on-chain queries
    */
   async getComputeProviders(options?: {
     agentLinkedOnly?: boolean;
     minGpuVram?: number;
     requireTee?: boolean;
     maxPricePerHour?: bigint;
+    useIndexer?: boolean;
   }): Promise<ComputeProviderInfo[]> {
-    if (!this.computeRegistry || !this.computeRental) return [];
-
     // Use cache if fresh
     if (Date.now() - this.lastCacheUpdate < this.CACHE_TTL && this.providerCache.size > 0) {
       return this.filterProviders(Array.from(this.providerCache.values()), options);
     }
+
+    // Try indexer first if available (faster, no RPC calls)
+    if (this.indexerClient && options?.useIndexer !== false) {
+      const indexerProviders = await this.indexerClient.getComputeProviders(100).catch(() => null);
+      if (indexerProviders && indexerProviders.length > 0) {
+        const providers: ComputeProviderInfo[] = indexerProviders.map(p => ({
+          address: p.address,
+          name: p.name,
+          endpoint: p.endpoint,
+          agentId: p.agentId || 0,
+          isActive: p.isActive,
+          stake: 0n,
+          gpuType: 'NONE',
+          gpuCount: 0,
+          gpuVram: 0,
+          cpuCores: 0,
+          memoryGB: 0,
+          storageGB: 0,
+          teeCapable: false,
+          pricePerHour: 0n,
+          minimumHours: 1,
+          sshEnabled: true,
+          dockerEnabled: true,
+          healthScore: 100,
+          avgRating: 0,
+          totalRentals: 0,
+        }));
+
+        // Update cache
+        for (const p of providers) {
+          this.providerCache.set(p.address, p);
+        }
+        this.lastCacheUpdate = Date.now();
+
+        return this.filterProviders(providers, options);
+      }
+    }
+
+    // Fall back to on-chain queries
+    if (!this.computeRegistry || !this.computeRental) return [];
 
     const addresses: string[] = await this.computeRegistry.getActiveProviders();
     const providers: ComputeProviderInfo[] = [];

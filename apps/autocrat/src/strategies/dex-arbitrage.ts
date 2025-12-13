@@ -1,21 +1,5 @@
-/**
- * @fileoverview DEX Arbitrage Strategy
- *
- * Detects and executes arbitrage opportunities across AMM pools:
- * - Triangular arbitrage (A -> B -> C -> A)
- * - Cross-pool arbitrage (same pair, different pools)
- * - Multi-hop routing for optimal paths
- */
-
-import type {
-  ChainId,
-  Pool,
-  ArbitrageOpportunity,
-  StrategyConfig,
-} from '../types';
+import type { ChainId, Pool, ArbitrageOpportunity, StrategyConfig } from '../types';
 import type { SyncEvent, SwapEvent } from '../engine/collector';
-
-// ============ Types ============
 
 interface PoolState {
   pool: Pool;
@@ -32,13 +16,9 @@ interface ArbitragePath {
   profitBps: number;
 }
 
-// ============ Constants ============
-
-const FEE_BPS = 30; // 0.3% fee per swap (standard Uniswap V2)
-const MIN_LIQUIDITY = BigInt(1e18); // Minimum pool liquidity to consider
-const OPPORTUNITY_TTL_MS = 2000; // 2 seconds validity
-
-// ============ Strategy Class ============
+const FEE_BPS = 30;
+const MIN_LIQUIDITY = BigInt(1e18);
+const OPPORTUNITY_TTL_MS = 2000;
 
 export class DexArbitrageStrategy {
   private pools: Map<string, PoolState> = new Map();
@@ -52,24 +32,14 @@ export class DexArbitrageStrategy {
     this.config = config;
   }
 
-  /**
-   * Initialize with pools from collector
-   */
   initialize(pools: Pool[]): void {
     console.log(`🔄 Initializing DEX arbitrage strategy with ${pools.length} pools`);
-
     for (const pool of pools) {
-      if (pool.chainId !== this.chainId) continue;
-
-      this.addPool(pool);
+      if (pool.chainId === this.chainId) this.addPool(pool);
     }
-
     console.log(`   Indexed ${this.pools.size} pools, ${this.tokenPairs.size} unique tokens`);
   }
 
-  /**
-   * Add or update a pool
-   */
   addPool(pool: Pool): void {
     const poolState: PoolState = {
       pool,
@@ -85,102 +55,59 @@ export class DexArbitrageStrategy {
     this.indexTokenPool(pool.token1.address, pool.address);
   }
 
-  /**
-   * Handle sync event (reserve update)
-   */
   onSync(event: SyncEvent): void {
     const poolState = this.pools.get(event.poolAddress.toLowerCase());
     if (!poolState) return;
-
     poolState.reserve0 = event.reserve0;
     poolState.reserve1 = event.reserve1;
     poolState.lastUpdate = Date.now();
-
-    // Check for arbitrage opportunities after reserve update
     this.checkArbitrageForPool(poolState);
   }
 
-  /**
-   * Handle swap event
-   */
   onSwap(event: SwapEvent): void {
     const poolState = this.pools.get(event.poolAddress.toLowerCase());
     if (!poolState) return;
-
-    // A swap likely created a price discrepancy
-    // Check all pools for the same token pair
     const { token0, token1 } = poolState.pool;
     this.checkArbitrageForTokenPair(token0.address, token1.address);
   }
 
-  /**
-   * Get current opportunities
-   */
   getOpportunities(): ArbitrageOpportunity[] {
-    // Clean expired opportunities
     const now = Date.now();
     for (const [id, opp] of this.opportunities) {
-      if (opp.expiresAt < now) {
-        this.opportunities.delete(id);
-      }
+      if (opp.expiresAt < now) this.opportunities.delete(id);
     }
-
     return Array.from(this.opportunities.values())
       .filter(o => o.status === 'DETECTED')
       .sort((a, b) => b.expectedProfitBps - a.expectedProfitBps);
   }
 
-  /**
-   * Mark opportunity as being executed
-   */
   markExecuting(opportunityId: string): void {
     const opp = this.opportunities.get(opportunityId);
-    if (opp) {
-      opp.status = 'EXECUTING';
-    }
+    if (opp) opp.status = 'EXECUTING';
   }
 
-  /**
-   * Mark opportunity as completed/failed
-   */
   markCompleted(opportunityId: string, success: boolean): void {
     const opp = this.opportunities.get(opportunityId);
-    if (opp) {
-      opp.status = success ? 'COMPLETED' : 'FAILED';
-    }
+    if (opp) opp.status = success ? 'COMPLETED' : 'FAILED';
   }
-
-  // ============ Private Methods ============
 
   private indexTokenPool(token: string, pool: string): void {
     const tokenLower = token.toLowerCase();
-    const poolLower = pool.toLowerCase();
-
-    if (!this.tokenPairs.has(tokenLower)) {
-      this.tokenPairs.set(tokenLower, new Set());
-    }
-    this.tokenPairs.get(tokenLower)!.add(poolLower);
+    if (!this.tokenPairs.has(tokenLower)) this.tokenPairs.set(tokenLower, new Set());
+    this.tokenPairs.get(tokenLower)!.add(pool.toLowerCase());
   }
 
   private checkArbitrageForPool(poolState: PoolState): void {
     const { token0, token1 } = poolState.pool;
-
-    // Check triangular paths starting from token0
     this.findTriangularArbitrage(token0.address);
-
-    // Check triangular paths starting from token1
     this.findTriangularArbitrage(token1.address);
-
-    // Check cross-pool arbitrage
     this.checkCrossPoolArbitrage(poolState);
   }
 
   private checkArbitrageForTokenPair(token0: string, token1: string): void {
-    // Find all pools containing these tokens
     const pools0 = this.tokenPairs.get(token0.toLowerCase()) || new Set();
     const pools1 = this.tokenPairs.get(token1.toLowerCase()) || new Set();
 
-    // Get pools that contain both tokens (same pair, different pools)
     const pairPools: PoolState[] = [];
     for (const poolAddr of pools0) {
       if (pools1.has(poolAddr)) {
@@ -188,11 +115,7 @@ export class DexArbitrageStrategy {
         if (poolState) pairPools.push(poolState);
       }
     }
-
-    // Check for price discrepancy between pools
-    if (pairPools.length > 1) {
-      this.checkCrossPoolArbitrageBetween(pairPools);
-    }
+    if (pairPools.length > 1) this.checkCrossPoolArbitrageBetween(pairPools);
   }
 
   private findTriangularArbitrage(startToken: string): void {
@@ -200,8 +123,7 @@ export class DexArbitrageStrategy {
     const startPools = this.tokenPairs.get(startTokenLower);
     if (!startPools) return;
 
-    // Try to find paths that return to start token
-    const inputAmount = BigInt(1e18); // 1 token for calculation
+    const inputAmount = BigInt(1e18);
 
     for (const poolAddr1 of startPools) {
       const pool1State = this.pools.get(poolAddr1);
@@ -210,15 +132,9 @@ export class DexArbitrageStrategy {
       const token1 = this.getOtherToken(pool1State.pool, startTokenLower);
       if (!token1) continue;
 
-      // Get amount out from first hop
-      const amount1 = this.getAmountOut(
-        inputAmount,
-        pool1State,
-        startTokenLower === pool1State.pool.token0.address.toLowerCase()
-      );
+      const amount1 = this.getAmountOut(inputAmount, pool1State, startTokenLower === pool1State.pool.token0.address.toLowerCase());
       if (amount1 <= 0n) continue;
 
-      // Second hop
       const pools2 = this.tokenPairs.get(token1.toLowerCase());
       if (!pools2) continue;
 
@@ -231,15 +147,9 @@ export class DexArbitrageStrategy {
         const token2 = this.getOtherToken(pool2State.pool, token1);
         if (!token2 || token2.toLowerCase() === startTokenLower) continue;
 
-        // Get amount out from second hop
-        const amount2 = this.getAmountOut(
-          amount1,
-          pool2State,
-          token1.toLowerCase() === pool2State.pool.token0.address.toLowerCase()
-        );
+        const amount2 = this.getAmountOut(amount1, pool2State, token1.toLowerCase() === pool2State.pool.token0.address.toLowerCase());
         if (amount2 <= 0n) continue;
 
-        // Third hop (back to start)
         const pools3 = this.tokenPairs.get(token2.toLowerCase());
         if (!pools3) continue;
 
@@ -249,7 +159,6 @@ export class DexArbitrageStrategy {
           const pool3State = this.pools.get(poolAddr3);
           if (!pool3State || !this.hasMinLiquidity(pool3State)) continue;
 
-          // Check if this pool connects back to start
           const otherToken = this.getOtherToken(pool3State.pool, token2);
           if (!otherToken || otherToken.toLowerCase() !== startTokenLower) continue;
 

@@ -448,10 +448,10 @@ contract OIFConcurrentTest is Test {
 
         // All solvers withdraw some
         for (uint256 i = 0; i < NUM_SOLVERS; i++) {
-            uint256 liquidityBefore = outputSettler.getSolverLiquidity(solvers[i], address(0));
+            uint256 liquidityBefore = outputSettler.getSolverETH(solvers[i]);
             vm.prank(solvers[i]);
-            outputSettler.withdrawLiquidity(address(0), 3 ether);
-            uint256 liquidityAfter = outputSettler.getSolverLiquidity(solvers[i], address(0));
+            outputSettler.withdrawETH(3 ether);
+            uint256 liquidityAfter = outputSettler.getSolverETH(solvers[i]);
 
             assertEq(liquidityBefore - liquidityAfter, 3 ether);
         }
@@ -553,7 +553,8 @@ contract OIFDataVerificationTest is Test {
     function test_Verify_FillRecordData() public {
         bytes32 orderId = keccak256("verify-order");
         uint256 fillAmount = 5 ether;
-        bytes memory fillerData = abi.encode(address(0), fillAmount, recipient, uint256(12345));
+        uint256 gasProvided = 0; // Set to 0 for cleaner test
+        bytes memory fillerData = abi.encode(address(0), fillAmount, recipient, gasProvided);
 
         uint256 recipientBalanceBefore = recipient.balance;
 
@@ -568,13 +569,13 @@ contract OIFDataVerificationTest is Test {
         assertEq(fillRecord.filledBlock, block.number, "Fill block mismatch");
         assertTrue(outputSettler.isFilled(orderId), "Fill status mismatch");
 
-        // Verify actual ETH transfer
+        // Verify actual ETH transfer (amount + gasProvided)
         uint256 recipientBalanceAfter = recipient.balance;
-        assertEq(recipientBalanceAfter - recipientBalanceBefore, fillAmount, "ETH transfer amount mismatch");
+        assertEq(recipientBalanceAfter - recipientBalanceBefore, fillAmount + gasProvided, "ETH transfer amount mismatch");
     }
 
     function test_Verify_SolverLiquidityTracking() public {
-        uint256 initialLiquidity = outputSettler.getSolverLiquidity(solver, address(0));
+        uint256 initialLiquidity = outputSettler.getSolverETH(solver);
         assertEq(initialLiquidity, 50 ether, "Initial liquidity mismatch");
 
         // Fill an order
@@ -585,14 +586,14 @@ contract OIFDataVerificationTest is Test {
         vm.prank(solver);
         outputSettler.fill(orderId, "", fillerData);
 
-        uint256 afterFillLiquidity = outputSettler.getSolverLiquidity(solver, address(0));
+        uint256 afterFillLiquidity = outputSettler.getSolverETH(solver);
         assertEq(afterFillLiquidity, initialLiquidity - fillAmount, "Post-fill liquidity mismatch");
 
         // Deposit more
         vm.prank(solver);
         outputSettler.depositETH{value: 10 ether}();
 
-        uint256 afterDepositLiquidity = outputSettler.getSolverLiquidity(solver, address(0));
+        uint256 afterDepositLiquidity = outputSettler.getSolverETH(solver);
         assertEq(afterDepositLiquidity, afterFillLiquidity + 10 ether, "Post-deposit liquidity mismatch");
     }
 

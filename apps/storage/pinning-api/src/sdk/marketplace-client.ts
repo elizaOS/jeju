@@ -701,3 +701,4 @@ export function createComputeStorageClient(): StorageMarketplaceClient {
     enableFailover: true,
   });
 }
+

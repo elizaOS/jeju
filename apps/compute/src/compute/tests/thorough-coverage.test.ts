@@ -562,6 +562,7 @@ describe('Multi-Subscriber Notifications', () => {
       enableOnChainRegistration: false,
       executorWallet: testWallet,
       chainId: 9545,
+      allowPrivateCallbacks: true,
     });
     await integration.initialize();
   });
@@ -837,6 +838,7 @@ describe('Concurrent State Modifications', () => {
       rpcUrl: 'http://localhost:9545',
       enableOnChainRegistration: false,
       chainId: 9545,
+      allowPrivateCallbacks: true,
     });
     await integration.initialize();
   });

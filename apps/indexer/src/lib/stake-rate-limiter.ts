@@ -1,8 +1,3 @@
-/**
- * Stake-Based Rate Limiter for Indexer APIs
- * Higher stake = higher rate limit (matching RPC gateway pattern).
- */
-
 import { ethers } from 'ethers';
 import type { Request, Response, NextFunction } from 'express';
 import { loadNetworkConfig } from '../network-config';
@@ -57,21 +52,21 @@ async function getStakeTier(address: string): Promise<RateTier> {
   const { identity, ban, staking } = getContracts();
   let tier: RateTier = 'FREE';
 
-  // Check ban status
   if (identity && ban) {
-    const agentId = await identity.getAgentId(address).catch(() => 0n);
-    if (agentId > 0n && await ban.isBanned(agentId).catch(() => false)) {
-      tier = 'BANNED';
-      stakeCache.set(key, { tier, expiresAt: Date.now() + CACHE_TTL });
-      return tier;
+    const agentId = await identity.getAgentId(address);
+    if (agentId > 0n) {
+      if (await ban.isBanned(agentId)) {
+        tier = 'BANNED';
+        stakeCache.set(key, { tier, expiresAt: Date.now() + CACHE_TTL });
+        return tier;
+      }
     }
   }
 
-  // Check stake
   if (staking) {
-    const stakeWei = await staking.getStake(address)
-      .catch(() => staking.positions(address).then((p: [bigint]) => p[0]))
-      .catch(() => 0n);
+    const stakeWei = await staking.getStake(address).catch(() => {
+      return staking.positions(address).then(pos => pos[0]);
+    });
     
     const stakeUsd = (Number(stakeWei) / 1e18) * ETH_USD_PRICE;
     tier = stakeUsd >= TIER_THRESHOLDS.UNLIMITED ? 'UNLIMITED'

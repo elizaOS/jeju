@@ -474,7 +474,7 @@ contract BabylonTreasuryTest is Test {
         vm.prank(operator);
         treasury.withdraw(dailyLimit);
         
-        (uint256 limit, uint256 used, uint256 remaining) = treasury.getWithdrawalInfo();
+        (, uint256 used, uint256 remaining) = treasury.getWithdrawalInfo();
         assertEq(used, dailyLimit);
         assertEq(remaining, 0);
     }

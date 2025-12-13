@@ -388,3 +388,4 @@ export interface ProviderRegistrationService {
    */
   withdrawStake(): Promise<string>;
 }
+

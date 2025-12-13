@@ -1,31 +1,7 @@
-/**
- * @fileoverview Treasury Manager
- *
- * Manages profit deposits to the AutocratTreasury contract:
- * - Deposit profits from successful trades
- * - Track earnings and distributions
- * - Withdraw operator rewards
- */
-
-import {
-  createWalletClient,
-  createPublicClient,
-  http,
-  type WalletClient,
-  type PublicClient,
-  type Account,
-  encodeFunctionData,
-} from 'viem';
+import { createWalletClient, createPublicClient, http, type WalletClient, type PublicClient, type Account, encodeFunctionData } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import type {
-  ChainId,
-  ProfitSource,
-  TreasuryStats,
-  ProfitDeposit,
-} from '../types';
+import type { ChainId, ProfitSource, TreasuryStats, ProfitDeposit, ExecutionResult } from '../types';
 import { AUTOCRAT_TREASURY_ABI, ERC20_ABI, ZERO_ADDRESS } from '../lib/contracts';
-
-// ============ Types ============
 
 export interface TreasuryConfig {
   treasuryAddress: string;
@@ -34,18 +10,15 @@ export interface TreasuryConfig {
   privateKey: string;
 }
 
-// Map our types to contract enum values
 const PROFIT_SOURCE_MAP: Record<ProfitSource, number> = {
   DEX_ARBITRAGE: 0,
   CROSS_CHAIN_ARBITRAGE: 1,
   SANDWICH: 2,
   LIQUIDATION: 3,
-  SOLVER_FEE: 4,
+  SOLVER: 4,
   ORACLE_KEEPER: 5,
   OTHER: 6,
 };
-
-// ============ Treasury Manager Class ============
 
 export class TreasuryManager {
   private walletClient: WalletClient;

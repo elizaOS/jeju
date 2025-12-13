@@ -1,29 +1,6 @@
-/**
- * @fileoverview Sandwich Attack Strategy
- *
- * Detects and executes sandwich opportunities from pending transactions:
- * - Monitor mempool for large swaps
- * - Calculate frontrun/backrun parameters
- * - Execute atomic bundle (frontrun + victim + backrun)
- *
- * Note: This captures MEV for the protocol rather than external actors.
- * The profit goes to the treasury for redistribution.
- */
-
-import {
-  decodeAbiParameters,
-  parseAbiParameters,
-  type Hex,
-} from 'viem';
-import type {
-  ChainId,
-  Pool,
-  SandwichOpportunity,
-  StrategyConfig,
-} from '../types';
+import { decodeAbiParameters, parseAbiParameters, type Hex } from 'viem';
+import type { ChainId, Pool, SandwichOpportunity, StrategyConfig } from '../types';
 import type { PendingTransaction } from '../engine/collector';
-
-// ============ Types ============
 
 interface DecodedSwap {
   amountIn: bigint;
@@ -42,9 +19,6 @@ interface SandwichParams {
   victimImpact: bigint;
 }
 
-// ============ Constants ============
-
-// Known router function signatures
 const SWAP_SELECTORS = {
   swapExactTokensForTokens: '0x38ed1739',
   swapTokensForExactTokens: '0x8803dbee',
@@ -54,11 +28,9 @@ const SWAP_SELECTORS = {
   swapETHForExactTokens: '0xfb3bdb41',
 };
 
-const MIN_VICTIM_AMOUNT = BigInt(1e17); // 0.1 ETH minimum to consider
-const MAX_VICTIM_IMPACT_BPS = 100; // Max 1% impact on victim (ethical ceiling)
-const OPPORTUNITY_TTL_MS = 1000; // 1 second (very short for sandwiches)
-
-// ============ Strategy Class ============
+const MIN_VICTIM_AMOUNT = BigInt(1e17);
+const MAX_VICTIM_IMPACT_BPS = 100;
+const OPPORTUNITY_TTL_MS = 1000;
 
 export class SandwichStrategy {
   private pools: Map<string, Pool> = new Map();

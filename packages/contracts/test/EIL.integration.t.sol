@@ -496,3 +496,4 @@ contract EILIntegrationTest is Test {
         assertTrue(l2MessagingPaymaster.canComplete(address(0), transferAmount - fee));
     }
 }
+

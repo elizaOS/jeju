@@ -1,25 +1,7 @@
-/**
- * @fileoverview Oracle Keeper Strategy
- *
- * Keeps price oracle updated to prevent stale price exploitation:
- * - Monitor external price sources
- * - Update on-chain oracle when stale or deviated
- * - Earn keeper rewards (if any)
- */
-
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  type PublicClient,
-  type WalletClient,
-  type Account,
-} from 'viem';
+import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient, type Account } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { ChainId, ChainConfig, StrategyConfig } from '../types';
 import { PRICE_ORACLE_ABI, CHAINLINK_AGGREGATOR_ABI } from '../lib/contracts';
-
-// ============ Types ============
 
 interface PriceSource {
   token: string;
@@ -32,15 +14,12 @@ interface PriceSource {
 
 interface TokenPrice {
   token: string;
-  price: bigint; // USD with 18 decimals
+  price: bigint;
   decimals: number;
   source: 'chainlink' | 'dex' | 'api';
   timestamp: number;
 }
 
-// ============ Constants ============
-
-// Chainlink price feeds on Ethereum mainnet
 const CHAINLINK_FEEDS: Record<string, Record<string, string>> = {
   '1': { // Ethereum
     'ETH': '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',

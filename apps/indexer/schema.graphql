@@ -2468,3 +2468,125 @@ type PerpGlobalStats @entity {
   
   lastUpdated: DateTime!
 }
+
+# ============ Keepalive Registry Entities ============
+
+enum KeepaliveStatus {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  UNFUNDED
+}
+
+enum KeepaliveResourceType {
+  IPFS_CONTENT
+  COMPUTE_ENDPOINT
+  TRIGGER
+  STORAGE
+  AGENT
+  CUSTOM
+}
+
+type Keepalive @entity {
+  id: ID! # keepaliveId
+  owner: Account!
+  jnsNode: String! @index
+  agentId: BigInt
+  vaultAddress: String! @index
+  globalMinBalance: BigInt!
+  checkInterval: Int!
+  autoFundAmount: BigInt!
+  autoFundEnabled: Boolean!
+  active: Boolean!
+  status: KeepaliveStatus!
+  createdAt: DateTime!
+  lastCheckAt: DateTime
+  lastHealthy: DateTime
+  totalAutoFunded: BigInt!
+  healthCheckCount: Int!
+  resources: [KeepaliveResource!]! @derivedFrom(field: "keepalive")
+  healthChecks: [KeepaliveHealthCheck!]! @derivedFrom(field: "keepalive")
+}
+
+type KeepaliveResource @entity {
+  id: ID! # keepaliveId-index
+  keepalive: Keepalive!
+  resourceType: KeepaliveResourceType!
+  identifier: String!
+  healthEndpoint: String
+  minBalance: BigInt!
+  required: Boolean!
+  addedAt: DateTime!
+}
+
+type KeepaliveHealthCheck @entity {
+  id: ID! # txHash-logIndex
+  keepalive: Keepalive!
+  status: KeepaliveStatus!
+  balance: BigInt!
+  healthyResources: Int!
+  totalResources: Int!
+  failedResources: [String!]!
+  timestamp: DateTime!
+  blockNumber: Int! @index
+  txHash: String! @index
+}
+
+type KeepaliveAutoFund @entity {
+  id: ID! # txHash-logIndex
+  keepalive: Keepalive!
+  amount: BigInt!
+  vault: String!
+  success: Boolean!
+  timestamp: DateTime!
+  blockNumber: Int! @index
+  txHash: String! @index
+}
+
+# ============ ENS Mirror Entities ============
+
+type ENSMirror @entity {
+  id: ID! # mirrorId
+  ensNode: String! @index
+  jnsNode: String! @index
+  owner: Account!
+  syncInterval: Int!
+  mirrorContenthash: Boolean!
+  mirrorAddress: Boolean!
+  textKeys: [String!]!
+  active: Boolean!
+  createdAt: DateTime!
+  lastSyncAt: DateTime
+  syncCount: Int!
+  lastEthBlock: BigInt
+  syncs: [ENSMirrorSync!]! @derivedFrom(field: "mirror")
+}
+
+type ENSMirrorSync @entity {
+  id: ID! # txHash-logIndex
+  mirror: ENSMirror!
+  ethBlockNumber: BigInt!
+  success: Boolean!
+  errorReason: String
+  timestamp: DateTime!
+  blockNumber: Int! @index
+  txHash: String! @index
+}
+
+type KeepaliveStats @entity {
+  id: ID! # "global" or date string
+  date: DateTime @index
+  totalKeepalives: Int!
+  activeKeepalives: Int!
+  healthyCount: Int!
+  degradedCount: Int!
+  unhealthyCount: Int!
+  unfundedCount: Int!
+  totalFundedValue: BigInt!
+  totalAutoFunded: BigInt!
+  totalHealthChecks: Int!
+  mirrorCount: Int!
+  syncedMirrors: Int!
+  lastUpdated: DateTime!
+}

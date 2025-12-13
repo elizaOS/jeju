@@ -1,14 +1,4 @@
-/**
- * Compute + x402 Micropayment Integration Tests
- *
- * Comprehensive tests for x402 payment protocol integration:
- * - Configuration and network handling
- * - Payment header generation and parsing
- * - Signature verification
- * - Server 402 response handling
- * - Client-side utilities
- * - Multi-asset payment requirements
- */
+/** x402 Micropayment Integration Tests */
 
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { Wallet, parseEther, verifyMessage } from 'ethers';
@@ -22,12 +12,12 @@ import {
   verifyX402Payment,
   createPaymentRequirement,
   createMultiAssetPaymentRequirement,
-  estimateInferencePrice,
+  estimatePrice,
   formatPriceUSD,
   X402Client,
   X402_CHAIN_IDS,
   X402_USDC_ADDRESSES,
-  X402_NETWORK_CONFIGS,
+  X402_NETWORKS,
   type X402Network,
   type X402PaymentRequirement,
 } from '../sdk/x402';
@@ -42,9 +32,6 @@ let testWallet: Wallet;
 let userWallet: Wallet;
 let nodeAvailable = false;
 const baseUrl = `http://localhost:${TEST_PORT}`;
-
-// ============================================================================
-// ============================================================================
 
 describe('x402 Configuration', () => {
   test('getX402Config returns valid configuration', () => {
@@ -97,9 +84,6 @@ describe('x402 Configuration', () => {
     }
   });
 });
-
-// ============================================================================
-// ============================================================================
 
 describe('x402 Payment Headers', () => {
   beforeAll(() => {
@@ -201,9 +185,6 @@ describe('x402 Payment Headers', () => {
   });
 });
 
-// ============================================================================
-// ============================================================================
-
 describe('x402 Payment Requirements', () => {
   beforeAll(() => {
     testWallet = new Wallet(TEST_PRIVATE_KEY);
@@ -252,26 +233,17 @@ describe('x402 Payment Requirements', () => {
   });
 });
 
-// ============================================================================
-// ============================================================================
-
 describe('x402 Pricing', () => {
-  test('estimateInferencePrice returns default price for any model', () => {
-    // All models get the same default price (actual pricing from registry)
-    const priceA = estimateInferencePrice('model-a');
-    const priceB = estimateInferencePrice('model-b');
-    const priceC = estimateInferencePrice('any-model');
-    
-    // All should return the same default
+  test('estimatePrice returns consistent price for same model type', () => {
+    const priceA = estimatePrice('llm', 1000);
+    const priceB = estimatePrice('llm', 1000);
     expect(priceA).toBe(priceB);
-    expect(priceB).toBe(priceC);
     expect(priceA).toBeGreaterThan(0n);
   });
 
-  test('estimateInferencePrice scales with token count', () => {
-    const basePrice = estimateInferencePrice('test-model');
-    const scaledPrice = estimateInferencePrice('test-model', 5000); // 5x tokens
-    
+  test('estimatePrice scales with token count', () => {
+    const basePrice = estimatePrice('llm', 1000);
+    const scaledPrice = estimatePrice('llm', 5000);
     expect(scaledPrice).toBeGreaterThan(basePrice);
     expect(scaledPrice).toBe(basePrice * 5n);
   });
@@ -281,9 +253,6 @@ describe('x402 Pricing', () => {
     expect(price).toBe('$3.0000');
   });
 });
-
-// ============================================================================
-// ============================================================================
 
 describe('X402Client', () => {
   let client: X402Client;
@@ -326,9 +295,6 @@ describe('X402Client', () => {
     expect(isValid).toBe(true);
   });
 });
-
-// ============================================================================
-// ============================================================================
 
 describe('x402 Server Integration', () => {
   beforeAll(async () => {
@@ -452,12 +418,9 @@ describe('x402 Server Integration', () => {
   });
 });
 
-// ============================================================================
-// ============================================================================
-
 describe('x402 Protocol Compatibility', () => {
   test('network config follows standard format', () => {
-    const sepoliaConfig = X402_NETWORK_CONFIGS['base-sepolia'];
+    const sepoliaConfig = X402_NETWORKS['base-sepolia'];
     
     expect(sepoliaConfig.chainId).toBe(84532);
     expect(sepoliaConfig.rpcUrl).toBe('https://sepolia.base.org');

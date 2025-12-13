@@ -84,12 +84,13 @@ describe('Trigger E2E Tests', () => {
       fetch: targetApp.fetch,
     });
 
-    // Initialize trigger integration
+    // Initialize trigger integration (allowPrivateCallbacks for localhost testing)
     integration = createTriggerIntegration({
       rpcUrl: 'http://localhost:9545',
       enableOnChainRegistration: false,
       executorWallet,
       chainId: 9545,
+      allowPrivateCallbacks: true,
     });
 
     await integration.initialize();

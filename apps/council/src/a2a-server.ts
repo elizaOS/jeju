@@ -1,7 +1,5 @@
 /**
  * Council A2A Server
- * 
- * Agent-to-agent communication for the AI Council DAO.
  */
 
 import { Hono } from 'hono';
@@ -9,13 +7,10 @@ import { cors } from 'hono/cors';
 import { formatEther, parseEther } from 'ethers';
 import type { CouncilConfig } from './types';
 import { CouncilBlockchain } from './blockchain';
-import { councilAgentRuntime, OLLAMA_URL, OLLAMA_MODEL, type DeliberationRequest } from './agents';
-import {
-  ZERO_ADDRESS,
-  assessClarity, assessCompleteness, assessFeasibility, assessAlignment,
-  assessImpact, assessRisk, assessCostBenefit, calculateQualityScore,
-  assessProposalWithAI
-} from './shared';
+import { councilAgentRuntime, type DeliberationRequest } from './agents';
+import { storeVote, getVotes, generateResearch, getResearch, store, checkOllama, ollamaGenerate, OLLAMA_MODEL } from './local-services';
+import { ZERO_ADDRESS, assessClarity, assessCompleteness, assessFeasibility, assessAlignment, assessImpact, assessRisk, assessCostBenefit, calculateQualityScore, assessProposalWithAI } from './shared';
+import { getTEEMode } from './tee';
 
 interface SkillResult {
   message: string;
@@ -40,7 +35,6 @@ export class CouncilA2AServer {
 
     this.app.post('/', async (c) => {
       const body = await c.req.json();
-      
       if (body.method !== 'message/send') {
         return c.json({ jsonrpc: '2.0', id: body.id, error: { code: -32601, message: 'Method not found' } });
       }
@@ -85,32 +79,28 @@ export class CouncilA2AServer {
       capabilities: { streaming: false, pushNotifications: false, stateTransitionHistory: true },
       defaultInputModes: ['text', 'data'],
       defaultOutputModes: ['text', 'data'],
-      skills: this.getSkills()
+      skills: [
+        { id: 'chat', name: 'Chat', description: 'Chat with council agents (requires Ollama)', tags: ['chat', 'ai'] },
+        { id: 'assess-proposal', name: 'Assess Proposal', description: 'Evaluate proposal quality', tags: ['proposal'] },
+        { id: 'submit-proposal', name: 'Submit Proposal', description: 'Prepare proposal submission', tags: ['proposal', 'action'] },
+        { id: 'get-proposal', name: 'Get Proposal', description: 'Get proposal details', tags: ['proposal', 'query'] },
+        { id: 'list-proposals', name: 'List Proposals', description: 'List proposals', tags: ['proposal', 'query'] },
+        { id: 'back-proposal', name: 'Back Proposal', description: 'Stake on proposal', tags: ['proposal', 'action'] },
+        { id: 'get-council-status', name: 'Council Status', description: 'Get council info', tags: ['council', 'query'] },
+        { id: 'get-council-votes', name: 'Council Votes', description: 'Get votes for proposal', tags: ['council', 'query'] },
+        { id: 'submit-vote', name: 'Submit Vote', description: 'Cast council vote', tags: ['council', 'action'] },
+        { id: 'deliberate', name: 'Deliberate', description: 'Run council deliberation (requires Ollama)', tags: ['council', 'action', 'ai'] },
+        { id: 'get-ceo-status', name: 'CEO Status', description: 'Get CEO model and stats', tags: ['ceo', 'query'] },
+        { id: 'get-decision', name: 'Get Decision', description: 'Get CEO decision', tags: ['ceo', 'query'] },
+        { id: 'ceo-decision', name: 'CEO Decision', description: 'Trigger CEO decision', tags: ['ceo', 'action', 'ai'] },
+        { id: 'list-models', name: 'List Models', description: 'List CEO candidates', tags: ['ceo', 'query'] },
+        { id: 'request-research', name: 'Request Research', description: 'Request research (requires Ollama)', tags: ['research', 'action'] },
+        { id: 'get-research', name: 'Get Research', description: 'Get research report', tags: ['research', 'query'] },
+        { id: 'cast-veto', name: 'Cast Veto', description: 'Cast veto vote', tags: ['veto', 'action'] },
+        { id: 'add-commentary', name: 'Add Commentary', description: 'Add comment', tags: ['commentary', 'action'] },
+        { id: 'get-governance-stats', name: 'Stats', description: 'Governance stats', tags: ['governance', 'query'] }
+      ]
     };
-  }
-
-  private getSkills() {
-    return [
-      { id: 'chat', name: 'Chat', description: 'Send a message to council agents and get AI response', tags: ['chat', 'ai'] },
-      { id: 'assess-proposal', name: 'Assess Proposal Quality', description: 'Evaluate proposal quality', tags: ['proposal'] },
-      { id: 'submit-proposal', name: 'Submit Proposal', description: 'Prepare proposal submission tx', tags: ['proposal', 'action'] },
-      { id: 'get-proposal', name: 'Get Proposal', description: 'Get proposal details', tags: ['proposal', 'query'] },
-      { id: 'list-proposals', name: 'List Proposals', description: 'List proposals', tags: ['proposal', 'query'] },
-      { id: 'back-proposal', name: 'Back Proposal', description: 'Stake on a proposal', tags: ['proposal', 'action'] },
-      { id: 'get-council-status', name: 'Get Council Status', description: 'Get council info', tags: ['council', 'query'] },
-      { id: 'get-council-votes', name: 'Get Council Votes', description: 'Get votes for proposal', tags: ['council', 'query'] },
-      { id: 'submit-vote', name: 'Submit Vote', description: 'Cast a council agent vote', tags: ['council', 'action'] },
-      { id: 'deliberate', name: 'Deliberate', description: 'Trigger full council AI deliberation', tags: ['council', 'action', 'ai'] },
-      { id: 'get-ceo-status', name: 'Get CEO Status', description: 'Get CEO model and stats', tags: ['ceo', 'query'] },
-      { id: 'get-decision', name: 'Get Decision', description: 'Get CEO decision', tags: ['ceo', 'query'] },
-      { id: 'ceo-decision', name: 'CEO Decision', description: 'Trigger CEO AI decision on proposal', tags: ['ceo', 'action', 'ai'] },
-      { id: 'list-models', name: 'List Models', description: 'List CEO candidates', tags: ['ceo', 'query'] },
-      { id: 'request-research', name: 'Request Research', description: 'Request deep research', tags: ['research', 'action', 'payment'] },
-      { id: 'get-research', name: 'Get Research', description: 'Get research report', tags: ['research', 'query'] },
-      { id: 'cast-veto', name: 'Cast Veto', description: 'Cast veto vote', tags: ['veto', 'action'] },
-      { id: 'add-commentary', name: 'Add Commentary', description: 'Add proposal comment', tags: ['commentary', 'action'] },
-      { id: 'get-governance-stats', name: 'Get Stats', description: 'Get governance stats', tags: ['governance', 'query'] }
-    ];
   }
 
   private async executeSkill(skillId: string, params: Record<string, unknown>): Promise<SkillResult> {
@@ -129,8 +119,8 @@ export class CouncilA2AServer {
       case 'get-decision': return this.getDecision(params.proposalId as string);
       case 'ceo-decision': return this.makeCEODecision(params.proposalId as string);
       case 'list-models': return this.listModels();
-      case 'request-research': return this.requestResearch(params.proposalId as string);
-      case 'get-research': return this.getResearch(params.proposalId as string);
+      case 'request-research': return this.requestResearch(params);
+      case 'get-research': return this.getResearchResult(params.proposalId as string);
       case 'cast-veto': return this.prepareCastVeto(params);
       case 'add-commentary': return this.addCommentary(params);
       case 'get-governance-stats': return this.getGovernanceStats();
@@ -138,31 +128,71 @@ export class CouncilA2AServer {
     }
   }
 
+  private async chat(params: Record<string, unknown>): Promise<SkillResult> {
+    const message = params.message as string;
+    const agent = (params.agent as string) ?? 'ceo';
+    if (!message) return { message: 'Error', data: { error: 'Missing message parameter' } };
+
+    const ollamaUp = await checkOllama();
+    if (!ollamaUp) {
+      return { message: 'LLM unavailable', data: { error: 'Ollama not running. Start with: ollama serve' } };
+    }
+
+    const systemPrompts: Record<string, string> = {
+      ceo: 'You are Eliza, AI CEO of Jeju DAO. Make decisive governance decisions.',
+      treasury: 'You are the Treasury Guardian. Analyze financial implications.',
+      code: 'You are the Code Guardian. Review technical feasibility.',
+      community: 'You are the Community Guardian. Assess community impact.',
+      security: 'You are the Security Guardian. Identify risks and vulnerabilities.',
+    };
+
+    const response = await ollamaGenerate(message, systemPrompts[agent] ?? systemPrompts.ceo);
+    return { message: `${agent} responded`, data: { agent, model: OLLAMA_MODEL, response, timestamp: new Date().toISOString() } };
+  }
+
   private async assessProposal(params: Record<string, unknown>): Promise<SkillResult> {
     const { title, summary, description } = params as { title?: string; summary?: string; description?: string };
 
-    // Try AI assessment if cloud endpoint is configured (not 'local')
-    const hasCloudEndpoint = this.config.cloudEndpoint && this.config.cloudEndpoint !== 'local';
-    if (title && summary && description && hasCloudEndpoint) {
+    // Try AI assessment first
+    const ollamaUp = await checkOllama();
+    if (ollamaUp && title && summary && description) {
+      const prompt = `Assess this DAO proposal and return JSON scores 0-100:
+
+Title: ${title}
+Summary: ${summary}
+Description: ${description}
+
+Return ONLY JSON:
+{"clarity":N,"completeness":N,"feasibility":N,"alignment":N,"impact":N,"riskAssessment":N,"costBenefit":N,"feedback":[],"blockers":[],"suggestions":[]}`;
+
       try {
-        const aiResult = await assessProposalWithAI(
-          title,
-          summary,
-          description,
-          this.config.cloudEndpoint,
-          process.env.CLOUD_API_KEY
-        );
-        const readyToSubmit = aiResult.overallScore >= 90 && aiResult.blockers.length === 0;
+        const response = await ollamaGenerate(prompt, 'You are a DAO proposal evaluator. Return only valid JSON.');
+        const parsed = JSON.parse(response) as { clarity: number; completeness: number; feasibility: number; alignment: number; impact: number; riskAssessment: number; costBenefit: number; feedback: string[]; blockers: string[]; suggestions: string[] };
+        const overallScore = calculateQualityScore(parsed);
         return {
-          message: readyToSubmit ? `Ready: ${aiResult.overallScore}/100` : `Needs work: ${aiResult.overallScore}/100`,
-          data: { ...aiResult, readyToSubmit, minRequired: 90, assessedBy: 'ai' }
+          message: overallScore >= 90 ? `Ready: ${overallScore}/100` : `Needs work: ${overallScore}/100`,
+          data: { overallScore, criteria: parsed, feedback: parsed.feedback, blockers: parsed.blockers, suggestions: parsed.suggestions, readyToSubmit: overallScore >= 90, assessedBy: 'ollama' }
         };
       } catch {
-        // Fall through to heuristic assessment
+        // Fall through to heuristic
       }
     }
 
-    // Heuristic fallback (always used in local mode)
+    // Try cloud AI if configured
+    const hasCloud = this.config.cloudEndpoint && this.config.cloudEndpoint !== 'local';
+    if (hasCloud && title && summary && description) {
+      try {
+        const result = await assessProposalWithAI(title, summary, description, this.config.cloudEndpoint, process.env.CLOUD_API_KEY);
+        return {
+          message: result.overallScore >= 90 ? `Ready: ${result.overallScore}/100` : `Needs work: ${result.overallScore}/100`,
+          data: { ...result, readyToSubmit: result.overallScore >= 90, assessedBy: 'cloud' }
+        };
+      } catch {
+        // Fall through to heuristic
+      }
+    }
+
+    // Heuristic fallback (clearly labeled)
     const criteria = {
       clarity: assessClarity(title, summary, description),
       completeness: assessCompleteness(description),
@@ -172,24 +202,11 @@ export class CouncilA2AServer {
       riskAssessment: assessRisk(description),
       costBenefit: assessCostBenefit(description)
     };
-
     const overallScore = calculateQualityScore(criteria);
-    const blockers: string[] = [];
-    const suggestions: string[] = [];
-    const feedback: string[] = [];
-
-    if (criteria.clarity < 70) blockers.push('Title and summary lack clarity.');
-    if (criteria.completeness < 70) blockers.push('Description is incomplete.');
-    if (criteria.feasibility < 60) suggestions.push('Address feasibility concerns.');
-    if (criteria.alignment < 70) feedback.push('Align with DAO values.');
-    if (criteria.riskAssessment < 60) suggestions.push('Add risk assessment.');
-    if (criteria.costBenefit < 60) suggestions.push('Clarify cost-benefit.');
-
-    const readyToSubmit = overallScore >= 90 && blockers.length === 0;
 
     return {
-      message: readyToSubmit ? `Ready: ${overallScore}/100` : `Needs work: ${overallScore}/100`,
-      data: { overallScore, criteria, feedback, suggestions, blockers, readyToSubmit, minRequired: 90, assessedBy: 'heuristic' }
+      message: `Heuristic assessment: ${overallScore}/100 (no LLM available)`,
+      data: { overallScore, criteria, readyToSubmit: overallScore >= 90, assessedBy: 'heuristic', warning: 'LLM unavailable - using basic heuristics' }
     };
   }
 
@@ -203,14 +220,7 @@ export class CouncilA2AServer {
       data: {
         action: 'submitProposal',
         contract: this.config.contracts.council,
-        params: {
-          proposalType: params.proposalType,
-          qualityScore,
-          contentHash: params.contentHash,
-          targetContract: params.targetContract || ZERO_ADDRESS,
-          callData: params.callData || '0x',
-          value: params.value || '0'
-        },
+        params: { proposalType: params.proposalType, qualityScore, contentHash: params.contentHash, targetContract: params.targetContract || ZERO_ADDRESS, callData: params.callData || '0x', value: params.value || '0' },
         bond: formatEther(parseEther('0.001'))
       }
     };
@@ -218,154 +228,97 @@ export class CouncilA2AServer {
 
   private async getProposal(proposalId: string): Promise<SkillResult> {
     if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
-    
-    try {
-      const result = await this.blockchain.getProposal(proposalId);
-      if (!result) return { message: 'Not found', data: { error: 'Proposal not found', proposalId } };
-      return {
-        message: `Status: ${this.blockchain.formatProposal(result.proposal).status}`,
-        data: { ...this.blockchain.formatProposal(result.proposal), councilVotes: this.blockchain.formatVotes(result.votes) }
-      };
-    } catch {
-      return { message: 'Not found', data: { error: 'Proposal not found', proposalId } };
-    }
+    const result = await this.blockchain.getProposal(proposalId);
+    if (!result) return { message: 'Not found', data: { error: 'Proposal not found or contract not deployed', proposalId } };
+    return { message: `Status: ${this.blockchain.formatProposal(result.proposal).status}`, data: { ...this.blockchain.formatProposal(result.proposal), councilVotes: this.blockchain.formatVotes(result.votes) } };
   }
 
   private async listProposals(activeOnly = false): Promise<SkillResult> {
-    try {
-      const result = await this.blockchain.listProposals(activeOnly);
-      return { message: `Found ${result.total} proposals`, data: result };
-    } catch {
-      return { message: 'Found 0 proposals', data: { proposals: [], total: 0 } };
-    }
+    const result = await this.blockchain.listProposals(activeOnly);
+    return { message: `Found ${result.total} proposals`, data: result };
   }
 
   private prepareBackProposal(params: Record<string, unknown>): SkillResult {
     return {
-      message: 'Ready to back proposal',
-      data: {
-        action: 'backProposal',
-        contract: this.config.contracts.council,
-        params: { proposalId: params.proposalId, stakeAmount: params.stakeAmount || '0', reputationWeight: params.reputationWeight || 0 }
-      }
+      message: 'Ready to back',
+      data: { action: 'backProposal', contract: this.config.contracts.council, params: { proposalId: params.proposalId, stakeAmount: params.stakeAmount || '0', reputationWeight: params.reputationWeight || 0 } }
     };
   }
 
   private async getCouncilVotes(proposalId: string): Promise<SkillResult> {
     if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
     
-    try {
-      const result = await this.blockchain.getProposal(proposalId);
-      if (!result) return { message: 'No votes', data: { proposalId, votes: [] } };
-      return { message: `${result.votes.length} votes`, data: { proposalId, votes: this.blockchain.formatVotes(result.votes) } };
-    } catch {
-      // Contract call failed - return empty votes
-      return { message: 'No votes', data: { proposalId, votes: [] } };
+    // Get from local storage first
+    const localVotes = getVotes(proposalId);
+    if (localVotes.length > 0) {
+      return { message: `${localVotes.length} votes`, data: { proposalId, votes: localVotes, source: 'local' } };
     }
+
+    // Try blockchain
+    const result = await this.blockchain.getProposal(proposalId);
+    if (!result) return { message: 'No votes', data: { proposalId, votes: [] } };
+    return { message: `${result.votes.length} votes`, data: { proposalId, votes: this.blockchain.formatVotes(result.votes), source: 'chain' } };
   }
 
-  /** Chat with council agents via LLM */
-  private async chat(params: Record<string, unknown>): Promise<SkillResult> {
-    const message = params.message as string;
-    const agent = (params.agent as string) ?? 'ceo';
-    
-    if (!message) return { message: 'Error', data: { error: 'Missing message parameter' } };
+  private submitVote(params: Record<string, unknown>): SkillResult {
+    const { proposalId, agentId, vote, reasoning, confidence } = params as { proposalId: string; agentId: string; vote: 'APPROVE' | 'REJECT' | 'ABSTAIN'; reasoning: string; confidence: number };
 
-    const systemPrompts: Record<string, string> = {
-      ceo: 'You are Eliza, the AI CEO of Jeju DAO. Make final decisions. Be concise and decisive.',
-      treasury: 'You are the Treasury Guardian. Analyze financial implications. Be specific about costs.',
-      code: 'You are the Code Guardian. Review technical feasibility. Focus on implementation.',
-      community: 'You are the Community Guardian. Assess community impact and user experience.',
-      security: 'You are the Security Guardian. Identify risks and vulnerabilities. Be thorough.',
+    if (!proposalId || !agentId || !vote) {
+      return { message: 'Error', data: { error: 'Missing: proposalId, agentId, vote' } };
+    }
+
+    if (!['APPROVE', 'REJECT', 'ABSTAIN'].includes(vote)) {
+      return { message: 'Error', data: { error: 'Invalid vote. Must be: APPROVE, REJECT, or ABSTAIN' } };
+    }
+
+    const validAgents = ['treasury', 'code', 'community', 'security', 'legal'];
+    if (!validAgents.includes(agentId.toLowerCase())) {
+      return { message: 'Error', data: { error: `Invalid agent. Must be: ${validAgents.join(', ')}` } };
+    }
+
+    // Actually store the vote
+    storeVote(proposalId, { role: agentId.toUpperCase(), vote, reasoning: reasoning || 'No reasoning', confidence: confidence || 75 });
+
+    return {
+      message: `Vote stored: ${vote}`,
+      data: { proposalId, agentId, vote, reasoning: reasoning || 'No reasoning', confidence: confidence || 75, timestamp: new Date().toISOString(), status: 'stored' }
     };
-
-    try {
-      const checkResponse = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(2000) });
-      if (!checkResponse.ok) {
-        return {
-          message: 'LLM not available',
-          data: { error: 'Ollama not running', response: `Received: "${message.slice(0, 50)}...". Council will review.` }
-        };
-      }
-
-      const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          prompt: message,
-          system: systemPrompts[agent] ?? systemPrompts.ceo,
-          stream: false,
-          options: { temperature: 0.7, num_predict: 300 }
-        }),
-      });
-
-      if (!response.ok) throw new Error(`Ollama error: ${response.status}`);
-      const { response: text, model } = await response.json() as { response: string; model: string };
-      
-      return {
-        message: `${agent} responded`,
-        data: { agent, model, response: text, timestamp: new Date().toISOString() }
-      };
-    } catch (error) {
-      return {
-        message: 'Chat error',
-        data: { error: error instanceof Error ? error.message : 'Unknown error', suggestion: 'Run: ollama serve' }
-      };
-    }
   }
 
-  /**
-   * Run full AI deliberation on a proposal
-   */
   private async runDeliberation(params: Record<string, unknown>): Promise<SkillResult> {
-    const { proposalId, title, description, proposalType, submitter } = params as {
-      proposalId: string;
-      title?: string;
-      description?: string;
-      proposalType?: string;
-      submitter?: string;
-    };
+    const { proposalId, title, description, proposalType, submitter } = params as { proposalId: string; title?: string; description?: string; proposalType?: string; submitter?: string };
+    if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
 
-    if (!proposalId) {
-      return { message: 'Error', data: { error: 'Missing proposalId' } };
+    const ollamaUp = await checkOllama();
+    if (!ollamaUp) {
+      return { message: 'LLM unavailable', data: { error: 'Deliberation requires Ollama. Start with: ollama serve' } };
     }
 
     const request: DeliberationRequest = {
       proposalId,
-      title: title ?? 'Untitled Proposal',
+      title: title ?? 'Untitled',
       summary: description?.slice(0, 200) ?? 'No summary',
-      description: description ?? 'No description provided',
+      description: description ?? 'No description',
       proposalType: proposalType ?? 'GENERAL',
       submitter: submitter ?? 'unknown',
     };
 
-    console.log(`[A2A] Starting AI deliberation for ${proposalId}...`);
-    
-    // Get votes from all council agents using ElizaOS/Ollama
     const votes = await councilAgentRuntime.deliberateAll(request);
     
-    // Summarize votes
+    // Store all votes
+    for (const v of votes) {
+      storeVote(proposalId, { role: v.role, vote: v.vote, reasoning: v.reasoning, confidence: v.confidence });
+    }
+
     const approves = votes.filter(v => v.vote === 'APPROVE').length;
     const rejects = votes.filter(v => v.vote === 'REJECT').length;
-    const abstains = votes.filter(v => v.vote === 'ABSTAIN').length;
 
     return {
-      message: `Deliberation complete: ${approves} approve, ${rejects} reject, ${abstains} abstain`,
+      message: `Deliberation: ${approves} approve, ${rejects} reject`,
       data: {
         proposalId,
-        votes: votes.map(v => ({
-          agent: v.role,
-          vote: v.vote,
-          reasoning: v.reasoning,
-          confidence: v.confidence
-        })),
-        summary: {
-          approve: approves,
-          reject: rejects,
-          abstain: abstains,
-          total: votes.length
-        },
+        votes: votes.map(v => ({ agent: v.role, vote: v.vote, reasoning: v.reasoning, confidence: v.confidence })),
+        summary: { approve: approves, reject: rejects, abstain: votes.length - approves - rejects, total: votes.length },
         recommendation: approves > rejects ? 'APPROVE' : approves === rejects ? 'REVIEW' : 'REJECT',
         timestamp: new Date().toISOString()
       }
@@ -379,10 +332,8 @@ export class CouncilA2AServer {
 
   private async getDecision(proposalId: string): Promise<SkillResult> {
     if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
-    
     const result = await this.blockchain.getDecision(proposalId);
-    if (!result.decided) return { message: 'No decision yet', data: { proposalId, decided: false } };
-
+    if (!result.decided) return { message: 'No decision', data: { proposalId, decided: false } };
     return { message: `CEO: ${result.decision?.approved ? 'APPROVED' : 'REJECTED'}`, data: { ...result.decision, decided: true } };
   }
 
@@ -394,60 +345,47 @@ export class CouncilA2AServer {
     return { message: `${modelIds.length} models`, data: { models: modelIds } };
   }
 
-  private requestResearch(proposalId: string): SkillResult {
+  private async requestResearch(params: Record<string, unknown>): Promise<SkillResult> {
+    const proposalId = params.proposalId as string;
+    const description = (params.description as string) ?? 'Proposal for DAO governance';
     if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
-    
-    const isLocal = this.config.computeEndpoint === 'local';
+
+    const ollamaUp = await checkOllama();
+    if (!ollamaUp) {
+      return { message: 'LLM unavailable', data: { error: 'Research requires Ollama. Start with: ollama serve' } };
+    }
+
+    const research = await generateResearch(proposalId, description);
     return {
-      message: isLocal ? 'Research available (local)' : 'Research available',
-      data: { 
-        proposalId, 
-        model: isLocal ? 'local-inference' : 'claude-opus-4-5-20250514',
-        estimatedCost: isLocal ? '0' : formatEther(parseEther('0.1')),
-        mode: isLocal ? 'local' : 'cloud'
-      }
+      message: 'Research complete',
+      data: { proposalId, model: research.model, reportLength: research.report.length, preview: research.report.slice(0, 500) }
     };
   }
 
-  private async getResearch(proposalId: string): Promise<SkillResult> {
+  private getResearchResult(proposalId: string): SkillResult {
     if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
-    const result = await this.blockchain.getProposal(proposalId);
-    if (!result || !result.proposal.hasResearch) {
-      return { message: 'No research', data: { proposalId, hasResearch: false } };
-    }
-    
-    const retrieveFrom = this.config.storageEndpoint === 'local'
-      ? `.council-storage/${result.proposal.researchHash}.json`
-      : `${this.config.storageEndpoint}/ipfs/${result.proposal.researchHash}`;
-    
-    return {
-      message: 'Research available',
-      data: { proposalId, hasResearch: true, researchHash: result.proposal.researchHash, retrieveFrom }
-    };
+    const research = getResearch(proposalId);
+    if (!research) return { message: 'No research', data: { proposalId, hasResearch: false } };
+    return { message: 'Research available', data: { proposalId, hasResearch: true, ...research } };
   }
 
   private prepareCastVeto(params: Record<string, unknown>): SkillResult {
     return {
-      message: 'Ready to cast veto',
-      data: {
-        action: 'castVetoVote',
-        contract: this.config.contracts.council,
-        params: { proposalId: params.proposalId, category: params.category, reasonHash: params.reason },
-        minStake: '0.01 ETH'
-      }
+      message: 'Ready to veto',
+      data: { action: 'castVetoVote', contract: this.config.contracts.council, params: { proposalId: params.proposalId, category: params.category, reasonHash: params.reason }, minStake: '0.01 ETH' }
     };
   }
 
-  private addCommentary(params: Record<string, unknown>): SkillResult {
+  private async addCommentary(params: Record<string, unknown>): Promise<SkillResult> {
+    const { proposalId, content, sentiment } = params as { proposalId: string; content: string; sentiment?: string };
+    if (!proposalId || !content) return { message: 'Error', data: { error: 'Missing proposalId or content' } };
+
+    // Store the comment
+    const hash = await store({ type: 'commentary', proposalId, content, sentiment: sentiment || 'neutral', timestamp: Date.now() });
+
     return {
-      message: 'Commentary prepared',
-      data: {
-        proposalId: params.proposalId,
-        content: params.content,
-        sentiment: params.sentiment || 'neutral',
-        timestamp: new Date().toISOString(),
-        storageEndpoint: this.config.storageEndpoint
-      }
+      message: 'Commentary stored',
+      data: { proposalId, content, sentiment: sentiment || 'neutral', timestamp: new Date().toISOString(), hash }
     };
   }
 
@@ -456,81 +394,48 @@ export class CouncilA2AServer {
     return { message: 'Governance stats', data: stats };
   }
 
-  private submitVote(params: Record<string, unknown>): SkillResult {
-    const { proposalId, agentId, vote, reasoning, confidence } = params as {
-      proposalId: string;
-      agentId: string;
-      vote: 'APPROVE' | 'REJECT' | 'ABSTAIN';
-      reasoning: string;
-      confidence: number;
-    };
-
-    if (!proposalId || !agentId || !vote) {
-      return { message: 'Error', data: { error: 'Missing required fields: proposalId, agentId, vote' } };
-    }
-
-    const validVotes = ['APPROVE', 'REJECT', 'ABSTAIN'];
-    if (!validVotes.includes(vote)) {
-      return { message: 'Error', data: { error: `Invalid vote. Must be one of: ${validVotes.join(', ')}` } };
-    }
-
-    const validAgents = ['treasury', 'code', 'community', 'security', 'legal'];
-    if (!validAgents.includes(agentId.toLowerCase())) {
-      return { message: 'Error', data: { error: `Invalid agent. Must be one of: ${validAgents.join(', ')}` } };
-    }
-
-    // Store vote in local storage (or would submit to chain if deployed)
-    return {
-      message: `Vote recorded: ${vote}`,
-      data: {
-        proposalId,
-        agentId,
-        vote,
-        reasoning: reasoning || 'No reasoning provided',
-        confidence: confidence || 75,
-        timestamp: new Date().toISOString(),
-        status: 'recorded'
-      }
-    };
-  }
-
   private async makeCEODecision(proposalId: string): Promise<SkillResult> {
-    if (!proposalId) {
-      return { message: 'Error', data: { error: 'Missing proposalId' } };
+    if (!proposalId) return { message: 'Error', data: { error: 'Missing proposalId' } };
+
+    const ollamaUp = await checkOllama();
+    if (!ollamaUp) {
+      return { message: 'LLM unavailable', data: { error: 'CEO decision requires Ollama. Start with: ollama serve' } };
     }
 
-    // Get council votes for context
-    const votesResult = await this.getCouncilVotes(proposalId);
-    const votes = (votesResult.data.votes as Array<{ vote: string }>) || [];
-    
-    // Calculate consensus
+    const votes = getVotes(proposalId);
     const approves = votes.filter(v => v.vote === 'APPROVE').length;
     const rejects = votes.filter(v => v.vote === 'REJECT').length;
     const total = votes.length || 1;
-    
-    // CEO decision based on council consensus (in real implementation, uses TEE)
-    const approved = approves > rejects;
-    const confidence = Math.round((Math.max(approves, rejects) / total) * 100);
-    const alignmentScore = Math.round(((approves + rejects) / total) * 100);
 
-    return {
-      message: `CEO Decision: ${approved ? 'APPROVED' : 'REJECTED'}`,
-      data: {
-        proposalId,
-        approved,
-        confidenceScore: confidence,
-        alignmentScore,
-        councilVotes: { approve: approves, reject: rejects, abstain: total - approves - rejects },
-        reasoning: approved 
-          ? 'Council consensus supports approval. Strategic alignment confirmed.'
-          : 'Council consensus indicates rejection. Risk assessment requires more review.',
-        recommendations: approved
-          ? ['Proceed with implementation', 'Monitor community feedback']
-          : ['Address council concerns', 'Revise proposal scope'],
-        timestamp: new Date().toISOString(),
-        teeMode: 'simulated'
-      }
+    // Use real LLM for decision reasoning
+    const prompt = `As AI CEO, make a decision on this proposal.
+
+Council votes: ${approves} approve, ${rejects} reject, ${total - approves - rejects} abstain
+
+Vote details:
+${votes.map(v => `- ${v.role}: ${v.vote} (${v.confidence}%) - ${v.reasoning}`).join('\n')}
+
+Provide your decision as: APPROVED or REJECTED, with reasoning.`;
+
+    const response = await ollamaGenerate(prompt, 'You are Eliza, AI CEO of Jeju DAO. Make decisive, well-reasoned governance decisions.');
+    const approved = response.toLowerCase().includes('approved') && !response.toLowerCase().includes('rejected');
+
+    const decision = {
+      proposalId,
+      approved,
+      confidenceScore: Math.round((Math.max(approves, rejects) / total) * 100),
+      alignmentScore: Math.round(((approves + rejects) / total) * 100),
+      councilVotes: { approve: approves, reject: rejects, abstain: total - approves - rejects },
+      reasoning: response.slice(0, 500),
+      recommendations: approved ? ['Proceed with implementation'] : ['Address council concerns'],
+      timestamp: new Date().toISOString(),
+      model: OLLAMA_MODEL,
+      teeMode: getTEEMode()
     };
+
+    await store({ type: 'ceo_decision', ...decision });
+
+    return { message: `CEO: ${approved ? 'APPROVED' : 'REJECTED'}`, data: decision };
   }
 
   getRouter(): Hono {

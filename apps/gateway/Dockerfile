@@ -17,8 +17,8 @@ WORKDIR /app
 # Copy workspace package files
 FROM base AS deps
 
-# Copy root package.json and bun.lock
-COPY package.json bun.lock* ./
+# Copy root package.json and bun.lockb
+COPY package.json bun.lockb* ./
 
 # Copy all package.json files for workspace resolution
 COPY packages/types/package.json ./packages/types/

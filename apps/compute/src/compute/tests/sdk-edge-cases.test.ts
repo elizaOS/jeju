@@ -15,7 +15,6 @@ import { serve } from 'bun';
 import type { Address } from 'viem';
 import {
   estimatePrice,
-  getDetailedPriceEstimate,
   formatPriceETH,
   formatPriceUSD,
   DEFAULT_PRICING,
@@ -27,6 +26,7 @@ import {
   createMultiAssetPaymentRequirement,
   type PricingModelType,
 } from '../sdk/x402';
+import { getAvailablePort } from './test-utils';
 
 type BunServer = ReturnType<typeof serve>;
 
@@ -101,25 +101,6 @@ describe('Pricing Boundary Conditions', () => {
     });
   });
 
-  describe('getDetailedPriceEstimate structure', () => {
-    test('returns correct structure for all model types', () => {
-      const modelTypes: PricingModelType[] = ['llm', 'image', 'video', 'audio', 'stt', 'tts', 'embedding'];
-      
-      for (const modelType of modelTypes) {
-        const estimate = getDetailedPriceEstimate(modelType, 1000);
-        
-        expect(estimate).toHaveProperty('amount');
-        expect(estimate).toHaveProperty('currency');
-        expect(estimate).toHaveProperty('breakdown');
-        expect(estimate.currency).toBe('ETH');
-        expect(estimate.breakdown).toHaveProperty('basePrice');
-        expect(estimate.breakdown).toHaveProperty('unitCount');
-        expect(estimate.breakdown).toHaveProperty('unitType');
-        expect(estimate.breakdown.unitCount).toBe(1000);
-        expect(estimate.breakdown.unitType).toBe(modelType);
-      }
-    });
-  });
 
   describe('formatPriceETH edge cases', () => {
     test('formats zero wei', () => {
@@ -284,7 +265,7 @@ describe('Payment Verification Edge Cases', () => {
 
 describe('X402Client Concurrent Behavior', () => {
   let server: BunServer;
-  let port = 8770;
+  let port: number;
   let requestCount = 0;
   let concurrentMax = 0;
   let currentConcurrent = 0;
@@ -292,6 +273,7 @@ describe('X402Client Concurrent Behavior', () => {
   const providerAddress = createWallet().address as Address;
 
   beforeAll(async () => {
+    port = await getAvailablePort();
     requestCount = 0;
     concurrentMax = 0;
     currentConcurrent = 0;
@@ -529,10 +511,11 @@ describe('Header Parsing Edge Cases', () => {
 
 describe('Error Recovery', () => {
   let server: BunServer;
-  let port = 8771;
+  let port: number;
   let failNextRequest = false;
 
   beforeAll(async () => {
+    port = await getAvailablePort();
     const app = new Hono();
     
     app.post('/api/flaky', async (c) => {

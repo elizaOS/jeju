@@ -165,31 +165,24 @@ test.describe('Live Chain Integration', () => {
   });
 });
 
-test.describe('Compute Integration', () => {
-  test.beforeAll(async () => {
-    // Check if compute service is available
-    try {
-      const response = await fetch(`${COMPUTE_URL}/health`);
-      if (!response.ok) {
-        test.skip();
-      }
-    } catch {
-      test.skip();
-    }
-  });
+test.describe('Compute Integration (Optional External Service)', () => {
+  // These tests require the external compute service at COMPUTE_URL (default: localhost:8020)
+  // They are skipped when the compute service is not running - this is expected behavior
+  // To run: start the compute service with `cd ../compute && bun run dev`
 
   test('compute service is healthy', async () => {
-    const response = await fetch(`${COMPUTE_URL}/health`);
-    
-    if (response.status === 404) {
-      test.skip();
-      return;
+    try {
+      const response = await fetch(`${COMPUTE_URL}/health`);
+      if (!response.ok) { test.skip(); return; }
+      expect(response.ok).toBeTruthy();
+    } catch {
+      test.skip(); // Expected when compute service not running
     }
-    
-    expect(response.ok).toBeTruthy();
   });
 
   test('council can use compute trigger', async ({ request }) => {
+    // This test always runs - it verifies council's trigger API works
+    // regardless of whether compute service is available
     const response = await request.get(`${COUNCIL_URL}/api/v1/triggers`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();

@@ -62,10 +62,8 @@ export * from './inference-registry';
 export * from './cloud-provider';
 export * from './cloud-integration';
 
-// Re-export marketplace with explicit names to avoid conflicts
 export {
   ComputeMarketplace,
-  createComputeMarketplace,
   type MarketplaceConfig,
   type InferenceRequest as MarketplaceInferenceRequest,
   type InferenceInput,

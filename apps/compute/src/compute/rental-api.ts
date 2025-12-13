@@ -1,28 +1,10 @@
-/**
- * GPU Rental REST API
- *
- * Provides HTTP endpoints for the compute marketplace rental system.
- * Used by Babylon training client and other apps to:
- * - Request GPU rentals
- * - Check rental status
- * - List available GPU options
- * - Terminate rentals
- *
- * Integrates with:
- * - TEE providers (Phala, Marlin, AWS Nitro)
- * - On-chain ComputeRental contract
- * - Cloud providers for GPU provisioning
- */
+/** GPU Rental REST API */
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { Contract, JsonRpcProvider, Wallet, parseEther } from 'ethers';
 import type { Address } from 'viem';
 import type { TEENode } from '../infra/tee-interface';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type GPUType = 'H200' | 'H100' | 'A100_80' | 'A100_40' | 'RTX4090';
 
@@ -72,7 +54,6 @@ export interface GPUOption {
   teeCapable: boolean;
 }
 
-// Contract ABI (minimal)
 const RENTAL_ABI = [
   'function calculateRentalCost(address provider, uint256 durationHours) view returns (uint256)',
   'function createRental(address provider, uint256 durationHours, string sshPublicKey, string containerImage, string startupScript) payable returns (bytes32)',
@@ -101,26 +82,18 @@ const GPU_PRICING_WEI: Record<GPUType, bigint> = {
   H200: parseEther('1.00'),        // $3.00/hr
 };
 
-// ============================================================================
-// Rental Service
-// ============================================================================
-
 export class RentalService {
   private provider: JsonRpcProvider;
   private _rental: Contract;
   private registry: Contract;
   private _signer: Wallet | null;
   private _config: RentalApiConfig;
-  
-  // Active rentals tracking
   private activeRentals: Map<string, {
     request: RentalRequest;
     status: RentalStatus;
     node?: TEENode;
     startedAt: number;
   }> = new Map();
-
-  // Mock provider pool (in production, this comes from on-chain registry)
   private mockProviders: Map<GPUType, Address[]> = new Map([
     ['H200', ['0x1111111111111111111111111111111111111111' as Address]],
     ['H100', ['0x2222222222222222222222222222222222222222' as Address]],
@@ -139,23 +112,14 @@ export class RentalService {
       : null;
   }
 
-  /**
-   * Create a new GPU rental
-   */
   async createRental(request: RentalRequest): Promise<RentalResponse> {
     const rentalId = `rental-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
-    // Find available provider for GPU type
     const providerAddress = await this.findProvider(request.gpuType);
-    if (!providerAddress) {
-      throw new Error(`No available provider for GPU type ${request.gpuType}`);
-    }
+    if (!providerAddress) throw new Error(`No provider for ${request.gpuType}`);
 
-    // Calculate cost
     const pricePerHour = GPU_PRICING_WEI[request.gpuType] ?? parseEther('0.10');
     const totalCost = pricePerHour * BigInt(request.durationHours);
-
-    // Initialize rental tracking
     const expiresAt = Date.now() + request.durationHours * 60 * 60 * 1000;
     
     this.activeRentals.set(rentalId, {
@@ -167,7 +131,6 @@ export class RentalService {
       startedAt: Date.now(),
     });
 
-    // Provision the TEE/container
     this.provisionAsync(rentalId, request, providerAddress);
 
     return {
@@ -181,9 +144,6 @@ export class RentalService {
     };
   }
 
-  /**
-   * Async provisioning (runs in background)
-   */
   private async provisionAsync(
     rentalId: string,
     _request: RentalRequest,
@@ -193,42 +153,25 @@ export class RentalService {
     if (!rental) return;
 
     try {
-      // Simulate provisioning delay (in production, this calls TEE provider)
       await new Promise((r) => setTimeout(r, 2000));
-
-      // Update with mock SSH details (in production, comes from TEE provider)
-      const sshHost = `${rentalId}.compute.jeju.io`;
-      const sshPort = 22;
-
       rental.status.status = 'running';
-      
-      console.log(`[RentalService] Provisioned ${rentalId} at ${sshHost}:${sshPort}`);
+      console.log(`[Rental] Provisioned ${rentalId}`);
     } catch (error) {
       rental.status.status = 'failed';
       rental.status.error = error instanceof Error ? error.message : 'Provisioning failed';
-      console.error(`[RentalService] Provisioning failed for ${rentalId}:`, error);
     }
   }
 
-  /**
-   * Find available provider for GPU type
-   */
   private async findProvider(gpuType: GPUType): Promise<Address | null> {
-    // Try on-chain registry first
     try {
       const providers = await this.registry.getAllProviders();
       for (const addr of providers) {
-        const isActive = await this.registry.isActive(addr);
-        if (isActive) {
-          // In production, check provider's resources match gpuType
-          return addr as Address;
-        }
+        if (await this.registry.isActive(addr)) return addr as Address;
       }
     } catch {
-      // Fall back to mock providers
+      // Fall through to mock providers
     }
 
-    // Use mock providers
     const mockProviders = this.mockProviders.get(gpuType);
     if (mockProviders && mockProviders.length > 0) {
       return mockProviders[0]!;
@@ -237,9 +180,6 @@ export class RentalService {
     return null;
   }
 
-  /**
-   * Get rental status
-   */
   async getRentalStatus(rentalId: string): Promise<RentalStatus> {
     const rental = this.activeRentals.get(rentalId);
     if (!rental) {
@@ -248,9 +188,6 @@ export class RentalService {
     return rental.status;
   }
 
-  /**
-   * Terminate a rental
-   */
   async terminateRental(rentalId: string): Promise<void> {
     const rental = this.activeRentals.get(rentalId);
     if (!rental) {
@@ -259,13 +196,8 @@ export class RentalService {
 
     rental.status.status = 'completed';
     this.activeRentals.delete(rentalId);
-    
-    console.log(`[RentalService] Terminated rental ${rentalId}`);
   }
 
-  /**
-   * List available GPU options
-   */
   async listGPUOptions(): Promise<GPUOption[]> {
     const options: GPUOption[] = [];
 
@@ -284,9 +216,6 @@ export class RentalService {
     return options;
   }
 
-  /**
-   * Get service configuration info
-   */
   getServiceInfo(): { rpcUrl: string; hasWallet: boolean; rentalContract: string; contractAddress: string } {
     return {
       rpcUrl: this._config.rpcUrl,
@@ -297,26 +226,19 @@ export class RentalService {
   }
 }
 
-// ============================================================================
-// HTTP API
-// ============================================================================
-
 export function createRentalApi(config: RentalApiConfig): Hono {
   const app = new Hono();
   const service = new RentalService(config);
 
   app.use('/*', cors());
 
-  // Health check
-  app.get('/health', (c) => c.json({ status: 'healthy', service: 'rental-api' }));
+  app.get('/health', (c) => c.json({ status: 'ok' }));
 
-  // List GPU options
   app.get('/api/v1/gpu-options', async (c) => {
     const options = await service.listGPUOptions();
     return c.json({ options });
   });
 
-  // Create rental
   app.post('/api/v1/rentals', async (c) => {
     const body = await c.req.json<RentalRequest>();
     
@@ -328,7 +250,6 @@ export function createRentalApi(config: RentalApiConfig): Hono {
     return c.json(rental, 201);
   });
 
-  // Get rental status
   app.get('/api/v1/rentals/:rentalId/status', async (c) => {
     const rentalId = c.req.param('rentalId');
     
@@ -340,7 +261,6 @@ export function createRentalApi(config: RentalApiConfig): Hono {
     return c.json(status);
   });
 
-  // Terminate rental
   app.delete('/api/v1/rentals/:rentalId', async (c) => {
     const rentalId = c.req.param('rentalId');
     
@@ -348,18 +268,10 @@ export function createRentalApi(config: RentalApiConfig): Hono {
     return c.json({ success: true });
   });
 
-  // List user rentals
-  app.get('/api/v1/rentals', async (c) => {
-    // In production, filter by authenticated user
-    return c.json({ rentals: [] });
-  });
+  app.get('/api/v1/rentals', async (c) => c.json({ rentals: [] }));
 
   return app;
 }
-
-// ============================================================================
-// Server Entrypoint
-// ============================================================================
 
 export async function startRentalServer(): Promise<void> {
   const config: RentalApiConfig = {

@@ -289,3 +289,4 @@ describe('Treasury Stats Aggregation', () => {
     expect(profitsBySource['CROSS_CHAIN_ARBITRAGE']).toBeUndefined();
   });
 });
+

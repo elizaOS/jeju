@@ -209,13 +209,10 @@ export async function search(
     .where('a.active = true').andWhere('a.serviceType IS NOT NULL')
     .groupBy('a.serviceType').getRawMany() as Array<{ type: string; count: string }>;
 
-  const countWithLog = (p: Promise<number>, label: string) => 
-    p.catch(err => { console.warn(`[Search] ${label} count failed:`, err instanceof Error ? err.message : err); return 0; });
-
   const [a2aCount, mcpCount, restCount] = await Promise.all([
-    countWithLog(agentRepo.count({ where: { active: true, a2aEndpoint: Not(IsNull()) } }), 'a2a'),
-    countWithLog(agentRepo.count({ where: { active: true, mcpEndpoint: Not(IsNull()) } }), 'mcp'),
-    countWithLog(agentRepo.count({ where: { active: true, serviceType: 'rest' } }), 'rest'),
+    agentRepo.count({ where: { active: true, a2aEndpoint: Not(IsNull()) } }),
+    agentRepo.count({ where: { active: true, mcpEndpoint: Not(IsNull()) } }),
+    agentRepo.count({ where: { active: true, serviceType: 'rest' } }),
   ]);
 
   const agentResults = agents

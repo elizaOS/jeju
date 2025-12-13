@@ -17,7 +17,7 @@ import { JejuComputeSDK, createSDK } from '../sdk/sdk';
 import { createInferenceRegistry } from '../sdk/inference-registry';
 import { createExternalProvider } from '../sdk/cloud-provider';
 import { createPaymentClient, COMPUTE_PRICING } from '../sdk/payment';
-import { getX402Config, X402_NETWORK_CONFIGS } from '../sdk/x402';
+import { getX402Config, X402_NETWORKS } from '../sdk/x402';
 import { ModelCapabilityEnum, ModelSourceTypeEnum, ModelHostingTypeEnum, TEETypeEnum } from '../sdk/types';
 import type { ExtendedSDKConfig, RegisteredModel } from '../sdk/types';
 
@@ -197,14 +197,14 @@ describe('Testnet Deployment Readiness', () => {
     });
 
     test('network configs are defined for testnet', () => {
-      expect(X402_NETWORK_CONFIGS['base-sepolia']).toBeDefined();
-      expect(X402_NETWORK_CONFIGS['base-sepolia'].chainId).toBe(84532);
-      expect(X402_NETWORK_CONFIGS['base-sepolia'].isTestnet).toBe(true);
+      expect(X402_NETWORKS['base-sepolia']).toBeDefined();
+      expect(X402_NETWORKS['base-sepolia'].chainId).toBe(84532);
+      expect(X402_NETWORKS['base-sepolia'].isTestnet).toBe(true);
     });
 
     test('jeju-testnet uses Base Sepolia', () => {
-      expect(X402_NETWORK_CONFIGS['jeju-testnet']).toBeDefined();
-      expect(X402_NETWORK_CONFIGS['jeju-testnet'].chainId).toBe(84532);
+      expect(X402_NETWORKS['jeju-testnet']).toBeDefined();
+      expect(X402_NETWORKS['jeju-testnet'].chainId).toBe(84532);
     });
   });
 

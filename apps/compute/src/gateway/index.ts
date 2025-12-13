@@ -997,12 +997,7 @@ export class ComputeGateway {
     // Get cloud status
     this.app.get('/v1/cloud/status', async (c: Context) => {
       if (!this.cloudBridge) {
-        return c.json({
-          enabled: false,
-          endpoint: null,
-          modelCount: 0,
-          skillCount: 0,
-        });
+        return c.json({ enabled: false, endpoint: null, modelCount: 0 });
       }
       
       const status = await this.cloudBridge.getStatus();
@@ -1047,17 +1042,8 @@ export class ComputeGateway {
       return c.json(result);
     });
     
-    // Execute A2A skill on cloud
-    this.app.post('/v1/cloud/skills/:skillId', async (c: Context) => {
-      if (!this.cloudBridge) {
-        return c.json({ error: 'Cloud integration not enabled' }, 503);
-      }
-      
-      const skillId = c.req.param('skillId');
-      const body = await c.req.json<{ input: string | Record<string, unknown> }>();
-      
-      const result = await this.cloudBridge.executeSkill(skillId, body.input);
-      return c.json({ result });
+    this.app.post('/v1/cloud/skills/:skillId', (c: Context) => {
+      return c.json({ error: 'Skills not supported' }, 501);
     });
   }
   

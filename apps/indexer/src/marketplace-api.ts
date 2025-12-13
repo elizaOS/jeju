@@ -1,15 +1,3 @@
-/**
- * Marketplace API Queries for Indexer
- * 
- * Provides query functions for:
- * - Cross-service provider discovery (compute + storage)
- * - ERC-8004 agent-based search
- * - Container image discovery for compute
- * - Marketplace statistics
- * 
- * These functions can be called from GraphQL resolvers or REST endpoints.
- */
-
 import { ethers } from 'ethers';
 import { DataSource } from 'typeorm';
 import {
@@ -21,10 +9,6 @@ import {
   IPFSFile,
   FileCategory,
 } from './model';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface ProviderResult {
   address: string;
@@ -108,13 +92,6 @@ function bytesToHex(bytes: Uint8Array | null | undefined): string {
   return '0x' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// ============================================================================
-// Query Functions
-// ============================================================================
-
-/**
- * Search all providers (compute + storage) with filters
- */
 export async function searchProviders(
   dataSource: DataSource,
   options: ProviderSearchOptions = {}

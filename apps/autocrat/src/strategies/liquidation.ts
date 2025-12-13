@@ -1,26 +1,6 @@
-/**
- * @fileoverview Liquidation Strategy
- *
- * Monitors and executes liquidations on perpetual positions:
- * - Track position health factors
- * - Execute liquidations when profitable
- * - Capture liquidation rewards for treasury
- */
-
-import {
-  createPublicClient,
-  http,
-  type PublicClient,
-} from 'viem';
-import type {
-  ChainId,
-  ChainConfig,
-  LiquidationOpportunity,
-  StrategyConfig,
-} from '../types';
+import { createPublicClient, http, type PublicClient } from 'viem';
+import type { ChainId, ChainConfig, LiquidationOpportunity, StrategyConfig } from '../types';
 import { PERPETUAL_MARKET_ABI } from '../lib/contracts';
-
-// ============ Types ============
 
 interface Position {
   positionId: string;
@@ -41,13 +21,9 @@ interface MarketConfig {
   liquidationBonus: number;
 }
 
-// ============ Constants ============
-
-const POSITION_CHECK_INTERVAL_MS = 5000; // 5 seconds
-const HEALTH_FACTOR_THRESHOLD = BigInt(1e18); // 1.0 - liquidatable when below
-const MIN_LIQUIDATION_PROFIT = BigInt(1e16); // 0.01 ETH minimum
-
-// ============ Strategy Class ============
+const POSITION_CHECK_INTERVAL_MS = 5000;
+const HEALTH_FACTOR_THRESHOLD = BigInt(1e18);
+const MIN_LIQUIDATION_PROFIT = BigInt(1e16);
 
 export class LiquidationStrategy {
   private client: PublicClient | null = null;

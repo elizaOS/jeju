@@ -1,11 +1,7 @@
 /**
  * Council Compute Trigger Integration
- * 
- * Registers council orchestrator with compute service for autonomous operation.
- * Supports cron, webhook, and event-based triggers with local fallback.
  */
 
-// Types
 export type TriggerSource = 'cloud' | 'compute' | 'onchain';
 
 export interface UnifiedTrigger {
@@ -44,150 +40,84 @@ export interface OrchestratorTriggerResult {
   error?: string;
 }
 
-// Config
 const COUNCIL_URL = process.env.COUNCIL_URL ?? 'http://localhost:8010';
 const COMPUTE_URL = process.env.COMPUTE_URL ?? 'http://localhost:8020';
 const ORCHESTRATOR_CRON = process.env.ORCHESTRATOR_CRON ?? '*/30 * * * * *';
 
-// Trigger definitions
 export const councilTriggers: Array<Omit<UnifiedTrigger, 'id' | 'createdAt'>> = [
-  {
-    source: 'compute',
-    type: 'cron',
-    name: 'council-orchestrator-cycle',
-    description: 'Run council orchestrator to process proposals',
-    cronExpression: ORCHESTRATOR_CRON,
-    endpoint: `${COUNCIL_URL}/trigger/orchestrator`,
-    method: 'POST',
-    timeout: 60,
-    payload: { action: 'run-cycle' },
-    resources: { cpuCores: 1, memoryMb: 512, maxExecutionTime: 60 },
-    payment: { mode: 'free' },
-    active: true,
-  },
-  {
-    source: 'compute',
-    type: 'webhook',
-    name: 'council-manual-trigger',
-    webhookPath: '/council/trigger',
-    endpoint: `${COUNCIL_URL}/trigger/orchestrator`,
-    method: 'POST',
-    timeout: 60,
-    payload: { action: 'run-cycle' },
-    payment: { mode: 'free' },
-    active: true,
-  },
-  {
-    source: 'compute',
-    type: 'event',
-    name: 'council-proposal-submitted',
-    eventTypes: ['ProposalSubmitted', 'CouncilVoteCast', 'CEODecisionNeeded'],
-    endpoint: `${COUNCIL_URL}/trigger/orchestrator`,
-    method: 'POST',
-    timeout: 30,
-    payload: { action: 'process-event' },
-    payment: { mode: 'free' },
-    active: true,
-  },
+  { source: 'compute', type: 'cron', name: 'council-orchestrator-cycle', description: 'Run orchestrator', cronExpression: ORCHESTRATOR_CRON, endpoint: `${COUNCIL_URL}/trigger/orchestrator`, method: 'POST', timeout: 60, payload: { action: 'run-cycle' }, resources: { cpuCores: 1, memoryMb: 512 }, payment: { mode: 'free' }, active: true },
+  { source: 'compute', type: 'webhook', name: 'council-manual-trigger', webhookPath: '/council/trigger', endpoint: `${COUNCIL_URL}/trigger/orchestrator`, method: 'POST', timeout: 60, payment: { mode: 'free' }, active: true },
+  { source: 'compute', type: 'event', name: 'council-proposal-submitted', eventTypes: ['ProposalSubmitted', 'CouncilVoteCast', 'CEODecisionNeeded'], endpoint: `${COUNCIL_URL}/trigger/orchestrator`, method: 'POST', timeout: 30, payment: { mode: 'free' }, active: true },
 ];
 
-/** Register council triggers with compute service */
 export async function registerCouncilTriggers(): Promise<void> {
-  console.log('[CouncilTrigger] Registering triggers...');
-
+  console.log('[Trigger] Registering...');
   for (const trigger of councilTriggers) {
     try {
-      const response = await fetch(`${COMPUTE_URL}/api/triggers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(trigger),
-      });
-
-      if (response.ok) {
-        const { id } = await response.json() as { id: string };
-        console.log(`[CouncilTrigger] Registered: ${trigger.name} (${id})`);
+      const r = await fetch(`${COMPUTE_URL}/api/triggers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trigger) });
+      if (r.ok) {
+        const { id } = await r.json() as { id: string };
+        console.log(`[Trigger] Registered: ${trigger.name} (${id})`);
       } else {
-        console.warn(`[CouncilTrigger] Failed: ${trigger.name} (${response.status})`);
+        console.warn(`[Trigger] Failed: ${trigger.name} (${r.status})`);
       }
     } catch {
-      console.warn(`[CouncilTrigger] Unreachable: ${trigger.name}`);
+      console.warn(`[Trigger] Unreachable: ${trigger.name}`);
     }
   }
 }
 
-/** Start local cron (fallback when compute unavailable) */
 export function startLocalCron(callback: () => Promise<OrchestratorTriggerResult>): NodeJS.Timer {
-  const intervalMs = parseCronInterval(ORCHESTRATOR_CRON);
-  console.log(`[CouncilTrigger] Starting local cron (${intervalMs}ms interval)`);
-  
+  const match = ORCHESTRATOR_CRON.match(/^\*\/(\d+)/);
+  const intervalMs = match ? parseInt(match[1], 10) * 1000 : 30_000;
+  console.log(`[Trigger] Local cron (${intervalMs}ms)`);
   return setInterval(async () => {
     try {
       const result = await callback();
-      console.log(`[CouncilTrigger] Cycle: ${result.processedProposals} proposals, ${result.duration}ms`);
+      console.log(`[Trigger] Cycle: ${result.processedProposals} proposals, ${result.duration}ms`);
     } catch (error) {
-      console.error('[CouncilTrigger] Cycle error:', error);
+      console.error('[Trigger] Error:', error);
     }
   }, intervalMs);
 }
 
-function parseCronInterval(cron: string): number {
-  const match = cron.match(/^\*\/(\d+)/);
-  return match ? parseInt(match[1], 10) * 1000 : 30_000;
-}
-
-/** Compute service client */
 export class ComputeTriggerClient {
   constructor(private readonly computeUrl = COMPUTE_URL) {}
 
   async register(trigger: Omit<UnifiedTrigger, 'id' | 'createdAt'>): Promise<string> {
-    const response = await fetch(`${this.computeUrl}/api/triggers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(trigger),
-    });
-    if (!response.ok) throw new Error(`Register failed: ${response.status}`);
-    return ((await response.json()) as { id: string }).id;
+    const r = await fetch(`${this.computeUrl}/api/triggers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trigger) });
+    if (!r.ok) throw new Error(`Register failed: ${r.status}`);
+    return ((await r.json()) as { id: string }).id;
   }
 
   async execute(triggerId: string, input?: Record<string, unknown>): Promise<TriggerExecutionResult> {
-    const response = await fetch(`${this.computeUrl}/api/triggers/${triggerId}/execute`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input }),
-    });
-    if (!response.ok) throw new Error(`Execute failed: ${response.status}`);
-    return response.json() as Promise<TriggerExecutionResult>;
+    const r = await fetch(`${this.computeUrl}/api/triggers/${triggerId}/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }) });
+    if (!r.ok) throw new Error(`Execute failed: ${r.status}`);
+    return r.json() as Promise<TriggerExecutionResult>;
   }
 
   async list(filter?: { type?: string; active?: boolean }): Promise<UnifiedTrigger[]> {
     const params = new URLSearchParams();
     if (filter?.type) params.set('type', filter.type);
     if (filter?.active !== undefined) params.set('active', String(filter.active));
-
-    const response = await fetch(`${this.computeUrl}/api/triggers?${params}`);
-    if (!response.ok) throw new Error(`List failed: ${response.status}`);
-    return ((await response.json()) as { triggers: UnifiedTrigger[] }).triggers;
+    const r = await fetch(`${this.computeUrl}/api/triggers?${params}`);
+    if (!r.ok) throw new Error(`List failed: ${r.status}`);
+    return ((await r.json()) as { triggers: UnifiedTrigger[] }).triggers;
   }
 
   async getHistory(triggerId?: string, limit = 50): Promise<TriggerExecutionResult[]> {
     const params = new URLSearchParams({ limit: String(limit) });
     if (triggerId) params.set('triggerId', triggerId);
-
-    const response = await fetch(`${this.computeUrl}/api/triggers/history?${params}`);
-    if (!response.ok) throw new Error(`History failed: ${response.status}`);
-    return ((await response.json()) as { executions: TriggerExecutionResult[] }).executions;
+    const r = await fetch(`${this.computeUrl}/api/triggers/history?${params}`);
+    if (!r.ok) throw new Error(`History failed: ${r.status}`);
+    return ((await r.json()) as { executions: TriggerExecutionResult[] }).executions;
   }
 
   async isAvailable(): Promise<boolean> {
-    try {
-      return (await fetch(`${this.computeUrl}/health`)).ok;
-    } catch {
-      return false;
-    }
+    try { return (await fetch(`${this.computeUrl}/health`)).ok; } catch { return false; }
   }
 }
 
-// Singleton
 let triggerClient: ComputeTriggerClient | null = null;
 export function getComputeTriggerClient(): ComputeTriggerClient {
   return triggerClient ??= new ComputeTriggerClient();

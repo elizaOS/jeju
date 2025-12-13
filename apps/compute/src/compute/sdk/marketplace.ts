@@ -1,16 +1,7 @@
-/**
- * Compute Marketplace SDK
- *
- * Interface for the decentralized compute marketplace:
- * - Model discovery (LLM, image, video, audio)
- * - TEE node provisioning and routing
- * - X402 payment integration with JEJU token
- * - Inference routing with TEE attestation
- */
+/** Compute Marketplace - model discovery, routing, and payment */
 
 import type { Address } from 'viem';
 import { InferenceRegistrySDK } from './inference-registry';
-import type { ExtendedSDKConfig } from './types';
 import {
   ComputePaymentClient,
   createPaymentClient,
@@ -18,7 +9,7 @@ import {
   COMPUTE_PRICING,
 } from './payment';
 import {
-  createX402PaymentRequirement,
+  createPaymentRequirement,
   type X402Network,
 } from './x402';
 import type {
@@ -47,27 +38,18 @@ export interface InferenceRequest {
 }
 
 export interface InferenceInput {
-  // For LLM
   messages?: Array<{ role: string; content: string }>;
   prompt?: string;
-
-  // For image generation
   imagePrompt?: string;
   negativePrompt?: string;
   width?: number;
   height?: number;
   steps?: number;
-
-  // For video generation
   videoPrompt?: string;
   duration?: number;
   fps?: number;
-
-  // For audio
   audioPrompt?: string;
-  audioInput?: string; // Base64 for speech-to-text
-
-  // For embeddings
+  audioInput?: string;
   textToEmbed?: string;
 }
 
@@ -87,34 +69,15 @@ export interface InferenceResult {
   endpoint: string;
   teeType: TEEType;
   attestationHash?: string;
-
-  // LLM output
   content?: string;
   tokensUsed?: { input: number; output: number };
-
-  // Image output
-  images?: string[]; // Base64 or URLs
-
-  // Video output
+  images?: string[];
   videoUrl?: string;
   videoDurationSeconds?: number;
-
-  // Audio output
   audioUrl?: string;
   transcript?: string;
-
-  // Embedding output
   embedding?: number[];
-
-  // Cost
-  cost: {
-    amount: bigint;
-    currency: string;
-    paid: boolean;
-    txHash?: string;
-  };
-
-  // Timing
+  cost: { amount: bigint; currency: string; paid: boolean; txHash?: string };
   latencyMs: number;
   coldStart: boolean;
 }
@@ -129,14 +92,9 @@ export class ComputeMarketplace {
   private teeGatewayEndpoint: string | null = null;
 
   constructor(config: MarketplaceConfig) {
-    this.config = {
-      network: 'jeju-testnet',
-      preferredPaymentToken: 'JEJU',
-      ...config,
-    };
+    this.config = { network: 'jeju-testnet', preferredPaymentToken: 'JEJU', ...config };
 
-    // Initialize inference registry
-    const registryConfig: ExtendedSDKConfig = {
+    this.registry = new InferenceRegistrySDK({
       rpcUrl: config.rpcUrl,
       contracts: {
         registry: '0x0000000000000000000000000000000000000000',
@@ -144,14 +102,9 @@ export class ComputeMarketplace {
         inference: '0x0000000000000000000000000000000000000000',
         modelRegistry: config.modelRegistryAddress,
       },
-    };
-    this.registry = new InferenceRegistrySDK(registryConfig);
-
-    // Initialize payment client
-    this.payment = createPaymentClient({
-      rpcUrl: config.rpcUrl,
-      ...config.paymentConfig,
     });
+
+    this.payment = createPaymentClient({ rpcUrl: config.rpcUrl, ...config.paymentConfig });
   }
 
   async getLLMs(): Promise<RegisteredModel[]> { return this.registry.getLLMs(); }
@@ -294,14 +247,9 @@ export class ComputeMarketplace {
   }
 
 
-  /** Execute inference request with automatic endpoint selection and payment */
   async inference(request: InferenceRequest): Promise<InferenceResult> {
     const startTime = Date.now();
-
-    // Get model info
     const model = await this.getModel(request.modelId);
-
-    // Find best endpoint
     let endpoint: ModelEndpoint | null = null;
     let coldStart = false;
 
@@ -335,10 +283,7 @@ export class ComputeMarketplace {
       throw new Error(`No available endpoint for model: ${request.modelId}`);
     }
 
-    // Execute inference based on model type
     const result = await this.executeInference(model, endpoint, request);
-
-    // Calculate cost
     const cost = this.calculateCost(model, result);
 
     return {
@@ -577,19 +522,13 @@ export class ComputeMarketplace {
     };
   }
 
-  private async executeMultimodal(
-    endpoint: ModelEndpoint,
-    request: InferenceRequest
-  ): Promise<Partial<InferenceResult>> {
-    // Multimodal uses LLM-style chat completions with image support
+  private async executeMultimodal(endpoint: ModelEndpoint, request: InferenceRequest): Promise<Partial<InferenceResult>> {
     return this.executeLLMInference(endpoint, request);
   }
 
 
-  /** Calculate cost based on model type and usage */
   calculateCost(model: RegisteredModel, result: Partial<InferenceResult>): bigint {
     const pricing = model.pricing;
-
     switch (model.modelType) {
       case ModelTypeEnum.LLM:
       case ModelTypeEnum.MULTIMODAL: {
@@ -616,13 +555,11 @@ export class ComputeMarketplace {
       case ModelTypeEnum.AUDIO_GEN:
       case ModelTypeEnum.SPEECH_TO_TEXT:
       case ModelTypeEnum.TEXT_TO_SPEECH: {
-        // Estimate 1 second per request for simplicity
         const audioCost = pricing.pricePerAudioSecond;
         return audioCost > pricing.minimumFee ? audioCost : pricing.minimumFee;
       }
 
       case ModelTypeEnum.EMBEDDING: {
-        // Embeddings typically charged per input token
         const inputTokens = result.tokensUsed?.input ?? 100;
         const embeddingCost = BigInt(inputTokens) * pricing.pricePerInputToken;
         return embeddingCost > pricing.minimumFee ? embeddingCost : pricing.minimumFee;
@@ -633,24 +570,16 @@ export class ComputeMarketplace {
     }
   }
 
-  /** Get X402 payment requirement for an inference request */
-  getPaymentRequirement(
-    modelId: string,
-    estimatedCost: bigint,
-    description?: string
-  ): ReturnType<typeof createX402PaymentRequirement> {
-    const network = this.config.network ?? 'jeju-testnet';
-
-    return createX402PaymentRequirement({
-      network,
-      recipient: this.config.paymentConfig?.ledgerManagerAddress ?? '0x0' as Address,
-      amount: estimatedCost,
-      resource: `/v1/inference/${modelId}`,
-      description: description ?? `Inference request for ${modelId}`,
-    });
+  getPaymentRequirement(modelId: string, estimatedCost: bigint, description?: string) {
+    return createPaymentRequirement(
+      `/v1/inference/${modelId}`,
+      estimatedCost,
+      this.config.paymentConfig?.ledgerManagerAddress ?? '0x0' as Address,
+      description ?? `Inference request for ${modelId}`,
+      this.config.network ?? 'jeju-testnet'
+    );
   }
 
-  /** Get credit balance for a user */
   async getCreditBalance(userAddress: string): Promise<{
     total: bigint;
     usdc: bigint;
@@ -667,12 +596,10 @@ export class ComputeMarketplace {
   }
 
 
-  /** Get standard compute pricing */
   static getPricing() {
     return COMPUTE_PRICING;
   }
 
-  /** Get model type name */
   static getModelTypeName(modelType: ModelType): string {
     const names: Record<ModelType, string> = {
       [ModelTypeEnum.LLM]: 'Large Language Model',
@@ -687,7 +614,6 @@ export class ComputeMarketplace {
     return names[modelType] ?? 'Unknown';
   }
 
-  /** Get capability names from bitmask */
   static getCapabilityNames(capabilities: number): string[] {
     const names: string[] = [];
     const caps = ModelCapabilityEnum;
@@ -914,9 +840,4 @@ export class ComputeMarketplace {
 }
 
 
-export function createComputeMarketplace(config: MarketplaceConfig): ComputeMarketplace {
-  return new ComputeMarketplace(config);
-}
-
-// Re-export types
 export { ModelTypeEnum, TEETypeEnum, ModelCapabilityEnum };

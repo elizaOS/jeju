@@ -6,6 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IPredimarket} from "./IPredimarket.sol";
 
 /**
  * @title Council
@@ -50,6 +51,9 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         COMPLETED,           // Fully executed
         REJECTED,            // Rejected by council or CEO
         VETOED,              // Vetoed during grace period
+        FUTARCHY_PENDING,    // Escalated to futarchy market
+        FUTARCHY_APPROVED,   // Futarchy market approved
+        FUTARCHY_REJECTED,   // Futarchy market rejected
         DUPLICATE,           // Marked as duplicate
         SPAM                 // Marked as spam
     }
@@ -213,6 +217,18 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
     /// @notice Proposal count
     uint256 public proposalCount;
 
+    /// @notice Futarchy markets for vetoed proposals
+    mapping(bytes32 => bytes32) public proposalFutarchyMarkets;
+
+    /// @notice Futarchy market resolution deadline
+    mapping(bytes32 => uint256) public futarchyDeadlines;
+
+    /// @notice Default futarchy voting period
+    uint256 public futarchyVotingPeriod = 3 days;
+
+    /// @notice Default futarchy liquidity parameter
+    uint256 public futarchyLiquidity = 1000 * 1e18;
+
     // ============================================================================
     // Parameters
     // ============================================================================
@@ -310,6 +326,20 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         uint256 agentId
     );
 
+    event ProposalEscalatedToFutarchy(
+        bytes32 indexed proposalId,
+        bytes32 indexed marketId,
+        address escalator
+    );
+
+    event FutarchyResolved(
+        bytes32 indexed proposalId,
+        bytes32 indexed marketId,
+        bool approved,
+        uint256 yesVotes,
+        uint256 noVotes
+    );
+
     // ============================================================================
     // Errors
     // ============================================================================
@@ -330,6 +360,12 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
     error InsufficientVetoStake();
     error NotResearchOperator();
     error VetoSucceeded();
+    error NotVetoed();
+    error FutarchyNotConfigured();
+    error FutarchyAlreadyEscalated();
+    error FutarchyNotPending();
+    error FutarchyNotResolved();
+    error FutarchyDeadlineNotPassed();
 
     // ============================================================================
     // Modifiers
@@ -784,6 +820,132 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
     }
 
     // ============================================================================
+    // Futarchy Escalation
+    // ============================================================================
+
+    /**
+     * @notice Escalate a vetoed proposal to futarchy market for community resolution
+     * @param proposalId Proposal to escalate
+     * @dev Anyone can escalate a vetoed proposal. Creates a prediction market where
+     *      community members bet on whether the proposal should be approved.
+     *      The side with more stake/volume wins after the voting period.
+     */
+    function escalateToFutarchy(bytes32 proposalId) external nonReentrant {
+        Proposal storage proposal = proposals[proposalId];
+        if (proposal.proposalId == bytes32(0)) revert ProposalNotFound();
+        if (proposal.status != ProposalStatus.VETOED) revert NotVetoed();
+        if (predimarket == address(0)) revert FutarchyNotConfigured();
+        if (proposalFutarchyMarkets[proposalId] != bytes32(0)) revert FutarchyAlreadyEscalated();
+
+        // Generate unique market ID
+        bytes32 marketId = keccak256(abi.encodePacked(
+            "futarchy",
+            proposalId,
+            block.timestamp
+        ));
+
+        // Create the futarchy market
+        string memory question = string(abi.encodePacked(
+            "Should vetoed proposal ",
+            _bytes32ToHexString(proposalId),
+            " be approved?"
+        ));
+
+        IPredimarket.ModerationMetadata memory metadata = IPredimarket.ModerationMetadata({
+            targetAgentId: proposal.proposerAgentId,
+            evidenceHash: proposal.contentHash,
+            reporter: proposal.proposer,
+            reportId: uint256(proposalId)
+        });
+
+        IPredimarket(predimarket).createModerationMarket(
+            marketId,
+            question,
+            futarchyLiquidity,
+            IPredimarket.MarketCategory.GOVERNANCE_VETO,
+            metadata
+        );
+
+        // Store the market reference
+        proposalFutarchyMarkets[proposalId] = marketId;
+        futarchyDeadlines[proposalId] = block.timestamp + futarchyVotingPeriod;
+
+        // Transition to futarchy pending
+        _transitionStatus(proposalId, ProposalStatus.FUTARCHY_PENDING);
+
+        emit ProposalEscalatedToFutarchy(proposalId, marketId, msg.sender);
+    }
+
+    /**
+     * @notice Resolve a futarchy market and apply the outcome to the proposal
+     * @param proposalId Proposal to resolve
+     * @dev Can only be called after the futarchy voting period ends and the market is resolved.
+     *      If YES wins, the proposal is approved and goes to execution.
+     *      If NO wins, the proposal is permanently rejected.
+     */
+    function resolveFutarchy(bytes32 proposalId) external nonReentrant {
+        Proposal storage proposal = proposals[proposalId];
+        if (proposal.proposalId == bytes32(0)) revert ProposalNotFound();
+        if (proposal.status != ProposalStatus.FUTARCHY_PENDING) revert FutarchyNotPending();
+
+        bytes32 marketId = proposalFutarchyMarkets[proposalId];
+        if (marketId == bytes32(0)) revert FutarchyNotConfigured();
+
+        // Check if deadline has passed
+        if (block.timestamp < futarchyDeadlines[proposalId]) {
+            revert FutarchyDeadlineNotPassed();
+        }
+
+        // Get the market prices - higher price indicates community preference
+        (uint256 yesPrice, uint256 noPrice) = IPredimarket(predimarket).getMarketPrices(marketId);
+
+        // YES wins if yesPrice > noPrice
+        bool approved = yesPrice > noPrice;
+
+        emit FutarchyResolved(proposalId, marketId, approved, yesPrice, noPrice);
+
+        if (approved) {
+            // Futarchy approved - set up for execution with new grace period
+            proposal.gracePeriodEnd = block.timestamp + gracePeriod;
+            _transitionStatus(proposalId, ProposalStatus.FUTARCHY_APPROVED);
+        } else {
+            // Futarchy rejected - permanently rejected
+            _transitionStatus(proposalId, ProposalStatus.FUTARCHY_REJECTED);
+        }
+    }
+
+    /**
+     * @notice Execute a proposal that was approved via futarchy
+     * @param proposalId Proposal to execute
+     */
+    function executeFutarchyApproved(bytes32 proposalId) external nonReentrant {
+        Proposal storage proposal = proposals[proposalId];
+        if (proposal.proposalId == bytes32(0)) revert ProposalNotFound();
+        if (proposal.status != ProposalStatus.FUTARCHY_APPROVED) {
+            revert InvalidStatus(proposal.status, ProposalStatus.FUTARCHY_APPROVED);
+        }
+        if (block.timestamp < proposal.gracePeriodEnd) {
+            revert GracePeriodNotEnded();
+        }
+
+        _transitionStatus(proposalId, ProposalStatus.EXECUTING);
+
+        // Execute if target contract specified
+        bool success = true;
+        if (proposal.targetContract != address(0) && proposal.callData.length > 0) {
+            (success,) = proposal.targetContract.call{value: proposal.value}(proposal.callData);
+        }
+
+        emit ProposalExecuted(proposalId, proposal.targetContract, success);
+
+        if (success) {
+            _transitionStatus(proposalId, ProposalStatus.COMPLETED);
+        } else {
+            _transitionStatus(proposalId, ProposalStatus.REJECTED);
+        }
+    }
+
+    // ============================================================================
     // Internal Functions
     // ============================================================================
 
@@ -791,6 +953,21 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         ProposalStatus oldStatus = proposals[proposalId].status;
         proposals[proposalId].status = newStatus;
         emit ProposalStatusChanged(proposalId, oldStatus, newStatus);
+    }
+
+    /**
+     * @notice Convert bytes32 to hex string for market question
+     */
+    function _bytes32ToHexString(bytes32 _bytes) internal pure returns (string memory) {
+        bytes memory hexChars = "0123456789abcdef";
+        bytes memory str = new bytes(10); // Just first 4 bytes + "0x"
+        str[0] = "0";
+        str[1] = "x";
+        for (uint256 i = 0; i < 4; i++) {
+            str[2 + i * 2] = hexChars[uint8(_bytes[i] >> 4)];
+            str[3 + i * 2] = hexChars[uint8(_bytes[i] & 0x0f)];
+        }
+        return string(str);
     }
 
     // ============================================================================
@@ -825,11 +1002,7 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         uint256 count = 0;
         for (uint256 i = 0; i < allProposalIds.length; i++) {
             ProposalStatus status = proposals[allProposalIds[i]].status;
-            if (status != ProposalStatus.COMPLETED &&
-                status != ProposalStatus.REJECTED &&
-                status != ProposalStatus.VETOED &&
-                status != ProposalStatus.DUPLICATE &&
-                status != ProposalStatus.SPAM) {
+            if (_isActiveStatus(status)) {
                 count++;
             }
         }
@@ -838,17 +1011,80 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         uint256 j = 0;
         for (uint256 i = 0; i < allProposalIds.length; i++) {
             ProposalStatus status = proposals[allProposalIds[i]].status;
-            if (status != ProposalStatus.COMPLETED &&
-                status != ProposalStatus.REJECTED &&
-                status != ProposalStatus.VETOED &&
-                status != ProposalStatus.DUPLICATE &&
-                status != ProposalStatus.SPAM) {
+            if (_isActiveStatus(status)) {
                 active[j] = allProposalIds[i];
                 j++;
             }
         }
 
         return active;
+    }
+
+    function _isActiveStatus(ProposalStatus status) internal pure returns (bool) {
+        return status != ProposalStatus.COMPLETED &&
+               status != ProposalStatus.REJECTED &&
+               status != ProposalStatus.FUTARCHY_REJECTED &&
+               status != ProposalStatus.DUPLICATE &&
+               status != ProposalStatus.SPAM;
+    }
+
+    /**
+     * @notice Get proposals that are vetoed and eligible for futarchy escalation
+     */
+    function getVetoedProposals() external view returns (bytes32[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < allProposalIds.length; i++) {
+            if (proposals[allProposalIds[i]].status == ProposalStatus.VETOED) {
+                count++;
+            }
+        }
+
+        bytes32[] memory vetoed = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < allProposalIds.length; i++) {
+            if (proposals[allProposalIds[i]].status == ProposalStatus.VETOED) {
+                vetoed[j] = allProposalIds[i];
+                j++;
+            }
+        }
+
+        return vetoed;
+    }
+
+    /**
+     * @notice Get proposals pending futarchy resolution
+     */
+    function getFutarchyPendingProposals() external view returns (bytes32[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < allProposalIds.length; i++) {
+            if (proposals[allProposalIds[i]].status == ProposalStatus.FUTARCHY_PENDING) {
+                count++;
+            }
+        }
+
+        bytes32[] memory pending = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < allProposalIds.length; i++) {
+            if (proposals[allProposalIds[i]].status == ProposalStatus.FUTARCHY_PENDING) {
+                pending[j] = allProposalIds[i];
+                j++;
+            }
+        }
+
+        return pending;
+    }
+
+    /**
+     * @notice Get futarchy market info for a proposal
+     */
+    function getFutarchyMarket(bytes32 proposalId) external view returns (
+        bytes32 marketId,
+        uint256 deadline,
+        bool canResolve
+    ) {
+        marketId = proposalFutarchyMarkets[proposalId];
+        deadline = futarchyDeadlines[proposalId];
+        canResolve = marketId != bytes32(0) && block.timestamp >= deadline;
     }
 
     // ============================================================================
@@ -908,6 +1144,14 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         minStakeForVeto = _minStakeForVeto;
         vetoThresholdBPS = _vetoThresholdBPS;
         proposalBond = _proposalBond;
+    }
+
+    function setFutarchyParameters(
+        uint256 _futarchyVotingPeriod,
+        uint256 _futarchyLiquidity
+    ) external onlyOwner {
+        futarchyVotingPeriod = _futarchyVotingPeriod;
+        futarchyLiquidity = _futarchyLiquidity;
     }
 
     function pause() external onlyOwner {

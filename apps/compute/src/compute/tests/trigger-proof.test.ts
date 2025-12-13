@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, beforeAll, afterAll } from 'bun:test';
 import { Wallet } from 'ethers';
+import { serve } from 'bun';
 import {
   TriggerIntegration,
   createTriggerIntegration,
@@ -13,9 +14,7 @@ import {
 } from '../sdk/trigger-integration';
 import type { Address } from 'viem';
 
-// Mock fetch for API calls
-const mockFetch = mock(() => Promise.resolve(new Response('{}', { status: 200 })));
-(globalThis as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
+type BunServer = ReturnType<typeof serve>;
 
 describe('Trigger Proof System', () => {
   const testWallet = Wallet.createRandom() as unknown as Wallet;
@@ -157,11 +156,6 @@ describe('TriggerIntegration Subscriptions', () => {
   let integration: TriggerIntegration;
 
   beforeEach(() => {
-    mockFetch.mockClear();
-    mockFetch.mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({ triggers: [] })))
-    );
-
     integration = createTriggerIntegration({
       rpcUrl: 'http://localhost:9545',
       enableOnChainRegistration: false,
@@ -288,13 +282,24 @@ describe('TriggerIntegration Subscriptions', () => {
 
 describe('Trigger Execution', () => {
   let integration: TriggerIntegration;
+  let mockServer: BunServer;
+  const port = 19999;
+
+  beforeAll(() => {
+    mockServer = serve({
+      port,
+      fetch: () => new Response(JSON.stringify({ success: true, data: 'test' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+  });
+
+  afterAll(() => {
+    mockServer.stop();
+  });
 
   beforeEach(() => {
-    mockFetch.mockClear();
-    mockFetch.mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({ triggers: [] })))
-    );
-
     integration = createTriggerIntegration({
       rpcUrl: 'http://localhost:9545',
       enableOnChainRegistration: false,
@@ -305,7 +310,7 @@ describe('Trigger Execution', () => {
   test('executes trigger and returns result', async () => {
     const target: HttpTarget = {
       type: 'http',
-      endpoint: 'https://httpbin.org/post',
+      endpoint: `http://localhost:${port}/post`,
       method: 'POST',
       timeout: 30,
     };
@@ -317,12 +322,6 @@ describe('Trigger Execution', () => {
       target,
       active: true,
     });
-
-    mockFetch.mockImplementationOnce(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ success: true, data: 'test' }), { status: 200 })
-      )
-    );
 
     const result = await integration.executeTrigger({
       triggerId,
@@ -336,7 +335,7 @@ describe('Trigger Execution', () => {
   test('throws for inactive trigger', async () => {
     const target: HttpTarget = {
       type: 'http',
-      endpoint: 'https://example.com',
+      endpoint: `http://localhost:${port}`,
       method: 'POST',
       timeout: 30,
     };

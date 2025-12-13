@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:8010';
+const CEO_URL = 'http://localhost:8004';
 
 export default defineConfig({
   testDir: './tests/synpress',
@@ -23,6 +24,20 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  webServer: [
+    {
+      command: 'bun run src/index.ts',
+      url: BASE_URL,
+      reuseExistingServer: true,
+      timeout: 60000,
+    },
+    {
+      command: 'bun run src/ceo-server.ts',
+      url: CEO_URL,
+      reuseExistingServer: true,
+      timeout: 60000,
     },
   ],
 });

@@ -1,23 +1,6 @@
-/**
- * Cross-Service Integration for Compute/Storage/Indexer
- * 
- * Provides types and utilities for:
- * - Container image storage and retrieval (Storage → Compute)
- * - Compute resource discovery for stored assets
- * - ERC-8004 agent-based cross-service discovery
- * - Marketplace queries
- */
-
 import { ethers } from 'ethers';
 import type { Address } from 'viem';
 
-// ============================================================================
-// Cross-Service Types
-// ============================================================================
-
-/**
- * Provider type that can represent both compute and storage providers
- */
 export interface CrossServiceProvider {
   address: string;
   name: string;

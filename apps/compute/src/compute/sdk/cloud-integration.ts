@@ -6,6 +6,26 @@ import type { Address } from 'viem';
 import type { RegisteredModel, ModelPricing, ModelEndpoint, ModelType, ModelDiscoveryResult, ModelDiscoveryFilter, ExtendedSDKConfig } from './types';
 import { ModelTypeEnum, ModelSourceTypeEnum, ModelHostingTypeEnum, ModelCapabilityEnum, TEETypeEnum, GPUTypeEnum } from './types';
 import { createInferenceRegistry, type InferenceRegistrySDK } from './inference-registry';
+import { getEthPrice } from './x402';
+
+const errMsg = (e: unknown): string => e instanceof Error ? e.message : String(e);
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const res = await fetch(url, options).catch((e: Error) => {
+      lastError = e;
+      return null;
+    });
+    if (res && (res.ok || res.status < 500)) return res;
+    if (attempt < maxRetries - 1) {
+      const delay = Math.pow(2, attempt) * 1000;
+      console.warn('[Cloud] Retrying request', { url, attempt: attempt + 1, delay });
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw lastError ?? new Error(`Failed after ${maxRetries} retries: ${url}`);
+}
 
 export type ComputeNodeStatus = 'cold' | 'provisioning' | 'ready' | 'active' | 'idle' | 'draining' | 'terminated' | 'error';
 export type ComputeHardwareType = 'cpu' | 'gpu';
@@ -157,7 +177,7 @@ export class ComputeNodeManager {
       return { nodeId: req.nodeId, status: 'ready', endpoint: node.endpoint, provisionTimeMs };
     } catch (e) {
       node.status = 'error';
-      node.error = e instanceof Error ? e.message : String(e);
+      node.error = errMsg(e);
       console.error('[Compute] Failed', { nodeId: req.nodeId, error: node.error });
       this.rejectQueue(req.nodeId, new Error(`Provisioning failed: ${node.error}`));
       return { nodeId: req.nodeId, status: 'error', error: node.error };
@@ -194,7 +214,9 @@ export class ComputeNodeManager {
       }
     }
 
-    if (node.status === 'cold' || node.status === 'error') this.provisionNode({ nodeId }).catch(() => {});
+    if (node.status === 'cold' || node.status === 'error') {
+      this.provisionNode({ nodeId }).catch(e => console.error('[Compute] Background provision failed', { nodeId, error: errMsg(e) }));
+    }
 
     return new Promise((resolve, reject) => {
       const queue = this.queues.get(nodeId);
@@ -234,19 +256,29 @@ export class ComputeNodeManager {
     }
   }
 
+  private stopIdleMonitor(nodeId: string): void {
+    const poller = this.pollers.get(nodeId);
+    if (poller) {
+      clearInterval(poller);
+      this.pollers.delete(nodeId);
+    }
+  }
+
   private startIdleMonitor(nodeId: string): void {
-    const existing = this.pollers.get(nodeId);
-    if (existing) clearInterval(existing);
+    this.stopIdleMonitor(nodeId);
 
     const poller = setInterval(() => {
       const n = this.nodes.get(nodeId);
-      if (!n) { clearInterval(poller); this.pollers.delete(nodeId); return; }
+      if (!n || n.status === 'error' || n.status === 'cold' || n.status === 'terminated') {
+        this.stopIdleMonitor(nodeId);
+        return;
+      }
       if ((n.status !== 'ready' && n.status !== 'idle') || n.activeRequests > 0) return;
 
       const idle = Date.now() - (n.lastRequestAt ?? n.readySince ?? Date.now());
       if (idle > n.config.idleTimeoutMs) {
         console.log('[Compute] Idle timeout', { nodeId, idleMs: idle });
-        this.terminateNode(nodeId).catch(() => {});
+        this.terminateNode(nodeId).catch(e => console.error('[Compute] Idle termination failed', { nodeId, error: errMsg(e) }));
       } else if (idle > n.config.idleTimeoutMs / 2) {
         n.status = 'idle';
       }
@@ -265,10 +297,9 @@ export class ComputeNodeManager {
       while (node.activeRequests > 0 && Date.now() < deadline) await new Promise(r => setTimeout(r, 1000));
     }
 
-    const poller = this.pollers.get(nodeId);
-    if (poller) { clearInterval(poller); this.pollers.delete(nodeId); }
+    this.stopIdleMonitor(nodeId);
 
-    await this.callProvisioner('terminate', { nodeId }).catch(() => {});
+    await this.callProvisioner('terminate', { nodeId }).catch(e => console.error('[Compute] Provisioner terminate failed', { nodeId, error: errMsg(e) }));
 
     Object.assign(node, {
       status: 'cold', endpoint: undefined, internalEndpoint: undefined,
@@ -284,7 +315,7 @@ export class ComputeNodeManager {
   }
 
   private async callProvisioner(action: string, params: Record<string, unknown>): Promise<{ endpoint?: string; internalEndpoint?: string; providerMeta?: Record<string, unknown> }> {
-    const res = await fetch(`${this.config.provisionerEndpoint}/api/v1/compute/${action}`, {
+    const res = await fetchWithRetry(`${this.config.provisionerEndpoint}/api/v1/compute/${action}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -339,7 +370,7 @@ export class CloudModelBroadcaster {
   async sync(): Promise<void> {
     if (Date.now() - this.lastSync < this.syncInterval) return;
 
-    const res = await fetch(`${this.config.cloudEndpoint}/api/v1/models`, { headers: this.headers() });
+    const res = await fetchWithRetry(`${this.config.cloudEndpoint}/api/v1/models`, { headers: this.getHeaders() });
     if (!res.ok) throw new Error(`Fetch models failed: ${res.status}`);
 
     const data = await res.json() as { models: CloudModelInfo[] };
@@ -378,7 +409,7 @@ export class CloudModelBroadcaster {
     if (m.multiModal) caps |= ModelCapabilityEnum.VISION | ModelCapabilityEnum.MULTIMODAL;
     if (m.contextWindow && m.contextWindow > 32000) caps |= ModelCapabilityEnum.LONG_CONTEXT;
 
-    const weiPerUsd = BigInt(Math.floor((1 / 3000) * 1e18));
+    const weiPerUsd = BigInt(Math.floor((1 / getEthPrice()) * 1e18));
     const pricing: ModelPricing = {
       pricePerInputToken: m.inputPricePerMillion ? (weiPerUsd * BigInt(Math.floor(m.inputPricePerMillion * 1e6))) / 1_000_000n : 0n,
       pricePerOutputToken: m.outputPricePerMillion ? (weiPerUsd * BigInt(Math.floor(m.outputPricePerMillion * 1e6))) / 1_000_000n : 0n,
@@ -393,14 +424,14 @@ export class CloudModelBroadcaster {
       modelId: `cloud/${m.provider.toLowerCase()}/${m.id}`, name: m.name, description: `${m.name} via ${m.provider}`,
       version: '1.0.0', modelType: typeMap[m.modelType] ?? ModelTypeEnum.LLM,
       sourceType: ModelSourceTypeEnum.CLOSED_SOURCE, hostingType: ModelHostingTypeEnum.CENTRALIZED,
-      creator: { name: m.provider, website: websites[m.provider.toLowerCase()] ?? 'https://jeju.network', verified: true, trustScore: 100 },
+      creator: { name: m.provider, website: websites[m.provider.toLowerCase()] ?? 'https://jeju.network', verified: false, trustScore: 0 },
       capabilities: caps, contextWindow: m.contextWindow ?? 0, pricing,
       hardware: { minGpuVram: 0, recommendedGpuType: GPUTypeEnum.NONE, minCpuCores: 0, minMemory: 0, teeRequired: false, teeType: TEETypeEnum.NONE },
-      registeredAt: Date.now(), updatedAt: Date.now(), active: true, totalRequests: 0n, avgLatencyMs: 0, uptime: 100,
+      registeredAt: Date.now(), updatedAt: Date.now(), active: true, totalRequests: 0n, avgLatencyMs: 0, uptime: 0,
     };
   }
 
-  private headers(): Record<string, string> {
+  getHeaders(): Record<string, string> {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
     if (this.config.cloudApiKey) h['Authorization'] = `Bearer ${this.config.cloudApiKey}`;
     return h;
@@ -441,9 +472,9 @@ export class CloudProviderBridge {
   }
 
   async inference(modelId: string, messages: Array<{ role: string; content: string }>, opts?: { temperature?: number; maxTokens?: number }): Promise<{ id: string; model: string; content: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
-    const res = await fetch(`${this.config.cloudEndpoint}/api/v1/chat/completions`, {
+    const res = await fetchWithRetry(`${this.config.cloudEndpoint}/api/v1/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(this.config.cloudApiKey ? { Authorization: `Bearer ${this.config.cloudApiKey}` } : {}) },
+      headers: this.broadcaster.getHeaders(),
       body: JSON.stringify({ model: modelId, messages, temperature: opts?.temperature ?? 0.7, max_tokens: opts?.maxTokens ?? 1024 }),
     });
     if (!res.ok) throw new Error(`Inference failed: ${res.status} - ${await res.text()}`);
@@ -452,18 +483,14 @@ export class CloudProviderBridge {
     return { id: data.id, model: data.model, content: data.choices[0]?.message.content ?? '', usage: { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens, totalTokens: data.usage.total_tokens } };
   }
 
-  async getStatus(): Promise<{ endpoint: string; modelCount: number; skillCount: number }> {
+  async getStatus(): Promise<{ endpoint: string; modelCount: number }> {
     await this.broadcaster.sync();
-    return { endpoint: this.config.cloudEndpoint, modelCount: this.broadcaster.getModels().length, skillCount: 0 };
+    return { endpoint: this.config.cloudEndpoint, modelCount: this.broadcaster.getModels().length };
   }
 
-  getAvailableSkills(): Array<{ id: string; name: string; description: string }> {
-    return [];
-  }
+  getAvailableSkills(): never[] { return []; }
 
-  async executeSkill(_skillId: string, _input: string | Record<string, unknown>): Promise<unknown> {
-    throw new Error('A2A skills not implemented in cloud bridge');
-  }
+  executeSkill(): never { throw new Error('Skills not supported'); }
 }
 
 export class ModelDiscovery {
@@ -496,13 +523,12 @@ export class ModelDiscovery {
   getComputeManager(): ComputeNodeManager | null { return this.computeManager; }
 }
 
-// Factory functions
-export function createComputeNodeManager(config: ComputeManagerConfig): ComputeNodeManager { return new ComputeNodeManager(config); }
-export function createCloudBroadcaster(config: CloudIntegrationConfig): CloudModelBroadcaster { return new CloudModelBroadcaster(config); }
-export function createCloudBridge(config: CloudIntegrationConfig): CloudProviderBridge { return new CloudProviderBridge(config); }
-export function createModelDiscovery(config: CloudIntegrationConfig & { registryConfig?: ExtendedSDKConfig; computeConfig?: ComputeManagerConfig }): ModelDiscovery { return new ModelDiscovery(config); }
+export const createComputeNodeManager = (c: ComputeManagerConfig) => new ComputeNodeManager(c);
+export const createCloudBroadcaster = (c: CloudIntegrationConfig) => new CloudModelBroadcaster(c);
+export const createCloudBridge = (c: CloudIntegrationConfig) => new CloudProviderBridge(c);
+export const createModelDiscovery = (c: CloudIntegrationConfig & { registryConfig?: ExtendedSDKConfig; computeConfig?: ComputeManagerConfig }) => new ModelDiscovery(c);
 
-export function createCloudIntegrationFromEnv(): ModelDiscovery {
+export function createFromEnv(): ModelDiscovery {
   const config: CloudIntegrationConfig & { registryConfig?: ExtendedSDKConfig; computeConfig?: ComputeManagerConfig } = {
     cloudEndpoint: process.env.CLOUD_ENDPOINT ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:8010',
     cloudApiKey: process.env.CLOUD_API_KEY,
@@ -529,5 +555,5 @@ export function createCloudIntegrationFromEnv(): ModelDiscovery {
     };
   }
 
-  return createModelDiscovery(config);
+  return new ModelDiscovery(config);
 }

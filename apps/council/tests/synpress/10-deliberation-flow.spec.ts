@@ -161,16 +161,18 @@ Timeline: 3 months`,
   test('research request returns local mode info', async ({ request }) => {
     const result = await sendA2AMessage(request, 'request-research', {
       proposalId: '0x' + 'e'.repeat(64),
-      topic: 'Market analysis for proposal'
+      description: 'Market analysis for proposal'
     });
 
     expect(result.result).toBeDefined();
     const dataPart = result.result.parts.find((p: { kind: string }) => p.kind === 'data');
     expect(dataPart).toBeDefined();
     
-    // In local mode, should indicate free research
-    if (dataPart.data.mode === 'local') {
-      expect(dataPart.data.estimatedCost).toBe('0');
+    // Research returns data if Ollama is available, otherwise error
+    if (dataPart.data.error) {
+      expect(dataPart.data.error).toContain('Ollama');
+    } else {
+      expect(dataPart.data.model).toBeDefined();
     }
   });
 });

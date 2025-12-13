@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
+    "security:scan": "bash scripts/security-scan.sh",
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node --minify",
     "start": "bun run dist/index.js",

@@ -485,12 +485,12 @@ describe('Trigger Integration', () => {
   });
 });
 
-import { parseX402PaymentHeader } from '../sdk/x402';
+import { parseX402Header } from '../sdk/x402';
 
 describe('X402 Payment Parsing', () => {
   test('parses valid x402 payment header', () => {
     const header = 'scheme=exact;network=jeju;payload=0x1234567890abcdef;asset=0x0000000000000000000000000000000000000000;amount=1000000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
 
     expect(parsed).not.toBeNull();
     expect(parsed!.scheme).toBe('exact');
@@ -501,20 +501,20 @@ describe('X402 Payment Parsing', () => {
 
   test('returns null for missing required fields', () => {
     // scheme, network, and payload are required
-    expect(parseX402PaymentHeader('network=jeju;payload=0x123;amount=1000')).toBeNull(); // missing scheme
-    expect(parseX402PaymentHeader('scheme=exact;network=jeju;amount=1000')).toBeNull(); // missing payload
-    expect(parseX402PaymentHeader('scheme=exact;payload=0x123;amount=1000')).toBeNull(); // missing network
+    expect(parseX402Header('network=jeju;payload=0x123;amount=1000')).toBeNull(); // missing scheme
+    expect(parseX402Header('scheme=exact;network=jeju;amount=1000')).toBeNull(); // missing payload
+    expect(parseX402Header('scheme=exact;payload=0x123;amount=1000')).toBeNull(); // missing network
   });
 
   test('amount defaults to 0 when not provided', () => {
-    const parsed = parseX402PaymentHeader('scheme=exact;network=jeju;payload=0x123');
+    const parsed = parseX402Header('scheme=exact;network=jeju;payload=0x123');
     expect(parsed).not.toBeNull();
     expect(parsed!.amount).toBe('0');
   });
 
   test('handles whitespace in header', () => {
     const header = 'scheme = exact ; network = jeju ; payload = 0x123 ; amount = 1000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
 
     expect(parsed).not.toBeNull();
     expect(parsed!.scheme).toBe('exact');
@@ -522,7 +522,7 @@ describe('X402 Payment Parsing', () => {
 
   test('provides default asset address when missing', () => {
     const header = 'scheme=exact;network=jeju;payload=0x123;amount=1000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
 
     expect(parsed).not.toBeNull();
     expect(parsed!.asset).toBe('0x0000000000000000000000000000000000000000');

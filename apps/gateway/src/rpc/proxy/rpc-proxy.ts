@@ -98,7 +98,9 @@ export async function proxyRequest(chainId: number, request: JsonRpcRequest): Pr
 
   const chain = getChain(chainId);
   const endpoints = [chain.rpcUrl, ...chain.fallbackRpcs].filter(isEndpointHealthy);
-  if (endpoints.length === 0) endpoints.push(chain.rpcUrl);
+  if (endpoints.length === 0) {
+    throw new Error(`No healthy RPC endpoints available for ${chain.name}`);
+  }
 
   let lastError: Error | null = null;
 

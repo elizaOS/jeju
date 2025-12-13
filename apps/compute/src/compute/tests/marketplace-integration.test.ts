@@ -22,6 +22,7 @@ import {
   type CloudModelInfo,
 } from '../sdk/cloud-integration';
 import { X402Client, parseX402Header } from '../sdk/x402';
+import { getAvailablePort } from './test-utils';
 
 type BunServer = ReturnType<typeof serve>;
 
@@ -85,9 +86,10 @@ function createMockCloudServer(port: number) {
 
 describe('CloudProviderBridge Integration', () => {
   let mockServer: ReturnType<typeof createMockCloudServer>;
-  let port = 8750;
+  let port: number;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    port = await getAvailablePort();
     mockServer = createMockCloudServer(port);
   });
 
@@ -195,7 +197,6 @@ describe('CloudProviderBridge Integration', () => {
 
     expect(status.endpoint).toBe(`http://localhost:${port}`);
     expect(status.modelCount).toBe(4);
-    expect(status.skillCount).toBe(0);
   });
 });
 
@@ -205,12 +206,13 @@ describe('CloudProviderBridge Integration', () => {
 
 describe('ComputeNodeManager Integration', () => {
   let server: BunServer;
-  let port = 8751;
+  let port: number;
   let provisionedNodes: string[] = [];
   let terminatedNodes: string[] = [];
   let shouldFailProvision = false;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    port = await getAvailablePort();
     const app = new Hono();
 
     app.post('/api/v1/compute/provision', async (c) => {
@@ -413,10 +415,11 @@ describe('ComputeNodeManager Integration', () => {
 
 describe('Payment Flow Integration', () => {
   let server: BunServer;
-  let port = 8752;
+  let port: number;
   let receivedPayments: Array<{ header: string; parsed: ReturnType<typeof parseX402Header> }> = [];
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    port = await getAvailablePort();
     const app = new Hono();
 
     app.post('/v1/inference', async (c) => {
@@ -490,6 +493,7 @@ describe('Payment Flow Integration', () => {
 
   test('paidFetch includes x-jeju-address header', async () => {
     let receivedHeaders: Record<string, string> = {};
+    const headerPort = await getAvailablePort();
     
     const app = new Hono();
     app.post('/check-headers', async (c) => {
@@ -498,14 +502,14 @@ describe('Payment Flow Integration', () => {
       return c.json({ ok: true });
     });
     
-    const headerServer = serve({ port: 8753, fetch: app.fetch });
+    const headerServer = serve({ port: headerPort, fetch: app.fetch });
 
     const wallet = createWallet();
     const client = new X402Client(wallet, 'jeju');
     const providerAddress = createWallet().address as Address;
 
     await client.paidFetch(
-      'http://localhost:8753/check-headers',
+      `http://localhost:${headerPort}/check-headers`,
       { method: 'POST' },
       providerAddress,
       '1000000'
@@ -524,9 +528,10 @@ describe('Payment Flow Integration', () => {
 
 describe('ModelDiscovery Combined Sources', () => {
   let mockServer: ReturnType<typeof createMockCloudServer>;
-  let port = 8754;
+  let port: number;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    port = await getAvailablePort();
     mockServer = createMockCloudServer(port);
   });
 
@@ -582,6 +587,7 @@ describe('ModelDiscovery Combined Sources', () => {
 describe('Race Conditions', () => {
   test('concurrent provision requests to same node deduplicate', async () => {
     let provisionCount = 0;
+    const racePort = await getAvailablePort();
     const app = new Hono();
     app.post('/api/v1/compute/provision', async () => {
       provisionCount++;
@@ -592,10 +598,10 @@ describe('Race Conditions', () => {
     });
     app.post('/api/v1/compute/terminate', () => new Response(JSON.stringify({ success: true })));
 
-    const server = serve({ port: 8755, fetch: app.fetch });
+    const server = serve({ port: racePort, fetch: app.fetch });
 
     const manager = createComputeNodeManager({
-      provisionerEndpoint: 'http://localhost:8755',
+      provisionerEndpoint: `http://localhost:${racePort}`,
       rpcUrl: 'http://localhost:9545',
       defaultIdleTimeoutMs: 60000,
       maxQueueTimeMs: 30000,
@@ -663,6 +669,7 @@ describe('Race Conditions', () => {
 
 describe('Timeout and Retry Behavior', () => {
   test('cloud bridge handles slow endpoint', async () => {
+    const slowPort = await getAvailablePort();
     const app = new Hono();
     app.get('/api/v1/models', async () => {
       await new Promise(r => setTimeout(r, 200));
@@ -671,10 +678,10 @@ describe('Timeout and Retry Behavior', () => {
       });
     });
 
-    const server = serve({ port: 8756, fetch: app.fetch });
+    const server = serve({ port: slowPort, fetch: app.fetch });
 
     const bridge = createCloudBridge({
-      cloudEndpoint: 'http://localhost:8756',
+      cloudEndpoint: `http://localhost:${slowPort}`,
       rpcUrl: 'http://localhost:9545',
       syncIntervalMs: 100,
     });
@@ -690,6 +697,7 @@ describe('Timeout and Retry Behavior', () => {
   });
 
   test('compute manager respects queue timeout', async () => {
+    const timeoutPort = await getAvailablePort();
     const app = new Hono();
     app.post('/api/v1/compute/provision', async () => {
       await new Promise(r => setTimeout(r, 5000)); // Very long delay
@@ -697,10 +705,10 @@ describe('Timeout and Retry Behavior', () => {
     });
     app.post('/api/v1/compute/terminate', () => new Response(JSON.stringify({ success: true })));
 
-    const server = serve({ port: 8757, fetch: app.fetch });
+    const server = serve({ port: timeoutPort, fetch: app.fetch });
 
     const manager = createComputeNodeManager({
-      provisionerEndpoint: 'http://localhost:8757',
+      provisionerEndpoint: `http://localhost:${timeoutPort}`,
       rpcUrl: 'http://localhost:9545',
       defaultIdleTimeoutMs: 60000,
       maxQueueTimeMs: 100, // Very short timeout

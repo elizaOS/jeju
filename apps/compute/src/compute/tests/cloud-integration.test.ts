@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from 'bun:test';
 import {
   CloudModelBroadcaster,
   CloudProviderBridge,
@@ -55,6 +55,9 @@ const TEST_CONFIG: CloudIntegrationConfig = {
   syncIntervalMs: 0,
 };
 
+// Save original fetch to restore after tests
+const originalFetch = globalThis.fetch;
+
 const mockFetch = mock((url: string) => {
   const urlStr = url.toString();
 
@@ -75,7 +78,14 @@ const mockFetch = mock((url: string) => {
   return Promise.resolve(new Response('Not found', { status: 404 }));
 });
 
-(globalThis as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
+// Setup/teardown to isolate fetch mocking to this test file
+beforeAll(() => {
+  (globalThis as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
+});
+
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+});
 
 beforeEach(() => {
   mockFetch.mockClear();
@@ -186,21 +196,16 @@ describe('CloudProviderBridge', () => {
 
     expect(status.endpoint).toBe('https://mock-cloud.example.com');
     expect(status.modelCount).toBe(3);
-    expect(status.skillCount).toBe(0);
   });
 
-  test('getAvailableSkills returns empty array', () => {
+  test('getAvailableSkills returns empty', () => {
     const bridge = createCloudBridge(TEST_CONFIG);
-    const skills = bridge.getAvailableSkills();
-
-    expect(skills).toEqual([]);
+    expect(bridge.getAvailableSkills()).toEqual([]);
   });
 
-  test('executeSkill throws not implemented error', async () => {
+  test('executeSkill throws', () => {
     const bridge = createCloudBridge(TEST_CONFIG);
-
-    await expect(bridge.executeSkill('some-skill', 'input'))
-      .rejects.toThrow('A2A skills not implemented in cloud bridge');
+    expect(() => bridge.executeSkill()).toThrow('Skills not supported');
   });
 });
 
@@ -298,28 +303,32 @@ describe('Integration', () => {
 
 describe('Error Handling', () => {
   test('handles inference error', async () => {
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = ((url: string) => {
+    const errorFetch = ((url: string) => {
       if (url.includes('/chat/completions')) {
         return Promise.resolve(new Response('Internal Server Error', { status: 500 }));
       }
       return mockFetch(url);
     }) as typeof fetch;
+    
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = errorFetch;
 
     const bridge = createCloudBridge(TEST_CONFIG);
 
     await expect(bridge.inference('gpt-4o', [{ role: 'user', content: 'test' }]))
       .rejects.toThrow();
 
+    // Restore mock fetch for remaining tests
     (globalThis as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
   });
 
   test('handles sync failure', async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = (() => Promise.resolve(new Response('Error', { status: 500 }))) as unknown as typeof fetch;
+    const errorFetch = (() => Promise.resolve(new Response('Error', { status: 500 }))) as unknown as typeof fetch;
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = errorFetch;
 
     const broadcaster = createCloudBroadcaster(TEST_CONFIG);
     await expect(broadcaster.sync()).rejects.toThrow();
 
-    globalThis.fetch = originalFetch;
+    // Restore mock fetch for remaining tests
+    (globalThis as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
   });
 });

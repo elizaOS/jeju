@@ -1,43 +1,37 @@
 /**
  * Council DAO Types
- * 
- * Core type definitions for the AI Council governance system.
  */
 
 import type { Address } from 'viem';
 
-// ============================================================================
-// Proposal Types
-// ============================================================================
-
 export enum ProposalStatus {
-  DRAFT = 0,           // Being crafted with proposal agent
-  PENDING_QUALITY = 1, // Awaiting quality score
-  SUBMITTED = 2,       // Submitted on-chain
-  COUNCIL_REVIEW = 3,  // Council is deliberating
-  RESEARCH = 4,        // Deep research in progress
-  COUNCIL_FINAL = 5,   // Final council deliberation
-  CEO_QUEUE = 6,       // Awaiting CEO decision
-  APPROVED = 7,        // CEO approved, in grace period
-  EXECUTING = 8,       // Being executed
-  COMPLETED = 9,       // Fully executed
-  REJECTED = 10,       // Rejected by council or CEO
-  VETOED = 11,         // Vetoed during grace period
-  DUPLICATE = 12,      // Marked as duplicate
-  SPAM = 13,           // Marked as spam
+  DRAFT = 0,
+  PENDING_QUALITY = 1,
+  SUBMITTED = 2,
+  COUNCIL_REVIEW = 3,
+  RESEARCH = 4,
+  COUNCIL_FINAL = 5,
+  CEO_QUEUE = 6,
+  APPROVED = 7,
+  EXECUTING = 8,
+  COMPLETED = 9,
+  REJECTED = 10,
+  VETOED = 11,
+  DUPLICATE = 12,
+  SPAM = 13,
 }
 
 export enum ProposalType {
-  PARAMETER_CHANGE = 0,    // Change DAO parameters
-  TREASURY_ALLOCATION = 1, // Allocate treasury funds
-  CODE_UPGRADE = 2,        // Smart contract upgrades
-  HIRE_CONTRACTOR = 3,     // Hire a contributor
-  FIRE_CONTRACTOR = 4,     // Remove a contributor
-  BOUNTY = 5,              // Create a bounty
-  GRANT = 6,               // Issue a grant
-  PARTNERSHIP = 7,         // Establish partnership
-  POLICY = 8,              // Policy change
-  EMERGENCY = 9,           // Emergency action
+  PARAMETER_CHANGE = 0,
+  TREASURY_ALLOCATION = 1,
+  CODE_UPGRADE = 2,
+  HIRE_CONTRACTOR = 3,
+  FIRE_CONTRACTOR = 4,
+  BOUNTY = 5,
+  GRANT = 6,
+  PARTNERSHIP = 7,
+  POLICY = 8,
+  EMERGENCY = 9,
 }
 
 export interface Proposal {
@@ -49,7 +43,7 @@ export interface Proposal {
   description: string;
   proposalType: ProposalType;
   status: ProposalStatus;
-  qualityScore: number;          // 0-100, needs 90+ to submit
+  qualityScore: number;
   createdAt: number;
   submittedAt: number;
   councilVoteStart: number;
@@ -57,8 +51,8 @@ export interface Proposal {
   ceoDecisionAt: number;
   gracePeriodEnd: number;
   executedAt: number;
-  ipfsHash: string;              // Full proposal content
-  calldata: string;              // Execution calldata
+  ipfsHash: string;
+  calldata: string;
   targetContract: Address;
   value: bigint;
   backers: Address[];
@@ -92,20 +86,16 @@ export interface QualityAssessment {
     clarity: number;
     completeness: number;
     feasibility: number;
-    alignment: number;   // With DAO values
+    alignment: number;
     impact: number;
     riskAssessment: number;
     costBenefit: number;
   };
   feedback: string[];
   suggestions: string[];
-  blockers: string[];   // Must-fix issues
+  blockers: string[];
   readyToSubmit: boolean;
 }
-
-// ============================================================================
-// Council Types
-// ============================================================================
 
 export enum CouncilRole {
   TREASURY = 0,
@@ -142,7 +132,7 @@ export interface CouncilVote {
   vote: VoteType;
   reasoning: string;
   concerns: string[];
-  requirements: string[];  // Required changes
+  requirements: string[];
   votedAt: number;
   weight: number;
 }
@@ -158,21 +148,17 @@ export interface CouncilDeliberation {
   requiredChanges: string[];
 }
 
-// ============================================================================
-// CEO Types
-// ============================================================================
-
 export interface CEODecision {
   proposalId: string;
   approved: boolean;
   reasoning: string;
-  encryptedReasoning: string;   // Full reasoning, TEE-encrypted
-  conditions: string[];          // Conditions for execution
-  modifications: string[];       // Required modifications
+  encryptedReasoning: string;
+  conditions: string[];
+  modifications: string[];
   timeline: string;
   decidedAt: number;
-  confidence: number;            // 0-100
-  alignmentScore: number;        // Alignment with DAO values
+  confidence: number;
+  alignmentScore: number;
 }
 
 export interface CEOState {
@@ -182,13 +168,9 @@ export interface CEOState {
   approvalRate: number;
   lastDecision: number;
   modelVersion: string;
-  contextHash: string;          // Hash of current context/values
-  encryptedState: string;       // TEE-encrypted internal state
+  contextHash: string;
+  encryptedState: string;
 }
-
-// ============================================================================
-// Reputation & Staking Types
-// ============================================================================
 
 export interface ProposerReputation {
   address: Address;
@@ -197,7 +179,7 @@ export interface ProposerReputation {
   approvedProposals: number;
   rejectedProposals: number;
   successRate: number;
-  reputationScore: number;      // From leaderboard
+  reputationScore: number;
   stakingPower: bigint;
   isVerifiedBuilder: boolean;
   linkedGithub: string | null;
@@ -213,25 +195,17 @@ export interface BackerInfo {
   signature: string;
 }
 
-// ============================================================================
-// Research Types
-// ============================================================================
-
 export interface ResearchReport {
   proposalId: string;
-  researcher: string;           // Agent ID
-  model: string;                // Model used (claude-opus-4-5)
+  researcher: string;
+  model: string;
   startedAt: number;
   completedAt: number;
   executionTime: number;
-  tokenUsage: {
-    input: number;
-    output: number;
-    cost: number;
-  };
+  tokenUsage: { input: number; output: number; cost: number };
   sections: ResearchSection[];
   recommendation: 'proceed' | 'reject' | 'modify';
-  confidenceLevel: number;      // 0-100
+  confidenceLevel: number;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   summary: string;
   keyFindings: string[];
@@ -246,10 +220,6 @@ export interface ResearchSection {
   sources: string[];
   confidence: number;
 }
-
-// ============================================================================
-// Veto & Commentary Types
-// ============================================================================
 
 export interface VetoVote {
   proposalId: string;
@@ -286,10 +256,6 @@ export interface ProposalComment {
   downvotes: number;
 }
 
-// ============================================================================
-// Market Types (for veto prediction markets)
-// ============================================================================
-
 export interface VetoMarket {
   proposalId: string;
   marketId: string;
@@ -301,10 +267,6 @@ export interface VetoMarket {
   resolved: boolean;
   outcome: boolean | null;
 }
-
-// ============================================================================
-// Execution Types
-// ============================================================================
 
 export interface ExecutionPlan {
   proposalId: string;
@@ -327,10 +289,6 @@ export interface ExecutionStep {
   executedAt: number | null;
 }
 
-// ============================================================================
-// A2A Types
-// ============================================================================
-
 export interface A2AMessage {
   messageId: string;
   from: string;
@@ -346,10 +304,6 @@ export interface A2AResponse {
   result: unknown;
   error: string | null;
 }
-
-// ============================================================================
-// Configuration Types
-// ============================================================================
 
 export interface CouncilConfig {
   rpcUrl: string;
@@ -369,12 +323,12 @@ export interface CouncilConfig {
     researchAgent: AgentConfig;
   };
   parameters: {
-    minQualityScore: number;       // 90
-    councilVotingPeriod: number;   // 3 days
-    gracePeriod: number;           // 24 hours
-    minBackers: number;            // 0
+    minQualityScore: number;
+    councilVotingPeriod: number;
+    gracePeriod: number;
+    minBackers: number;
     minStakeForVeto: bigint;
-    vetoThreshold: number;         // % of stake needed to veto
+    vetoThreshold: number;
   };
   cloudEndpoint: string;
   computeEndpoint: string;

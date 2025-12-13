@@ -7,20 +7,19 @@ test.describe('Create Proposal Page', () => {
     await expect(page.getByRole('heading', { name: 'Create Proposal' })).toBeVisible()
   })
 
-  test('has proposal type selector', async ({ page }) => {
+  test('has proposal type selection', async ({ page }) => {
     await page.goto('/create')
     
-    const typeSelect = page.locator('select')
-    await expect(typeSelect).toBeVisible()
-    
-    const options = await typeSelect.locator('option').count()
-    expect(options).toBeGreaterThan(0)
+    // New wizard has button-based type selection
+    await expect(page.getByText('Parameter Change')).toBeVisible()
+    await expect(page.getByText('Treasury Allocation')).toBeVisible()
+    await expect(page.getByText('Code Upgrade')).toBeVisible()
   })
 
   test('has title input field', async ({ page }) => {
     await page.goto('/create')
     
-    const titleInput = page.getByPlaceholder(/10-100/)
+    const titleInput = page.locator('input[placeholder*="Clear, descriptive title"]')
     await expect(titleInput).toBeVisible()
     
     await titleInput.fill('Test Proposal Title')
@@ -30,43 +29,65 @@ test.describe('Create Proposal Page', () => {
   test('has summary textarea', async ({ page }) => {
     await page.goto('/create')
     
-    const summaryInput = page.getByPlaceholder(/50-500/)
+    const summaryInput = page.locator('textarea[placeholder*="1-2 sentence summary"]')
     await expect(summaryInput).toBeVisible()
   })
 
   test('has description textarea', async ({ page }) => {
     await page.goto('/create')
     
-    const descInput = page.getByPlaceholder(/Problem/)
+    const descInput = page.locator('textarea[placeholder*="Include"]')
     await expect(descInput).toBeVisible()
   })
 
-  test('has assess button', async ({ page }) => {
+  test('has AI assistant toggle', async ({ page }) => {
     await page.goto('/create')
     
-    await expect(page.getByRole('button', { name: /Assess/i })).toBeVisible()
+    await expect(page.getByText('AI Assistant')).toBeVisible()
   })
 
-  test('has submit button (disabled initially)', async ({ page }) => {
+  test('has continue button', async ({ page }) => {
     await page.goto('/create')
     
-    const submitBtn = page.getByRole('button', { name: /Submit/i })
-    await expect(submitBtn).toBeVisible()
-    await expect(submitBtn).toBeDisabled()
+    const continueBtn = page.getByRole('button', { name: /Continue/i })
+    await expect(continueBtn).toBeVisible()
+    // Should be disabled until form is filled
+    await expect(continueBtn).toBeDisabled()
   })
 
-  test('back link returns to home', async ({ page }) => {
+  test('back/cancel button returns to home', async ({ page }) => {
     await page.goto('/create')
     
-    // Click back arrow link in header area
-    await page.locator('a[href="/"]').first().click()
+    // Click cancel button (which is Back/Cancel on first step)
+    await page.getByRole('button', { name: /Cancel/i }).click()
     
     await expect(page).toHaveURL('/')
   })
 
-  test('assessment sidebar shows initial state', async ({ page }) => {
+  test('shows draft step initially', async ({ page }) => {
     await page.goto('/create')
     
-    await expect(page.getByText('Click Assess for feedback')).toBeVisible()
+    await expect(page.getByText('Draft Your Proposal')).toBeVisible()
+  })
+
+  test('character count shows for title', async ({ page }) => {
+    await page.goto('/create')
+    
+    const titleInput = page.locator('input[placeholder*="Clear, descriptive title"]')
+    await titleInput.fill('Test Title Here')
+    
+    // Should show character count
+    await expect(page.getByText(/\/100/)).toBeVisible()
+  })
+
+  test('can select proposal type', async ({ page }) => {
+    await page.goto('/create')
+    
+    // Click on Treasury Allocation type
+    await page.getByText('Treasury Allocation').click()
+    
+    // The button should have accent border (selected state)
+    const treasuryButton = page.locator('button').filter({ hasText: 'Treasury Allocation' })
+    await expect(treasuryButton).toHaveClass(/border-accent/)
   })
 })

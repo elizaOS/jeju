@@ -106,6 +106,241 @@ const PROVIDER_TYPES: Record<number, 'ipfs' | 'arweave' | 'cloud' | 'hybrid'> = 
 };
 
 // ============================================================================
+// Indexer Client - Query indexer REST API for provider/container discovery
+// ============================================================================
+
+export interface IndexerConfig {
+  indexerUrl: string;
+  timeout?: number;
+}
+
+export interface IndexerProviderResult {
+  type: 'compute' | 'storage';
+  address: string;
+  name: string;
+  endpoint: string;
+  agentId: number | null;
+  isActive: boolean;
+}
+
+export interface IndexerContainerResult {
+  cid: string;
+  name: string;
+  tag: string;
+  sizeBytes: string;
+  uploadedAt: string;
+  storageProvider: string | null;
+  tier: string;
+  architecture: string;
+  gpuRequired: boolean;
+  teeRequired: boolean;
+  verified: boolean;
+  pullCount: number;
+}
+
+export interface IndexerMarketplaceStats {
+  compute: {
+    totalProviders: number;
+    activeProviders: number;
+    agentLinkedProviders: number;
+    totalRentals: number;
+    activeRentals: number;
+    totalStakedETH: string;
+    totalEarningsETH: string;
+  };
+  storage: {
+    totalProviders: number;
+    activeProviders: number;
+    agentLinkedProviders: number;
+    totalDeals: number;
+    activeDeals: number;
+    totalCapacityTB: string;
+    usedCapacityTB: string;
+    totalStakedETH: string;
+  };
+  crossService: {
+    totalContainerImages: number;
+    verifiedContainerImages: number;
+    totalCrossServiceRequests: number;
+    successfulRequests: number;
+    fullStackAgents: number;
+  };
+  lastUpdated: string;
+}
+
+export class IndexerClient {
+  private baseUrl: string;
+  private timeout: number;
+
+  constructor(config: IndexerConfig) {
+    this.baseUrl = config.indexerUrl.replace(/\/$/, '');
+    this.timeout = config.timeout || 5000;
+  }
+
+  private async fetch<T>(path: string): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Indexer request failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Get all providers (compute and storage)
+   */
+  async getProviders(options?: { type?: 'compute' | 'storage'; limit?: number }): Promise<IndexerProviderResult[]> {
+    const params = new URLSearchParams();
+    if (options?.type) params.set('type', options.type);
+    if (options?.limit) params.set('limit', options.limit.toString());
+
+    const result = await this.fetch<{ providers: IndexerProviderResult[] }>(
+      `/api/providers?${params.toString()}`
+    );
+    return result.providers;
+  }
+
+  /**
+   * Get storage providers only
+   */
+  async getStorageProviders(limit?: number): Promise<IndexerProviderResult[]> {
+    return this.getProviders({ type: 'storage', limit });
+  }
+
+  /**
+   * Get compute providers only
+   */
+  async getComputeProviders(limit?: number): Promise<IndexerProviderResult[]> {
+    return this.getProviders({ type: 'compute', limit });
+  }
+
+  /**
+   * Get full-stack providers (both compute and storage)
+   */
+  async getFullStackProviders(limit?: number): Promise<Array<{
+    agentId: number;
+    compute: Array<{ address: string; name: string; endpoint: string }>;
+    storage: Array<{ address: string; name: string; endpoint: string; providerType: string }>;
+  }>> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+
+    const result = await this.fetch<{
+      fullStackProviders: Array<{
+        agentId: number;
+        compute: Array<{ address: string; name: string; endpoint: string }>;
+        storage: Array<{ address: string; name: string; endpoint: string; providerType: string }>;
+      }>;
+    }>(`/api/full-stack?${params.toString()}`);
+    return result.fullStackProviders;
+  }
+
+  /**
+   * Search container images
+   */
+  async searchContainers(options?: {
+    verified?: boolean;
+    gpuRequired?: boolean;
+    teeRequired?: boolean;
+    limit?: number;
+  }): Promise<IndexerContainerResult[]> {
+    const params = new URLSearchParams();
+    if (options?.verified) params.set('verified', 'true');
+    if (options?.gpuRequired) params.set('gpu', 'true');
+    if (options?.teeRequired) params.set('tee', 'true');
+    if (options?.limit) params.set('limit', options.limit.toString());
+
+    const result = await this.fetch<{ containers: IndexerContainerResult[] }>(
+      `/api/containers?${params.toString()}`
+    );
+    return result.containers;
+  }
+
+  /**
+   * Get container by CID with compatible compute providers
+   */
+  async getContainer(cid: string): Promise<{
+    container: IndexerContainerResult | null;
+    compatibleProviders: Array<{
+      address: string;
+      name: string;
+      endpoint: string;
+      agentId: number | null;
+    }>;
+  }> {
+    const result = await this.fetch<{
+      container: IndexerContainerResult;
+      compatibleProviders: Array<{
+        address: string;
+        name: string;
+        endpoint: string;
+        agentId: number | null;
+      }>;
+    }>(`/api/containers/${cid}`);
+    return result;
+  }
+
+  /**
+   * Get marketplace statistics
+   */
+  async getMarketplaceStats(): Promise<IndexerMarketplaceStats> {
+    return this.fetch<IndexerMarketplaceStats>('/api/marketplace/stats');
+  }
+
+  /**
+   * Get cross-service requests
+   */
+  async getCrossServiceRequests(options?: {
+    status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+    type?: 'CONTAINER_PULL' | 'DATA_LOAD' | 'MODEL_FETCH' | 'OUTPUT_STORE';
+    limit?: number;
+  }): Promise<Array<{
+    requestId: string;
+    requester: string;
+    type: string;
+    sourceCid: string;
+    sourceProvider: string | null;
+    destinationProvider: string | null;
+    status: string;
+    createdAt: string;
+    completedAt: string | null;
+    totalCost: string;
+    error: string | null;
+  }>> {
+    const params = new URLSearchParams();
+    if (options?.status) params.set('status', options.status);
+    if (options?.type) params.set('type', options.type);
+    if (options?.limit) params.set('limit', options.limit.toString());
+
+    const result = await this.fetch<{
+      requests: Array<{
+        requestId: string;
+        requester: string;
+        type: string;
+        sourceCid: string;
+        sourceProvider: string | null;
+        destinationProvider: string | null;
+        status: string;
+        createdAt: string;
+        completedAt: string | null;
+        totalCost: string;
+        error: string | null;
+      }>;
+    }>(`/api/cross-service/requests?${params.toString()}`);
+    return result.requests;
+  }
+}
+
+// ============================================================================
 // Storage Integration Client
 // ============================================================================
 
@@ -115,6 +350,7 @@ export interface StorageIntegrationConfig {
   storageMarketAddress?: string;
   signer?: Wallet;
   defaultIpfsGateway?: string;
+  indexerUrl?: string;
 }
 
 export class ComputeStorageIntegration {
@@ -126,6 +362,7 @@ export class ComputeStorageIntegration {
   private providerCache: Map<string, StorageProviderInfo> = new Map();
   private lastCacheUpdate = 0;
   private readonly CACHE_TTL = 60000; // 1 minute
+  private indexerClient?: IndexerClient;
 
   constructor(config: StorageIntegrationConfig) {
     this.provider = new JsonRpcProvider(config.rpcUrl);
@@ -149,25 +386,37 @@ export class ComputeStorageIntegration {
         signerOrProvider
       );
     }
+
+    // Initialize indexer client for fast lookups
+    if (config.indexerUrl) {
+      this.indexerClient = new IndexerClient({ indexerUrl: config.indexerUrl });
+    }
   }
 
   /**
    * Check if storage integration is available
    */
   isAvailable(): boolean {
-    return !!this.storageRegistry;
+    return !!(this.storageRegistry || this.indexerClient);
+  }
+
+  /**
+   * Get indexer client for direct queries
+   */
+  getIndexerClient(): IndexerClient | undefined {
+    return this.indexerClient;
   }
 
   /**
    * Get list of storage providers for container hosting
+   * Tries indexer first for fast lookups, falls back to on-chain queries
    */
   async getStorageProviders(options?: {
     agentLinkedOnly?: boolean;
     providerType?: 'ipfs' | 'arweave' | 'cloud' | 'hybrid';
     maxPricePerGBMonth?: bigint;
+    useIndexer?: boolean;
   }): Promise<StorageProviderInfo[]> {
-    if (!this.storageRegistry) return [];
-
     // Use cache if fresh
     if (Date.now() - this.lastCacheUpdate < this.CACHE_TTL && this.providerCache.size > 0) {
       return Array.from(this.providerCache.values()).filter(p => {
@@ -177,6 +426,38 @@ export class ComputeStorageIntegration {
         return true;
       });
     }
+
+    // Try indexer first if available (faster, no RPC calls)
+    if (this.indexerClient && options?.useIndexer !== false) {
+      const indexerProviders = await this.indexerClient.getStorageProviders(100).catch(() => null);
+      if (indexerProviders && indexerProviders.length > 0) {
+        const providers: StorageProviderInfo[] = indexerProviders.map(p => ({
+          address: p.address,
+          name: p.name,
+          endpoint: p.endpoint,
+          agentId: p.agentId || 0,
+          providerType: 'hybrid' as const, // Indexer doesn't return this yet
+          isActive: p.isActive,
+          pricePerGBMonth: 0n, // Indexer doesn't return pricing yet
+          healthScore: 100,
+        }));
+
+        // Update cache
+        for (const p of providers) {
+          this.providerCache.set(p.address, p);
+        }
+        this.lastCacheUpdate = Date.now();
+
+        return providers.filter(p => {
+          if (options?.agentLinkedOnly && !p.agentId) return false;
+          if (options?.providerType && p.providerType !== options.providerType) return false;
+          return true;
+        });
+      }
+    }
+
+    // Fall back to on-chain queries
+    if (!this.storageRegistry) return [];
 
     const addresses: string[] = options?.agentLinkedOnly
       ? await this.storageRegistry.getAgentLinkedProviders()
@@ -235,6 +516,82 @@ export class ComputeStorageIntegration {
       ipfsGateway: info.ipfsGateway,
       healthScore: Number(info.healthScore),
     };
+  }
+
+  /**
+   * Search for container images using the indexer
+   * Returns containers that match the given criteria
+   */
+  async searchContainers(options?: {
+    verified?: boolean;
+    gpuRequired?: boolean;
+    teeRequired?: boolean;
+    limit?: number;
+  }): Promise<ContainerImage[]> {
+    if (!this.indexerClient) return [];
+
+    const results = await this.indexerClient.searchContainers(options).catch(() => []);
+    
+    return results.map(c => ({
+      cid: c.cid,
+      name: c.name,
+      tag: c.tag || 'latest',
+      sizeBytes: BigInt(c.sizeBytes),
+      storageProvider: c.storageProvider || '',
+      tier: c.tier as 'hot' | 'warm' | 'cold' | 'permanent',
+      architecture: c.architecture as 'amd64' | 'arm64',
+      gpuRequired: c.gpuRequired,
+      minGpuVram: undefined,
+      teeRequired: c.teeRequired,
+      verified: c.verified,
+    }));
+  }
+
+  /**
+   * Get container details with compatible compute providers
+   */
+  async getContainerWithProviders(cid: string): Promise<{
+    container: ContainerImage | null;
+    compatibleProviders: Array<{
+      address: string;
+      name: string;
+      endpoint: string;
+      agentId: number | null;
+    }>;
+  }> {
+    if (!this.indexerClient) {
+      return { container: null, compatibleProviders: [] };
+    }
+
+    const result = await this.indexerClient.getContainer(cid).catch(() => null);
+    if (!result || !result.container) {
+      return { container: null, compatibleProviders: [] };
+    }
+
+    const c = result.container;
+    return {
+      container: {
+        cid: c.cid,
+        name: c.name,
+        tag: c.tag || 'latest',
+        sizeBytes: BigInt(c.sizeBytes),
+        storageProvider: c.storageProvider || '',
+        tier: c.tier as 'hot' | 'warm' | 'cold' | 'permanent',
+        architecture: c.architecture as 'amd64' | 'arm64',
+        gpuRequired: c.gpuRequired,
+        teeRequired: c.teeRequired,
+        verified: c.verified,
+      },
+      compatibleProviders: result.compatibleProviders,
+    };
+  }
+
+  /**
+   * Get marketplace statistics from indexer
+   */
+  async getMarketplaceStats(): Promise<IndexerMarketplaceStats | null> {
+    if (!this.indexerClient) return null;
+    return this.indexerClient.getMarketplaceStats().catch(() => null);
   }
 
   /**

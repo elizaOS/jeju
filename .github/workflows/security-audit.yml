@@ -34,6 +34,22 @@ jobs:
             echo "✅ No HIGH or CRITICAL vulnerabilities" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Verify resolutions applied
+        run: |
+          echo "## Resolution Verification" >> $GITHUB_STEP_SUMMARY
+          # Verify critical resolutions are actually applied after install
+          bun audit 2>&1 | tee post-install-audit.txt || true
+          # Check that known patched packages are at safe versions
+          if grep -q "qs.*<6.13.0" post-install-audit.txt; then
+            echo "❌ qs resolution not applied (expected >=6.13.0)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          if grep -q "express.*<4.21.0" post-install-audit.txt; then
+            echo "❌ express resolution not applied (expected >=4.21.0)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ All resolutions applied correctly" >> $GITHUB_STEP_SUMMARY
+
   smart-contract-security:
     name: Smart Contract Security (Slither)
     runs-on: ubuntu-latest

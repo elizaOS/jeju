@@ -2,46 +2,12 @@
 pragma solidity ^0.8.26;
 
 import {Test, console} from "forge-std/Test.sol";
-import {PerpetualMarket, IPriceFeedAggregator} from "../../src/perps/PerpetualMarket.sol";
+import {PerpetualMarket} from "../../src/perps/PerpetualMarket.sol";
 import {MarginManager} from "../../src/perps/MarginManager.sol";
 import {InsuranceFund} from "../../src/perps/InsuranceFund.sol";
 import {LiquidationEngine} from "../../src/perps/LiquidationEngine.sol";
 import {IPerpetualMarket} from "../../src/perps/interfaces/IPerpetualMarket.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-contract MockERC20 is ERC20 {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
-}
-
-contract MockTokenRegistry {
-    mapping(address => bool) public isRegistered;
-    function setRegistered(address token, bool status) external { isRegistered[token] = status; }
-}
-
-contract MockPriceOracle {
-    mapping(address => uint256) public prices;
-    function setPrice(address token, uint256 price) external { prices[token] = price; }
-    function getPrice(address token) external view returns (uint256) { return prices[token]; }
-}
-
-contract MockPriceFeed is IPriceFeedAggregator {
-    mapping(string => uint256) public prices;
-    mapping(string => bool) public valid;
-
-    function setPrice(string calldata asset, uint256 price, bool isValid) external {
-        prices[asset] = price;
-        valid[asset] = isValid;
-    }
-
-    function getPrice(string calldata asset) external view returns (
-        uint256 price,
-        uint256 timestamp,
-        bool isValid
-    ) {
-        return (prices[asset], block.timestamp, valid[asset]);
-    }
-}
+import {MockERC20, MockTokenRegistry, MockPriceOracle, MockPriceFeed} from "../mocks/PerpsMocks.sol";
 
 /**
  * @title PerpsIntegrationTest

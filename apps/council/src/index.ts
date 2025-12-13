@@ -41,6 +41,7 @@ import { getResearchAgent, type ResearchRequest } from './research-agent';
 import { getERC8004Client, type ERC8004Config } from './erc8004';
 import { getFutarchyClient, type FutarchyConfig } from './futarchy';
 import { getModerationSystem, initModeration, FlagType } from './moderation';
+import { getRegistryIntegrationClient, type RegistryIntegrationConfig } from './registry-integration';
 import type { CouncilConfig } from './types';
 
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000' as `0x${string}`;

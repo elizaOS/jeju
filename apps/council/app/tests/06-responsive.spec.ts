@@ -35,14 +35,14 @@ test.describe('Responsive Layout', () => {
   test('create page form is usable', async ({ page }) => {
     await page.goto('/create')
     
-    // Form elements should be visible
-    await expect(page.locator('select')).toBeVisible()
-    await expect(page.getByPlaceholder(/10-100/)).toBeVisible()
-    await expect(page.getByPlaceholder(/50-500/)).toBeVisible()
+    // New wizard form elements should be visible
+    await expect(page.getByText('Draft Your Proposal')).toBeVisible()
+    await expect(page.locator('input[placeholder*="Clear, descriptive title"]')).toBeVisible()
+    await expect(page.locator('textarea[placeholder*="1-2 sentence summary"]')).toBeVisible()
     
-    // Buttons should be visible and clickable
-    const assessBtn = page.getByRole('button', { name: /Assess/i })
-    await expect(assessBtn).toBeVisible()
+    // Navigation buttons should be visible
+    const continueBtn = page.getByRole('button', { name: /Continue/i })
+    await expect(continueBtn).toBeVisible()
   })
 
   test('proposals page is usable', async ({ page }) => {

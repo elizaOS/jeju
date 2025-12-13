@@ -1,27 +1,7 @@
-/**
- * @fileoverview OIF Solver Integration Strategy
- *
- * Participates in the Open Intents Framework as a solver:
- * - Monitor for new intents
- * - Evaluate profitability
- * - Fill intents across chains
- * - Capture solver fees for treasury
- */
-
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  type PublicClient,
-  type WalletClient,
-  type Account,
-  parseAbiItem,
-} from 'viem';
+import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient, type Account, parseAbiItem } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { ChainId, ChainConfig, StrategyConfig } from '../types';
 import { OUTPUT_SETTLER_ABI, ERC20_ABI, ZERO_ADDRESS } from '../lib/contracts';
-
-// ============ Types ============
 
 interface Intent {
   orderId: string;
@@ -50,8 +30,6 @@ interface IntentEvaluation {
   estimatedGasCost: bigint;
   reason?: string;
 }
-
-// ============ Constants ============
 
 const OPEN_EVENT = parseAbiItem(
   'event Open(bytes32 indexed orderId, (address user, uint256 originChainId, uint32 openDeadline, uint32 fillDeadline, bytes32 orderId, (bytes32 token, uint256 amount, bytes32 recipient, uint256 chainId)[] maxSpent, (bytes32 token, uint256 amount, bytes32 recipient, uint256 chainId)[] minReceived, (uint64 destinationChainId, bytes32 destinationSettler, bytes originData)[] fillInstructions) order)'

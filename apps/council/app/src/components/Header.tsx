@@ -34,6 +34,7 @@ export function Header() {
     { href: '/', label: 'Dashboard' },
     { href: '/proposals', label: 'Proposals' },
     { href: '/create', label: 'Create' },
+    { href: '/ceo', label: 'CEO' },
   ]
 
   return (

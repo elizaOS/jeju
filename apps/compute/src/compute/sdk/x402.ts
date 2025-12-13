@@ -1,6 +1,12 @@
 /**
  * x402 Payment Protocol - HTTP 402 micropayments
  * @see https://x402.org
+ *
+ * Two modes of operation:
+ * 1. SIGNATURE-ONLY: X402Client - verifies intent, not actual transfer (micropayments)
+ * 2. ON-CHAIN: X402SettlementClient - full settlement via X402Facilitator contract
+ *
+ * Use signature mode for low-value micropayments, on-chain for larger amounts.
  */
 
 import type { Address } from 'viem';
@@ -51,6 +57,7 @@ export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Addr
 export const CREDITS_PER_DOLLAR = 100;
 const JEJU_TOKEN_ADDRESS = (process.env.JEJU_TOKEN_ADDRESS || ZERO_ADDRESS) as Address;
 
+/** USDC may migrate - monitor https://www.circle.com/en/usdc-multichain */
 export const X402_NETWORKS: Record<X402Network, X402NetworkConfig> = {
   sepolia: { name: 'Sepolia', chainId: 11155111, rpcUrl: 'https://sepolia.ethereum.org', blockExplorer: 'https://sepolia.etherscan.io', isTestnet: true, usdc: ZERO_ADDRESS },
   'base-sepolia': { name: 'Base Sepolia', chainId: 84532, rpcUrl: 'https://sepolia.base.org', blockExplorer: 'https://sepolia.basescan.org', isTestnet: true, usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address },
@@ -60,10 +67,10 @@ export const X402_NETWORKS: Record<X402Network, X402NetworkConfig> = {
   'jeju-testnet': { name: 'Jeju Testnet', chainId: 84532, rpcUrl: 'https://sepolia.base.org', blockExplorer: 'https://sepolia.basescan.org', isTestnet: true, usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address },
 };
 
-export const X402_NETWORK_CONFIGS = X402_NETWORKS;
-export const X402_CHAIN_IDS: Record<X402Network, number> = Object.fromEntries(Object.entries(X402_NETWORKS).map(([k, v]) => [k, v.chainId])) as Record<X402Network, number>;
-export const X402_USDC_ADDRESSES: Record<X402Network, Address> = Object.fromEntries(Object.entries(X402_NETWORKS).map(([k, v]) => [k, v.usdc])) as Record<X402Network, Address>;
-export const X402_RPC_URLS: Record<X402Network, string> = Object.fromEntries(Object.entries(X402_NETWORKS).map(([k, v]) => [k, v.rpcUrl])) as Record<X402Network, string>;
+// Derived lookups for convenience
+const derive = <T>(f: keyof X402NetworkConfig) => Object.fromEntries(Object.entries(X402_NETWORKS).map(([k, v]) => [k, v[f]])) as Record<X402Network, T>;
+export const X402_CHAIN_IDS = derive<number>('chainId');
+export const X402_USDC_ADDRESSES = derive<Address>('usdc');
 
 export function getX402Config(): X402Config & { creditsPerDollar: number } {
   return {
@@ -92,8 +99,6 @@ export function parseX402Header(header: string): X402PaymentHeader | null {
   if (!parts.scheme || !parts.network || !parts.payload) return null;
   return { scheme: parts.scheme, network: parts.network, payload: parts.payload, asset: parts.asset || ZERO_ADDRESS, amount: parts.amount || '0' };
 }
-
-export const parseX402PaymentHeader = parseX402Header;
 
 export async function generateX402PaymentHeader(signer: Wallet, providerAddress: Address, amount: string, network: X402Network = 'jeju'): Promise<string> {
   const signature = await signer.signMessage(`x402:${network}:${providerAddress}:${amount}`);
@@ -144,18 +149,23 @@ export function estimatePrice(modelType: PricingModelType, units = 1000): bigint
   }
 }
 
-export function formatPriceUSD(amountWei: bigint, ethPrice = 3000): string {
+// ETH_PRICE_USD should be set in production for accurate pricing
+const DEFAULT_ETH_PRICE = parseInt(process.env.ETH_PRICE_USD ?? '3000', 10);
+
+export function getEthPrice(): number {
+  if (!process.env.ETH_PRICE_USD && process.env.NODE_ENV === 'production') {
+    console.warn('[x402] ETH_PRICE_USD not set - using $3000 default. Set ETH_PRICE_USD for accurate pricing.');
+  }
+  return DEFAULT_ETH_PRICE;
+}
+
+export function formatPriceUSD(amountWei: bigint, ethPrice = getEthPrice()): string {
   return `$${(Number(amountWei) / 1e18 * ethPrice).toFixed(4)}`;
 }
 
 export function formatPriceETH(amountWei: bigint): string {
   const eth = Number(amountWei) / 1e18;
   return eth < 0.0001 ? `${(Number(amountWei) / 1e9).toFixed(2)} gwei` : `${eth.toFixed(6)} ETH`;
-}
-
-export function getDetailedPriceEstimate(modelType: PricingModelType, units: number): { amount: bigint; currency: 'ETH'; breakdown: { basePrice: bigint; unitCount: number; unitType: string } } {
-  const amount = estimatePrice(modelType, units);
-  return { amount, currency: 'ETH', breakdown: { basePrice: amount, unitCount: units, unitType: modelType } };
 }
 
 export class X402Client {
@@ -186,6 +196,124 @@ export class X402Client {
 
   getAddress(): Address { return this.signer.address as Address; }
   getNetworkConfig(): X402NetworkConfig { return X402_NETWORKS[this.network]; }
+}
+
+// X402 Facilitator ABI for on-chain settlement
+const X402_FACILITATOR_ABI = [
+  'function settle(address payer, address recipient, address token, uint256 amount, string resource, string nonce, uint256 timestamp, bytes signature) returns (bytes32)',
+  'function isNonceUsed(address payer, string nonce) view returns (bool)',
+  'function hashPayment(address token, address recipient, uint256 amount, string resource, string nonce, uint256 timestamp) view returns (bytes32)',
+  'function domainSeparator() view returns (bytes32)',
+];
+
+// EIP-712 domain and types for X402 payment signing
+const X402_EIP712_DOMAIN = {
+  name: 'x402 Payment Protocol',
+  version: '1',
+} as const;
+
+const X402_EIP712_TYPES = {
+  Payment: [
+    { name: 'scheme', type: 'string' },
+    { name: 'network', type: 'string' },
+    { name: 'asset', type: 'address' },
+    { name: 'payTo', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+    { name: 'resource', type: 'string' },
+    { name: 'nonce', type: 'string' },
+    { name: 'timestamp', type: 'uint256' },
+  ],
+} as const;
+
+export interface OnChainSettlementConfig {
+  facilitatorAddress: Address;
+  rpcUrl: string;
+}
+
+/**
+ * X402 On-Chain Settlement Client
+ * Settles x402 payments via the X402Facilitator contract
+ */
+export class X402SettlementClient {
+  private network: X402Network;
+
+  constructor(
+    private signer: Wallet,
+    private config: OnChainSettlementConfig,
+    network: X402Network = 'jeju'
+  ) {
+    this.network = network;
+  }
+
+  getNetwork(): X402Network { return this.network; }
+
+  private async getFacilitator(signed = false) {
+    const { Contract, JsonRpcProvider } = await import('ethers');
+    const provider = new JsonRpcProvider(this.config.rpcUrl);
+    const signerOrProvider = signed ? this.signer.connect(provider) : provider;
+    return new Contract(this.config.facilitatorAddress, X402_FACILITATOR_ABI, signerOrProvider);
+  }
+
+  async signPayment(params: {
+    token: Address;
+    recipient: Address;
+    amount: bigint;
+    resource: string;
+    nonce?: string;
+    timestamp?: number;
+  }): Promise<{ signature: string; nonce: string; timestamp: number }> {
+    const nonce = params.nonce ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const timestamp = params.timestamp ?? Math.floor(Date.now() / 1000);
+    const networkConfig = getX402NetworkConfig(this.network);
+
+    const domain = {
+      ...X402_EIP712_DOMAIN,
+      chainId: networkConfig.chainId,
+      verifyingContract: this.config.facilitatorAddress,
+    };
+
+    const value = {
+      scheme: 'exact',
+      network: 'jeju',
+      asset: params.token,
+      payTo: params.recipient,
+      amount: params.amount,
+      resource: params.resource,
+      nonce,
+      timestamp,
+    };
+
+    const signature = await this.signer.signTypedData(domain, X402_EIP712_TYPES, value);
+    return { signature, nonce, timestamp };
+  }
+
+  async settle(params: {
+    payer: Address;
+    recipient: Address;
+    token: Address;
+    amount: bigint;
+    resource: string;
+    nonce: string;
+    timestamp: number;
+    signature: string;
+  }): Promise<string> {
+    const facilitator = await this.getFacilitator(true);
+    const tx = await facilitator.settle(
+      params.payer, params.recipient, params.token, params.amount,
+      params.resource, params.nonce, params.timestamp, params.signature
+    );
+    const receipt = await tx.wait();
+    return receipt.hash;
+  }
+
+  async isNonceUsed(payer: Address, nonce: string): Promise<boolean> {
+    const facilitator = await this.getFacilitator();
+    return facilitator.isNonceUsed(payer, nonce);
+  }
+}
+
+export function createX402SettlementClient(signer: Wallet, config: OnChainSettlementConfig, network?: X402Network): X402SettlementClient {
+  return new X402SettlementClient(signer, config, network ?? getX402Config().network);
 }
 
 import type { Context, Next } from 'hono';
@@ -226,5 +354,3 @@ export function createMultiAssetPaymentRequirement(
   return { x402Version: 1, error: 'Payment required to access compute service', accepts };
 }
 
-export const estimateInferencePrice = (_model: string, tokens?: number, modelType: PricingModelType = 'llm') => estimatePrice(modelType, tokens);
-export const createX402PaymentRequirement = (p: { network: X402Network; recipient: Address; amount: bigint; resource: string; description: string }) => createPaymentRequirement(p.resource, p.amount, p.recipient, p.description, p.network);

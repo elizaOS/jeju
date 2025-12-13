@@ -267,3 +267,4 @@ contract L2OutputVerifierTest is Test {
         assertEq(verifier.getLatestCommittedBlock(BASE_CHAIN_ID), 0);
     }
 }
+

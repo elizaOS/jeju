@@ -1,25 +1,9 @@
-/**
- * @fileoverview Cross-Chain Arbitrage Strategy
- *
- * Monitors price differences across chains:
- * - ETH L1, Arbitrum, Optimism, Base, BSC
- * - Executes coordinated trades on source and destination
- * - Integrates with OIF/EIL for bridging
- */
-
-import type {
-  ChainId,
-  Token,
-  CrossChainArbOpportunity,
-  StrategyConfig,
-} from '../types';
-
-// ============ Types ============
+import type { ChainId, Token, CrossChainArbOpportunity, StrategyConfig } from '../types';
 
 interface ChainPrice {
   chainId: ChainId;
   token: string;
-  price: bigint; // Price in USD (scaled by 1e18)
+  price: bigint;
   reserve: bigint;
   lastUpdate: number;
 }
@@ -27,13 +11,10 @@ interface ChainPrice {
 interface BridgeCost {
   sourceChainId: ChainId;
   destChainId: ChainId;
-  baseCost: bigint; // In ETH
-  timeSec: number; // Expected bridge time
+  baseCost: bigint;
+  timeSec: number;
 }
 
-// ============ Constants ============
-
-// Bridge costs between chains (approximate)
 const BRIDGE_COSTS: BridgeCost[] = [
   // Ethereum -> L2s (via canonical bridge)
   { sourceChainId: 1, destChainId: 42161, baseCost: BigInt(1e15), timeSec: 600 }, // ~$3
@@ -54,11 +35,9 @@ const BRIDGE_COSTS: BridgeCost[] = [
   { sourceChainId: 420691, destChainId: 8453, baseCost: BigInt(8e14), timeSec: 60 },
 ];
 
-const PRICE_STALE_MS = 30000; // 30 seconds
-const MIN_PRICE_DIFF_BPS = 50; // 0.5% minimum price difference
-const OPPORTUNITY_TTL_MS = 10000; // 10 seconds
-
-// ============ Strategy Class ============
+const PRICE_STALE_MS = 30000;
+const MIN_PRICE_DIFF_BPS = 50;
+const OPPORTUNITY_TTL_MS = 10000;
 
 export class CrossChainArbStrategy {
   private prices: Map<string, ChainPrice> = new Map(); // "chainId-token" -> price

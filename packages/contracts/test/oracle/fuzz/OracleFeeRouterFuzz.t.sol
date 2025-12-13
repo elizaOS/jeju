@@ -166,11 +166,16 @@ contract OracleFeeRouterFuzzTest is Test {
         address subscriber = address(0x105);
         vm.deal(subscriber, 100 ether);
 
+        // Use absolute timestamp for predictable behavior
+        uint256 startTime = 1700000000;
+        vm.warp(startTime);
+
         vm.prank(subscriber);
         bytes32 subscriptionId = feeRouter.subscribe{value: price}(feeds, 1);
 
         // Let it expire
-        vm.warp(block.timestamp + 30 days + expiryGap);
+        uint256 expiredTime = startTime + 30 days + expiryGap;
+        vm.warp(expiredTime);
 
         // Renew expired subscription
         vm.prank(subscriber);
@@ -178,8 +183,8 @@ contract OracleFeeRouterFuzzTest is Test {
 
         IOracleFeeRouter.Subscription memory sub = feeRouter.getSubscription(subscriptionId);
         assertTrue(sub.isActive);
-        // Should start from now, not extend from old end time
-        assertEq(sub.endTime, block.timestamp + 30 days);
+        // Should start from now (expired time), not extend from old end time
+        assertEq(sub.endTime, expiredTime + 30 days);
     }
 
     // ==================== Per-Read Payment Fuzz Tests ====================
@@ -381,17 +386,22 @@ contract OracleFeeRouterFuzzTest is Test {
         address subscriber = address(0x400);
         vm.deal(subscriber, price + 1 ether);
 
+        // Use absolute timestamp
+        uint256 startTime = 1700000000;
+        vm.warp(startTime);
+
         vm.prank(subscriber);
         feeRouter.subscribe{value: price}(feeds, 1);
 
-        uint256 endTime = block.timestamp + 30 days;
+        uint256 endTime = startTime + 30 days;
         checkTime = bound(checkTime, 0, 60 days);
 
-        vm.warp(block.timestamp + checkTime);
+        uint256 actualCheckTime = startTime + checkTime;
+        vm.warp(actualCheckTime);
 
         bool isSubscribed = feeRouter.isSubscribed(subscriber, feedId);
 
-        if (block.timestamp <= endTime) {
+        if (actualCheckTime <= endTime) {
             assertTrue(isSubscribed);
         } else {
             assertFalse(isSubscribed);

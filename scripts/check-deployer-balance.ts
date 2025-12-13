@@ -39,3 +39,4 @@ if (allFunded) {
 } else {
   console.log('⚠️ Some chains need funding (min 0.05 ETH)');
 }
+

@@ -1,29 +1,8 @@
-/**
- * @fileoverview Event Collector
- *
- * Collects and aggregates events from multiple sources:
- * - Mempool transactions (pending TXs)
- * - New blocks
- * - DEX swap events
- * - Position updates
- * - Price updates
- */
-
-import {
-  createPublicClient,
-  http,
-  webSocket,
-  type PublicClient,
-  type Chain,
-  parseAbiItem,
-  type Log,
-} from 'viem';
+import { createPublicClient, http, webSocket, type PublicClient, type Chain, parseAbiItem, type Log } from 'viem';
 import { mainnet, arbitrum, optimism, base, bsc, sepolia } from 'viem/chains';
 import { EventEmitter } from 'events';
 import type { ChainConfig, ChainId, Pool, Token } from '../types';
 import { XLP_V2_PAIR_ABI, XLP_V2_FACTORY_ABI } from '../lib/contracts';
-
-// ============ Types ============
 
 export interface PendingTransaction {
   hash: string;

@@ -20,7 +20,7 @@ import {
   type TriggerProof,
   type HttpTarget,
 } from '../sdk/trigger-integration';
-import { parseX402PaymentHeader } from '../sdk/x402';
+import { parseX402Header } from '../sdk/x402';
 import type { Address } from 'viem';
 
 type BunServer = ReturnType<typeof serve>;
@@ -303,7 +303,7 @@ describe('Proof System Edge Cases', () => {
 describe('X402 Payment Header Edge Cases', () => {
   test('parses header with extra fields', () => {
     const header = 'scheme=exact;network=jeju;payload=0x123;amount=1000;extra=ignored;another=field';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed).not.toBeNull();
     expect(parsed!.scheme).toBe('exact');
     expect(parsed!.amount).toBe('1000');
@@ -311,54 +311,54 @@ describe('X402 Payment Header Edge Cases', () => {
 
   test('parses header with empty values', () => {
     const header = 'scheme=;network=jeju;payload=0x123;amount=1000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed).toBeNull(); // empty scheme should fail
   });
 
   test('handles duplicate keys (last wins)', () => {
     const header = 'scheme=wrong;scheme=exact;network=jeju;payload=0x123;amount=1000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed?.scheme).toBe('exact');
   });
 
   test('handles very large amount', () => {
     const header = 'scheme=exact;network=jeju;payload=0x123;amount=999999999999999999999999999999';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed).not.toBeNull();
     expect(parsed!.amount).toBe('999999999999999999999999999999');
   });
 
   test('handles zero amount', () => {
     const header = 'scheme=exact;network=jeju;payload=0x123;amount=0';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed).not.toBeNull();
     expect(parsed!.amount).toBe('0');
   });
 
   test('handles negative amount (as string)', () => {
     const header = 'scheme=exact;network=jeju;payload=0x123;amount=-100';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed).not.toBeNull();
     expect(parsed!.amount).toBe('-100'); // parsing doesn't validate, caller should
   });
 
   test('handles special characters in payload', () => {
     const header = 'scheme=exact;network=jeju;payload=0x123abc!@#$%^&*();amount=1000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     // Note: semicolons would break parsing, but other chars should be ok
     expect(parsed?.payload).toContain('0x123abc');
   });
 
   test('handles unicode in values', () => {
     const header = 'scheme=exact;network=日本語;payload=0x123;amount=1000';
-    const parsed = parseX402PaymentHeader(header);
+    const parsed = parseX402Header(header);
     expect(parsed).not.toBeNull();
     expect(parsed!.network).toBe('日本語');
   });
 });
 
 describe('X402 Payment Verification', () => {
-  const { verifyX402Payment, generateX402PaymentHeader, parseX402PaymentHeader: parseHeader } = require('../sdk/x402');
+  const { verifyX402Payment, generateX402PaymentHeader, parseX402Header: parseHeader } = require('../sdk/x402');
   const testWallet = Wallet.createRandom() as unknown as Wallet;
   const providerWallet = Wallet.createRandom() as unknown as Wallet;
 
@@ -602,6 +602,7 @@ describe('Subscription Edge Cases', () => {
       enableOnChainRegistration: false,
       executorWallet,
       chainId: 1,
+      allowPrivateCallbacks: true,
     });
     await integration.initialize();
   });
@@ -784,6 +785,7 @@ describe('Data Integrity Verification', () => {
       enableOnChainRegistration: false,
       executorWallet,
       chainId: 1,
+      allowPrivateCallbacks: true,
     });
     await integration.initialize();
   });
