@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@jeju/kms": "workspace:*",
-    "hono": "4.6.0",
+    "hono": "4.11.0",
     "viem": "2.21.0"
   },
   "devDependencies": {
