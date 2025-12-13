@@ -1,0 +1,40 @@
+{
+  "name": "@jeju/kms",
+  "version": "1.0.0",
+  "description": "Decentralized Key Management System for Jeju Network",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./sdk": {
+      "types": "./dist/sdk/index.d.ts",
+      "import": "./dist/sdk/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lit-protocol/lit-node-client": "^6.0.0",
+    "@lit-protocol/constants": "^6.0.0",
+    "@lit-protocol/types": "^6.0.0",
+    "@lit-protocol/auth-helpers": "^6.0.0",
+    "viem": "^2.0.0",
+    "ethers": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  }
+}
+

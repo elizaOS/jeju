@@ -12,49 +12,38 @@ const USER_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78
 
 const COUNCIL_ABI = [
   'function submitProposalWithAttestation(uint8 proposalType, uint8 qualityScore, bytes32 contentHash, address targetContract, bytes calldata callData, uint256 value, uint256 attestationTimestamp, bytes calldata attestationSignature) external payable returns (bytes32)',
-  'function submitProposal(uint8 proposalType, uint8 qualityScore, bytes32 contentHash, address targetContract, bytes calldata callData, uint256 value) external payable returns (bytes32)',
-  'function getProposal(bytes32 proposalId) external view returns (tuple(bytes32 proposalId, address proposer, uint8 proposalType, uint8 status, uint8 qualityScore, uint256 createdAt, uint256 councilVoteEnd, uint256 gracePeriodEnd, bytes32 contentHash, address targetContract, bytes callData, uint256 value, uint256 totalStaked, uint256 totalReputation, uint256 backerCount, bool hasResearch, bytes32 researchHash, bool ceoApproved))',
   'function proposalBond() external view returns (uint256)',
-  'function qualityOracle() external view returns (address)',
-  'function setQualityOracle(address) external',
-  'function owner() external view returns (address)',
 ];
 
 const QUALITY_ORACLE_ABI = [
-  'function verifyScore(bytes32 contentHash, uint8 score, uint256 timestamp, address submitter, bytes signature) external returns (address)',
-  'function checkAttestation(bytes32 contentHash, uint8 score, uint256 timestamp, address submitter, bytes signature) external view returns (bool valid, address assessor, string reason)',
+  'function verifyScore(bytes32 contentHash, uint256 qualityScore, uint256 attestationTimestamp, address proposer, bytes attestationSignature) external view',
   'function isAssessor(address) external view returns (bool)',
-  'function addAssessor(address) external',
-  'function minScore() external view returns (uint8)',
+  'function minScore() external view returns (uint256)',
 ];
 
-// Attestation signing logic (mirrors proposal-assistant.ts)
 function signAttestation(
   contentHash: string,
   score: number,
   timestamp: number,
-  submitterAddress: string,
+  proposerAddress: string,
   assessorKey: string,
   chainId: number
 ): { signature: string; assessor: string } {
   const messageHash = solidityPackedKeccak256(
-    ['string', 'bytes32', 'uint8', 'uint256', 'address', 'uint256'],
-    ['JejuQualityAttestation', contentHash, score, timestamp, submitterAddress, chainId]
+    ['string', 'bytes32', 'uint256', 'uint256', 'address', 'uint256'],
+    ['JejuQualityAttestation', contentHash, score, timestamp, proposerAddress, chainId]
   );
   
   const wallet = new Wallet(assessorKey);
-  // Note: signMessage handles EIP-191 prefix automatically
   const signature = wallet.signMessageSync(getBytes(messageHash));
   
   return { signature, assessor: wallet.address };
 }
 
-// Create content hash from proposal data
 function getContentHash(title: string, description: string, proposalType: number): string {
   return keccak256(toUtf8Bytes(JSON.stringify({ title, description, proposalType })));
 }
 
-// Check if anvil is running
 async function checkAnvil(): Promise<boolean> {
   try {
     const provider = new JsonRpcProvider(RPC_URL);
@@ -71,8 +60,6 @@ describe('Attestation End-to-End Tests', () => {
   let user: Wallet;
   let council: Contract;
   let qualityOracle: Contract;
-  let councilAddress: string;
-  let qualityOracleAddress: string;
   let anvilRunning: boolean;
 
   beforeAll(async () => {
@@ -86,9 +73,8 @@ describe('Attestation End-to-End Tests', () => {
     deployer = new Wallet(DEPLOYER_KEY, provider);
     user = new Wallet(USER_KEY, provider);
 
-    // Get contract addresses from env or use defaults from deployment
-    councilAddress = process.env.COUNCIL_ADDRESS ?? '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9';
-    qualityOracleAddress = process.env.QUALITY_ORACLE_ADDRESS ?? '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707';
+    const councilAddress = process.env.COUNCIL_ADDRESS ?? '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9';
+    const qualityOracleAddress = process.env.QUALITY_ORACLE_ADDRESS ?? '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707';
 
     council = new Contract(councilAddress, COUNCIL_ABI, deployer);
     qualityOracle = new Contract(qualityOracleAddress, QUALITY_ORACLE_ABI, deployer);
@@ -104,44 +90,25 @@ describe('Attestation End-to-End Tests', () => {
     const contentHash = getContentHash('Test Proposal', 'Test Description', 1);
     const score = 95;
     const timestamp = Math.floor(Date.now() / 1000);
-    const submitter = user.address;
 
-    const { signature, assessor } = signAttestation(
-      contentHash,
-      score,
-      timestamp,
-      submitter,
-      DEPLOYER_KEY, // deployer is the assessor
-      CHAIN_ID
-    );
+    const { signature, assessor } = signAttestation(contentHash, score, timestamp, user.address, DEPLOYER_KEY, CHAIN_ID);
 
     expect(signature).toMatch(/^0x[a-fA-F0-9]{130}$/);
     expect(assessor).toBe(deployer.address);
     console.log('✅ Attestation signature generated');
   });
 
-  test('checkAttestation validates signature on-chain', async () => {
+  test('verifyScore validates signature on-chain (view call)', async () => {
     if (!anvilRunning) return;
 
-    const contentHash = getContentHash('Check Test', 'Testing checkAttestation', 1);
+    const contentHash = getContentHash('Verify Test', 'Testing verifyScore', 1);
     const score = 95;
     const timestamp = Math.floor(Date.now() / 1000);
-    const submitter = user.address;
 
-    const { signature } = signAttestation(contentHash, score, timestamp, submitter, DEPLOYER_KEY, CHAIN_ID);
+    const { signature } = signAttestation(contentHash, score, timestamp, user.address, DEPLOYER_KEY, CHAIN_ID);
 
-    // Verify on-chain
-    const [valid, recoveredAssessor, reason] = await qualityOracle.checkAttestation(
-      contentHash,
-      score,
-      timestamp,
-      submitter,
-      signature
-    );
-
-    expect(valid).toBe(true);
-    expect(recoveredAssessor.toLowerCase()).toBe(deployer.address.toLowerCase());
-    expect(reason).toBe('Valid');
+    // Should not revert (valid attestation)
+    await qualityOracle.verifyScore(contentHash, score, timestamp, user.address, signature);
     console.log('✅ On-chain attestation verification passed');
   });
 
@@ -183,7 +150,7 @@ describe('Attestation End-to-End Tests', () => {
     if (!anvilRunning) return;
 
     const contentHash = getContentHash('Low Score Test', 'Testing low score rejection', 1);
-    const score = 50; // Below 90 minimum
+    const score = 50;
     const timestamp = Math.floor(Date.now() / 1000);
 
     const { signature } = signAttestation(contentHash, score, timestamp, user.address, DEPLOYER_KEY, CHAIN_ID);
@@ -191,7 +158,6 @@ describe('Attestation End-to-End Tests', () => {
     const proposalBond = await council.proposalBond();
     const councilAsUser = council.connect(user) as Contract;
 
-    // Should revert with ScoreBelowMinimum
     await expect(
       councilAsUser.submitProposalWithAttestation(
         1, score, contentHash, ethers.ZeroAddress, '0x', 0, timestamp, signature,
@@ -209,13 +175,11 @@ describe('Attestation End-to-End Tests', () => {
     const score = 95;
     const timestamp = Math.floor(Date.now() / 1000);
 
-    // Sign with user key (not an assessor)
     const { signature } = signAttestation(contentHash, score, timestamp, user.address, USER_KEY, CHAIN_ID);
 
     const proposalBond = await council.proposalBond();
     const councilAsUser = council.connect(user) as Contract;
 
-    // Should revert with InvalidSignature
     await expect(
       councilAsUser.submitProposalWithAttestation(
         1, score, contentHash, ethers.ZeroAddress, '0x', 0, timestamp, signature,
@@ -231,14 +195,13 @@ describe('Attestation End-to-End Tests', () => {
 
     const contentHash = getContentHash('Expired Test', 'Testing expired attestation', 1);
     const score = 95;
-    const timestamp = Math.floor(Date.now() / 1000) - 7200; // 2 hours ago (past TTL)
+    const timestamp = Math.floor(Date.now() / 1000) - 7200;
 
     const { signature } = signAttestation(contentHash, score, timestamp, user.address, DEPLOYER_KEY, CHAIN_ID);
 
     const proposalBond = await council.proposalBond();
     const councilAsUser = council.connect(user) as Contract;
 
-    // Should revert with AttestationExpired
     await expect(
       councilAsUser.submitProposalWithAttestation(
         1, score, contentHash, ethers.ZeroAddress, '0x', 0, timestamp, signature,

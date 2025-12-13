@@ -39,6 +39,25 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// Quick check if L2 RPC is available before running full suite
+const l2RpcUrl = process.env.L2_RPC_URL || process.env.JEJU_RPC_URL || `http://127.0.0.1:${process.env.L2_RPC_PORT || '9545'}`;
+let servicesAvailable = false;
+try {
+  const res = await fetch(l2RpcUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
+    signal: AbortSignal.timeout(2000),
+  });
+  servicesAvailable = res.ok;
+} catch {
+  servicesAvailable = false;
+}
+if (!servicesAvailable) {
+  console.log('⏭️  Skipping Runtime Full Stack tests - services not running');
+  console.log('   Start with: bun run localnet:start');
+}
+
 /** Configuration for runtime testing */
 interface RuntimeConfig {
   l1: {
@@ -115,7 +134,7 @@ interface DeployedContracts {
   };
 }
 
-describe('Runtime Full Stack Integration', () => {
+describe.skipIf(!servicesAvailable)('Runtime Full Stack Integration', () => {
   let serviceStatus: ServiceStatus;
   let l1Provider: ethers.Provider;
   let l2Provider: ethers.Provider;
@@ -151,7 +170,7 @@ describe('Runtime Full Stack Integration', () => {
       '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
       l2Provider
     );
-  }, 60000);
+  });
 
   describe('Service Health Checks', () => {
     it('L1 RPC should be running', () => {

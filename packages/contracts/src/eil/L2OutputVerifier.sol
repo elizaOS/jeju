@@ -271,4 +271,3 @@ contract L2OutputVerifier is Ownable {
         return IL2OutputOracle(oracle).latestBlockNumber();
     }
 }
-
