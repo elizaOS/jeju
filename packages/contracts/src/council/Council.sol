@@ -7,6 +7,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPredimarket} from "./IPredimarket.sol";
+import {IQualityOracle} from "./IQualityOracle.sol";
 
 /**
  * @title Council
@@ -177,6 +178,12 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
 
     /// @notice Predimarket for veto prediction markets
     address public predimarket;
+
+    /// @notice Quality oracle for verified assessments
+    address public qualityOracle;
+
+    /// @notice Whether quality attestation is required
+    bool public requireQualityAttestation = false;
 
     /// @notice CEO agent address
     address public ceoAgent;
@@ -366,6 +373,8 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
     error FutarchyNotPending();
     error FutarchyNotResolved();
     error FutarchyDeadlineNotPassed();
+    error QualityAttestationRequired();
+    error QualityOracleNotConfigured();
 
     // ============================================================================
     // Modifiers
@@ -418,7 +427,48 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
     // ============================================================================
 
     /**
-     * @notice Submit a proposal on-chain
+     * @notice Submit a proposal with verified quality attestation
+     * @param proposalType Type of proposal
+     * @param qualityScore Quality score from proposal agent (0-100)
+     * @param contentHash IPFS hash of full proposal content
+     * @param targetContract Contract to execute on (if applicable)
+     * @param callData Execution calldata
+     * @param value ETH value for execution
+     * @param attestationTimestamp When the quality assessment was signed
+     * @param attestationSignature Signature from authorized assessor
+     * @return proposalId Unique proposal identifier
+     */
+    function submitProposalWithAttestation(
+        ProposalType proposalType,
+        uint8 qualityScore,
+        bytes32 contentHash,
+        address targetContract,
+        bytes calldata callData,
+        uint256 value,
+        uint256 attestationTimestamp,
+        bytes calldata attestationSignature
+    ) external payable nonReentrant whenNotPaused returns (bytes32 proposalId) {
+        if (msg.value < proposalBond) {
+            revert InsufficientBond();
+        }
+        if (qualityOracle == address(0)) {
+            revert QualityOracleNotConfigured();
+        }
+
+        // Verify the quality attestation on-chain
+        IQualityOracle(qualityOracle).verifyScore(
+            contentHash,
+            qualityScore,
+            attestationTimestamp,
+            msg.sender,
+            attestationSignature
+        );
+
+        return _createProposal(proposalType, qualityScore, contentHash, targetContract, callData, value);
+    }
+
+    /**
+     * @notice Submit a proposal on-chain (legacy, may require attestation)
      * @param proposalType Type of proposal
      * @param qualityScore Quality score from proposal agent (0-100)
      * @param contentHash IPFS hash of full proposal content
@@ -435,6 +485,11 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
         bytes calldata callData,
         uint256 value
     ) external payable nonReentrant whenNotPaused returns (bytes32 proposalId) {
+        // If attestation required, reject unverified submissions
+        if (requireQualityAttestation) {
+            revert QualityAttestationRequired();
+        }
+
         if (qualityScore < minQualityScore) {
             revert InsufficientQualityScore(qualityScore, minQualityScore);
         }
@@ -442,6 +497,20 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
             revert InsufficientBond();
         }
 
+        return _createProposal(proposalType, qualityScore, contentHash, targetContract, callData, value);
+    }
+
+    /**
+     * @notice Internal function to create a proposal
+     */
+    function _createProposal(
+        ProposalType proposalType,
+        uint8 qualityScore,
+        bytes32 contentHash,
+        address targetContract,
+        bytes calldata callData,
+        uint256 value
+    ) internal returns (bytes32 proposalId) {
         proposalId = keccak256(abi.encodePacked(
             msg.sender,
             contentHash,
@@ -1126,6 +1195,14 @@ contract Council is Ownable, Pausable, ReentrancyGuard {
 
     function setPredimarket(address _predimarket) external onlyOwner {
         predimarket = _predimarket;
+    }
+
+    function setQualityOracle(address _qualityOracle) external onlyOwner {
+        qualityOracle = _qualityOracle;
+    }
+
+    function setRequireQualityAttestation(bool _require) external onlyOwner {
+        requireQualityAttestation = _require;
     }
 
     function setParameters(

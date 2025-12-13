@@ -5,7 +5,7 @@ import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
-const VENDOR_DIR = join(process.cwd(), 'vendor');
+const _VENDOR_DIR = join(process.cwd(), 'vendor');
 const ROOT_PACKAGE_JSON = join(process.cwd(), 'package.json');
 
 interface Vulnerability {

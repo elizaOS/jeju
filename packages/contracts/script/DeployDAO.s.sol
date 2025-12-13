@@ -7,15 +7,18 @@ import "../src/registry/IdentityRegistry.sol";
 import "../src/registry/ReputationRegistry.sol";
 import "../src/council/Council.sol";
 import "../src/council/CEOAgent.sol";
+import "../src/council/QualityOracle.sol";
 
 /**
  * @title DeployDAO
  * @notice Deploys full DAO stack for Council governance
- * @dev Run with: forge script script/DeployDAO.s.sol --rpc-url http://localhost:9545 --broadcast
+ * @dev Run with:
+ *   Localnet: forge script script/DeployDAO.s.sol --rpc-url http://localhost:9545 --broadcast
+ *   Testnet:  forge script script/DeployDAO.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
  */
 contract DeployDAO is Script {
     function run() external {
-        // Use the default anvil private key
+        // Use DEPLOYER_KEY env var for testnet, anvil default for localnet
         uint256 deployerKey = vm.envOr("DEPLOYER_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
         address deployer = vm.addr(deployerKey);
         
@@ -53,10 +56,21 @@ contract DeployDAO is Script {
             deployer
         );
         console.log("CEOAgent:", address(ceo));
+
+        // 6. Deploy Quality Oracle
+        QualityOracle qualityOracle = new QualityOracle(deployer);
+        console.log("QualityOracle:", address(qualityOracle));
+
+        // 7. Configure Quality Oracle - add deployer as assessor
+        qualityOracle.addAssessor(deployer);
+        console.log("Assessor added");
         
-        // 6. Configure Council with CEO
+        // 8. Configure Council with CEO and QualityOracle
         council.setCEOAgent(address(ceo), 1);
         console.log("CEO configured");
+
+        council.setQualityOracle(address(qualityOracle));
+        console.log("QualityOracle configured");
         
         // 7. Set research operator
         council.setResearchOperator(deployer, true);
@@ -82,6 +96,7 @@ contract DeployDAO is Script {
             '","ReputationRegistry":"', vm.toString(address(reputation)),
             '","Council":"', vm.toString(address(council)),
             '","CEOAgent":"', vm.toString(address(ceo)),
+            '","QualityOracle":"', vm.toString(address(qualityOracle)),
             '","deployer":"', vm.toString(deployer),
             '"}'
         ));

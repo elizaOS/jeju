@@ -47,7 +47,11 @@
     "socket.io": ">=4.8.0",
     "glob": ">=11.0.0",
     "hawk": ">=9.0.1",
-    "playwright": ">=1.55.1"
+    "playwright": ">=1.55.1",
+    "ai": ">=5.0.52",
+    "got": ">=11.8.5",
+    "tunnel-agent": ">=0.6.0",
+    "tsup": ">=8.3.5"
   },
   "scripts": {
     "docs:generate": "typedoc --options packages/config/typedoc.json",
@@ -123,6 +127,7 @@
     "@synthetixio/v3-contracts": "latest",
     "@uniswap/v4-core": "latest",
     "ethers": "^6.11.1",
+    "merkletreejs": "^0.6.0",
     "tar": "^7.5.1",
     "viem": "^2.7.15",
     "zod": "^3.22.4"

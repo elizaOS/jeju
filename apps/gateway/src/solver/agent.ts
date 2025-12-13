@@ -3,7 +3,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { LiquidityManager } from './liquidity';
 import { StrategyEngine } from './strategy';
 import { EventMonitor, type IntentEvent } from './monitor';
-import { OUTPUT_SETTLERS, INPUT_SETTLERS, OUTPUT_SETTLER_ABI, INPUT_SETTLER_ABI, ERC20_APPROVE_ABI, ORACLE_ABI, isNativeToken } from './contracts';
+import { OUTPUT_SETTLERS, INPUT_SETTLERS, ORACLES, OUTPUT_SETTLER_ABI, INPUT_SETTLER_ABI, ERC20_APPROVE_ABI, ORACLE_ABI, isNativeToken } from './contracts';
 import { getChain } from '../lib/chains.js';
 import {
   recordIntentReceived,
@@ -121,8 +121,7 @@ export class SolverAgent {
     const inputSettler = INPUT_SETTLERS[settlement.sourceChain];
     if (!inputSettler) return { settled: false, retry: false, reason: 'No InputSettler on source chain' };
 
-    // Check if oracle has attested the fill
-    const oracleAddr = process.env[`OIF_ORACLE_${settlement.sourceChain}`] as `0x${string}` | undefined;
+    const oracleAddr = ORACLES[settlement.sourceChain] || process.env[`OIF_ORACLE_${settlement.sourceChain}`] as `0x${string}` | undefined;
     if (oracleAddr) {
       const attested = await client.public.readContract({
         address: oracleAddr,
@@ -136,7 +135,6 @@ export class SolverAgent {
       }
     }
 
-    // Try to settle on InputSettler
     const chain = getChain(settlement.sourceChain);
     const settleTx = await client.wallet.writeContract({
       chain,
@@ -228,8 +226,6 @@ export class SolverAgent {
     if (fill.success) {
       recordIntentFilled(e.sourceChain, e.destinationChain, fillDurationMs, fill.gasUsed || 0n);
       console.log(`   ✅ Filled: ${fill.txHash}`);
-      
-      // Track for settlement claiming
       this.pendingSettlements.set(e.orderId, {
         orderId: e.orderId,
         sourceChain: e.sourceChain,

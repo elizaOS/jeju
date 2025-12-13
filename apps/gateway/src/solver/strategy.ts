@@ -77,7 +77,6 @@ export class StrategyEngine {
   }
 
   private async refreshPrices(): Promise<void> {
-    // Try Chainlink first (mainnet only)
     const client = this.clients.get(1);
     if (client) {
       const result = await client.readContract({
@@ -95,7 +94,6 @@ export class StrategyEngine {
       }
     }
 
-    // Fallback: CoinGecko API
     const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd').catch((err: Error) => {
       console.warn(`[strategy] CoinGecko API failed: ${err.message}`);
       return null;

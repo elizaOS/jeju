@@ -41,6 +41,16 @@ const TEST_CONFIG = {
   timeout: 60000, // 60 seconds for blockchain operations
 } as const;
 
+// Check if localnet is available
+let localnetAvailable = false;
+try {
+  const provider = new ethers.JsonRpcProvider(TEST_CONFIG.l2RpcUrl);
+  await provider.getBlockNumber();
+  localnetAvailable = true;
+} catch {
+  console.log(`Localnet not available at ${TEST_CONFIG.l2RpcUrl}, skipping full system tests`);
+}
+
 /** Test wallets (Foundry default accounts) */
 const TEST_WALLETS = {
   deployer: {
@@ -62,7 +72,7 @@ const deployedContracts: {
   paymaster?: string;
 } = {};
 
-describe('Localnet Full System Integration', () => {
+describe.skipIf(!localnetAvailable)('Localnet Full System Integration', () => {
   let l1Provider: ethers.Provider;
   let l2Provider: ethers.Provider;
   let deployer: ethers.Wallet;
@@ -83,7 +93,7 @@ describe('Localnet Full System Integration', () => {
     deployer = new ethers.Wallet(TEST_WALLETS.deployer.privateKey, l2Provider);
     user1 = new ethers.Wallet(TEST_WALLETS.user1.privateKey, l2Provider);
     console.log('✅ Created test signers\n');
-  }, TEST_CONFIG.timeout);
+  });
 
   describe('1. RPC Connectivity', () => {
     it('should connect to L1 RPC and fetch block number', async () => {
@@ -391,7 +401,7 @@ describe('Localnet Full System Integration', () => {
   });
 });
 
-describe('Service Interaction Tests', () => {
+describe.skipIf(!localnetAvailable)('Service Interaction Tests', () => {
   describe('RPC → Indexer Flow', () => {
     it('should verify transactions appear in indexer', async () => {
       console.log('   ℹ️  This test requires indexer to be running');
@@ -455,7 +465,7 @@ describe('Service Interaction Tests', () => {
   });
 });
 
-describe('End-to-End User Journey', () => {
+describe.skipIf(!localnetAvailable)('End-to-End User Journey', () => {
   it('should simulate complete user transaction flow', async () => {
     console.log('\n🎯 End-to-End User Journey Test\n');
     
@@ -485,7 +495,7 @@ describe('End-to-End User Journey', () => {
   });
 });
 
-describe('Cleanup and Teardown', () => {
+describe.skipIf(!localnetAvailable)('Cleanup and Teardown', () => {
   it('should print final system status', async () => {
     const l1Block = await l1Provider.getBlockNumber();
     const l2Block = await l2Provider.getBlockNumber();
